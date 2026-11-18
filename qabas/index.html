@@ -48,6 +48,11 @@
 
       <!-- أزرار التحكم العلوية -->
       <div class="topbar-actions">
+        <button id="qualityFilterBtn" class="btn btn-pill btn-ghost is-active" title="فلتر جودة التفريغ: يخفي الفقرات والمجالس الرديئة أو الخام تلقائياً (اضغط للتبديل)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <span id="qualityFilterLabel">الصافي فقط ✓</span>
+        </button>
+
         <button id="openSearchBtn" class="btn btn-pill btn-ghost search-trigger-btn" title="بحث شامل في الموسوعة (اختصار / أو Cmd+K)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <span class="hide-sm">بحث شامل</span>
@@ -113,6 +118,15 @@
                 <button class="btn btn-pill is-active" data-set-width="medium">متوسط</button>
                 <button class="btn btn-pill" data-set-width="wide">عريض</button>
                 <button class="btn btn-pill" data-set-width="full">كامل</button>
+              </div>
+            </div>
+
+            <div class="popover-section">
+              <div class="popover-label">فلتر جودة التفريغ</div>
+              <div class="segmented-row" id="qualityFilterRow">
+                <button class="btn btn-pill is-active" data-set-quality="clean">الصافي (استبعاد الرديء)</button>
+                <button class="btn btn-pill" data-set-quality="high">الممتاز فقط</button>
+                <button class="btn btn-pill" data-set-quality="all">عرض الكل</button>
               </div>
             </div>
 

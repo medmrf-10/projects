@@ -158,6 +158,7 @@
       width: "medium",
       wpm: 130,
       copyFormat: "plain",
+      qualityFilter: "clean",
       activeTab: "topics",
       activeDocId: "T01",
       activeCustomId: null,
@@ -367,6 +368,8 @@
               sectionTitle: sub.title || "",
               text: para.text || "",
               words: typeof para.words === "number" ? para.words : countWords(para.text || ""),
+              qScore: typeof para.qScore === "number" ? para.qScore : 100,
+              qTier: para.qTier || "high",
             };
             paragraphsById.set(para.id, meta);
 
@@ -381,6 +384,8 @@
               sectionId: meta.sectionId,
               sectionTitle: meta.sectionTitle,
               words: meta.words,
+              qTier: meta.qTier,
+              docQTier: book.qTier || "high",
               normHeading: normHeading,
               normOrigText: normalizeForSearch(meta.text),
             });
@@ -429,6 +434,8 @@
             sectionTitle: sec.title || "",
             text: para.text || "",
             words: typeof para.words === "number" ? para.words : countWords(para.text || ""),
+            qScore: typeof para.qScore === "number" ? para.qScore : 100,
+            qTier: para.qTier || "high",
           };
           paragraphsById.set(para.id, meta);
 
@@ -443,6 +450,8 @@
             sectionId: meta.sectionId,
             sectionTitle: meta.sectionTitle,
             words: meta.words,
+            qTier: meta.qTier,
+            docQTier: lesson.qTier || "high",
             normHeading: normHeading,
             normOrigText: normalizeForSearch(meta.text),
           });
@@ -541,6 +550,9 @@
       }
       if (typeof p.copyFormat === "string" && p.copyFormat) {
         basePrefs.copyFormat = p.copyFormat;
+      }
+      if (typeof p.qualityFilter === "string" && (p.qualityFilter === "clean" || p.qualityFilter === "high" || p.qualityFilter === "all")) {
+        basePrefs.qualityFilter = p.qualityFilter;
       }
       if (typeof p.activeTab === "string" && p.activeTab) {
         basePrefs.activeTab = p.activeTab;
@@ -1046,6 +1058,7 @@
     const tCount = tokens.length;
     const rawMatches = [];
     const hasAnnotations = Object.keys(state.annotations).length > 0;
+    const qMode = (opts && opts.qualityFilter) || state.prefs.qualityFilter || "clean";
 
     // 1. Search Corpus Paragraphs (Topics & Lessons)
     if (scope !== "custom") {
@@ -1060,6 +1073,12 @@
         if (ann && ann.hidden) continue;
 
         const hasEdit = ann && typeof ann.editedText === "string";
+        if (!hasEdit && qMode !== "all") {
+          if (entry.docKind === "lesson" && qMode === "clean" && entry.docQTier === "low") continue;
+          if (entry.docKind === "lesson" && qMode === "high" && entry.docQTier !== "high") continue;
+          if (qMode === "clean" && entry.qTier === "low") continue;
+          if (qMode === "high" && entry.qTier !== "high") continue;
+        }
         const normBody = hasEdit
           ? getNormalizedEditedText(entry.paraId, ann.editedText)
           : entry.normOrigText;
@@ -1239,6 +1258,9 @@
     }
     if ("copyFormat" in patch && patch.copyFormat) {
       next.copyFormat = String(patch.copyFormat);
+    }
+    if ("qualityFilter" in patch && (patch.qualityFilter === "clean" || patch.qualityFilter === "high" || patch.qualityFilter === "all")) {
+      next.qualityFilter = String(patch.qualityFilter);
     }
     if ("activeTab" in patch && patch.activeTab) {
       next.activeTab = String(patch.activeTab);
@@ -1727,8 +1749,75 @@
     }
   }
 
+  function isParagraphQualityAllowed(paraOrId, modeOverride) {
+    const qMode = modeOverride || state.prefs.qualityFilter || "clean";
+    if (qMode === "all") return true;
+
+    const pid = typeof paraOrId === "string" ? paraOrId : paraOrId && paraOrId.id;
+    if (pid) {
+      const ann = state.annotations[pid];
+      if (ann && typeof ann.editedText === "string") return true;
+    }
+
+    let qTier = paraOrId && typeof paraOrId === "object" ? paraOrId.qTier : null;
+    if (!qTier && pid) {
+      const meta = paragraphsById.get(pid);
+      qTier = meta ? meta.qTier : "high";
+    }
+    if (!qTier) qTier = "high";
+
+    if (qMode === "high") return qTier === "high";
+    return qTier !== "low";
+  }
+
+  function isDocQualityAllowed(docOrId, modeOverride) {
+    const qMode = modeOverride || state.prefs.qualityFilter || "clean";
+    if (qMode === "all") return true;
+    const doc = typeof docOrId === "string" ? getDoc(docOrId) : docOrId;
+    if (!doc) return false;
+    if (doc.kind === "topic") {
+      return qMode === "high" ? (doc.highParagraphCount || 1) > 0 : (doc.cleanParagraphCount || 1) > 0;
+    }
+    const tier = doc.qTier || "high";
+    if (qMode === "high") return tier === "high";
+    return tier !== "low";
+  }
+
+  function getDocVisibleStats(docOrId, modeOverride) {
+    const qMode = modeOverride || state.prefs.qualityFilter || "clean";
+    const doc = typeof docOrId === "string" ? getDoc(docOrId) : docOrId;
+    if (!doc) return { paragraphs: 0, words: 0, filteredOutCount: 0 };
+    if (qMode === "all") {
+      return {
+        paragraphs: doc.paragraphCount || 0,
+        words: doc.wordCount || 0,
+        filteredOutCount: 0,
+      };
+    }
+    if (qMode === "high" && typeof doc.highParagraphCount === "number") {
+      return {
+        paragraphs: doc.highParagraphCount,
+        words: doc.highWords || 0,
+        filteredOutCount: Math.max(0, (doc.paragraphCount || 0) - doc.highParagraphCount),
+      };
+    }
+    if (typeof doc.cleanParagraphCount === "number") {
+      return {
+        paragraphs: doc.cleanParagraphCount,
+        words: doc.cleanWords || 0,
+        filteredOutCount: doc.lowParagraphCount || 0,
+      };
+    }
+    return {
+      paragraphs: doc.paragraphCount || 0,
+      words: doc.wordCount || 0,
+      filteredOutCount: 0,
+    };
+  }
+
   function buildParagraphAndInsertionBlocks(docId, para) {
     const out = [];
+    if (!isParagraphQualityAllowed(para)) return out;
     const meta = getParagraphMeta(para.id);
     const ann = state.annotations[para.id];
     const effText = getEffectiveParagraphText(para.id);
@@ -1957,19 +2046,7 @@
 
         const isSingleSubtopicFork =
           Boolean(sectionId) && ch.id !== sectionId;
-
-        if (!isSingleSubtopicFork) {
-          blocks.push({
-            id: uid("blk"),
-            type: "h2",
-            text: cleanTextRules(ch.title || "", { escapeAngles: true }),
-            originalText: cleanTextRules(ch.title || "", { escapeAngles: true }),
-            sourceRef: ch.id || doc.id,
-            sourceParaId: null,
-            sourceDocId: doc.id,
-            hidden: false,
-          });
-        }
+        const chapterSubBlocks = [];
 
         const subtopics = Array.isArray(ch.subtopics) ? ch.subtopics : [];
         for (let s = 0; s < subtopics.length; s++) {
@@ -1986,7 +2063,17 @@
             singleSectionTitle = sub.title || "";
           }
 
-          blocks.push({
+          const subParaBlocks = [];
+          const paras = Array.isArray(sub.paragraphs) ? sub.paragraphs : [];
+          for (let p = 0; p < paras.length; p++) {
+            const pBlocks = buildParagraphAndInsertionBlocks(doc.id, paras[p]);
+            for (let k = 0; k < pBlocks.length; k++) {
+              subParaBlocks.push(pBlocks[k]);
+            }
+          }
+          if (!subParaBlocks.length) continue;
+
+          chapterSubBlocks.push({
             id: uid("blk"),
             type: isSingleSubtopicFork ? "h2" : "h3",
             text: cleanTextRules(sub.title || "", { escapeAngles: true }),
@@ -1996,13 +2083,26 @@
             sourceDocId: doc.id,
             hidden: false,
           });
+          for (let m = 0; m < subParaBlocks.length; m++) {
+            chapterSubBlocks.push(subParaBlocks[m]);
+          }
+        }
 
-          const paras = Array.isArray(sub.paragraphs) ? sub.paragraphs : [];
-          for (let p = 0; p < paras.length; p++) {
-            const pBlocks = buildParagraphAndInsertionBlocks(doc.id, paras[p]);
-            for (let k = 0; k < pBlocks.length; k++) {
-              blocks.push(pBlocks[k]);
-            }
+        if (chapterSubBlocks.length) {
+          if (!isSingleSubtopicFork) {
+            blocks.push({
+              id: uid("blk"),
+              type: "h2",
+              text: cleanTextRules(ch.title || "", { escapeAngles: true }),
+              originalText: cleanTextRules(ch.title || "", { escapeAngles: true }),
+              sourceRef: ch.id || doc.id,
+              sourceParaId: null,
+              sourceDocId: doc.id,
+              hidden: false,
+            });
+          }
+          for (let cb = 0; cb < chapterSubBlocks.length; cb++) {
+            blocks.push(chapterSubBlocks[cb]);
           }
         }
       }
@@ -2019,6 +2119,16 @@
           singleSectionTitle = sec.title || "";
         }
 
+        const secParaBlocks = [];
+        const paras = Array.isArray(sec.paragraphs) ? sec.paragraphs : [];
+        for (let p = 0; p < paras.length; p++) {
+          const pBlocks = buildParagraphAndInsertionBlocks(doc.id, paras[p]);
+          for (let k = 0; k < pBlocks.length; k++) {
+            secParaBlocks.push(pBlocks[k]);
+          }
+        }
+        if (!secParaBlocks.length) continue;
+
         blocks.push({
           id: uid("blk"),
           type: "h2",
@@ -2029,13 +2139,8 @@
           sourceDocId: doc.id,
           hidden: false,
         });
-
-        const paras = Array.isArray(sec.paragraphs) ? sec.paragraphs : [];
-        for (let p = 0; p < paras.length; p++) {
-          const pBlocks = buildParagraphAndInsertionBlocks(doc.id, paras[p]);
-          for (let k = 0; k < pBlocks.length; k++) {
-            blocks.push(pBlocks[k]);
-          }
+        for (let m = 0; m < secParaBlocks.length; m++) {
+          blocks.push(secParaBlocks[m]);
         }
       }
     }
@@ -2744,6 +2849,7 @@
           const paras = Array.isArray(sub.paragraphs) ? sub.paragraphs : [];
           for (let p = 0; p < paras.length; p++) {
             const para = paras[p];
+            if (!isParagraphQualityAllowed(para)) continue;
             const ann = state.annotations[para.id];
             if (!ann || !ann.hidden) {
               const pText = sanitizeExportText(getEffectiveParagraphText(para.id));
@@ -2764,6 +2870,7 @@
         const paras = Array.isArray(sec.paragraphs) ? sec.paragraphs : [];
         for (let p = 0; p < paras.length; p++) {
           const para = paras[p];
+          if (!isParagraphQualityAllowed(para)) continue;
           const ann = state.annotations[para.id];
           if (!ann || !ann.hidden) {
             const pText = sanitizeExportText(getEffectiveParagraphText(para.id));
@@ -2906,6 +3013,9 @@
 
     getDoc: getDoc,
     getParagraphMeta: getParagraphMeta,
+    isParagraphQualityAllowed: isParagraphQualityAllowed,
+    isDocQualityAllowed: isDocQualityAllowed,
+    getDocVisibleStats: getDocVisibleStats,
     search: search,
 
     updatePrefs: updatePrefs,

@@ -48,15 +48,16 @@
   function renderSplitSourceBar(currentDoc) {
     const S = window.QabasStore;
     const U = window.QabasUtils;
+    const allowedLessons = S.lessons.filter((l) => S.isDocQualityAllowed(l) || l.id === currentDoc.id);
     const optionsHtml = [
-      `<optgroup label="الكتب الموضوعية (12)">`,
+      `<optgroup label="الكتب الموضوعية (${S.topics.length})">`,
       ...S.topics.map(
         (t) =>
           `<option value="${t.id}" ${t.id === currentDoc.id ? "selected" : ""}>كتاب ${t.num}: ${U.escapeHtml(t.title)}</option>`
       ),
       `</optgroup>`,
-      `<optgroup label="المجالس المستقلة (67)">`,
-      ...S.lessons.map(
+      `<optgroup label="المجالس المستقلة (${allowedLessons.length})">`,
+      ...allowedLessons.map(
         (l) =>
           `<option value="${l.id}" ${l.id === currentDoc.id ? "selected" : ""}>${U.escapeHtml(l.title)}</option>`
       ),
@@ -76,6 +77,9 @@
   function renderParagraphCard(doc, p, filterQuery) {
     const S = window.QabasStore;
     const U = window.QabasUtils;
+    if (!S.isParagraphQualityAllowed(p)) {
+      return "";
+    }
     const ann = S.state.annotations[p.id] || {};
     const isHidden = !!ann.hidden;
     if (isHidden && !ui.showHidden) {
@@ -256,6 +260,7 @@
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
               <span class="stat-chip" style="padding:2px 8px; font-size:12px;">${U.formatNum(wc)} كلمة</span>
               ${isEdited ? `<span class="stat-chip" style="padding:2px 8px; font-size:12px; color:var(--teal);">معدّلة</span>` : ""}
+              ${!isEdited && p.qTier === "low" ? `<span class="stat-chip" style="padding:2px 8px; font-size:12px; color:var(--rose);">تفريغ خام</span>` : ""}
               ${hlKey && HL_META[hlKey] ? `<span class="stat-chip" style="padding:2px 8px; font-size:12px;">${HL_META[hlKey].label}</span>` : ""}
             </div>
             <div class="para-actions">
@@ -319,7 +324,7 @@
                 .map((p) => renderParagraphCard(doc, p, fq))
                 .filter(Boolean)
                 .join("");
-              if (!parasHtml && fq) return "";
+              if (!parasHtml) return "";
               return `
                 <section class="subtopic-block" id="${sub.id}" data-toc-target="${sub.id}">
                   <div class="subtopic-header">
@@ -336,7 +341,7 @@
             .filter(Boolean)
             .join("");
 
-          if (!subHtml && fq) return "";
+          if (!subHtml) return "";
           return `
             <section class="chapter-block" id="${ch.id}" data-toc-target="${ch.id}">
               <div class="chapter-header">
@@ -358,7 +363,7 @@
             .map((p) => renderParagraphCard(doc, p, fq))
             .filter(Boolean)
             .join("");
-          if (!parasHtml && fq) return "";
+          if (!parasHtml) return "";
           return `
             <section class="chapter-block" id="${sec.id}" data-toc-target="${sec.id}">
               <div class="chapter-header">
@@ -376,14 +381,17 @@
         .join("");
     }
 
-    if (!bodySectionsHtml && fq) {
-      bodySectionsHtml = `<div style="padding:36px; text-align:center; color:var(--text-muted); border:1px dashed var(--border); border-radius:8px;">لا توجد فقرات مطابقة للتصفية «${U.escapeHtml(fq)}» داخل هذا الدرس.</div>`;
+    if (!bodySectionsHtml) {
+      bodySectionsHtml = fq
+        ? `<div style="padding:36px; text-align:center; color:var(--text-muted); border:1px dashed var(--border); border-radius:8px;">لا توجد فقرات مطابقة للتصفية «${U.escapeHtml(fq)}» داخل هذا الدرس.</div>`
+        : `<div style="padding:36px; text-align:center; color:var(--text-muted); border:1px dashed var(--border); border-radius:8px;">جميع فقرات هذا المجلس مصنفة كتفريغ خام وقد استُبعدت بفلتر الجودة النشط.</div>`;
     }
 
+    const visStats = S.getDocVisibleStats(doc);
     const kickerLabel =
       doc.kind === "topic"
         ? `الكتاب الموضوعي ${doc.num} من 12`
-        : `المجلس التسلسلي ${doc.num} من 67`;
+        : `المجلس التسلسلي ${doc.num}`;
 
     _containerEl.innerHTML = `
       ${S.state.prefs.splitMode ? renderSplitSourceBar(doc) : ""}
@@ -399,9 +407,14 @@
           <div class="doc-stats-row">
             ${doc.kind === "topic" ? `<span class="stat-chip">${U.formatNum(doc.chapterCount)} أبواب رئيسية</span>` : ""}
             <span class="stat-chip">${U.formatNum(doc.sectionCount)} ${doc.kind === "topic" ? "مبحثاً فرعياً" : "محوراً"}</span>
-            <span class="stat-chip">${U.formatNum(doc.paragraphCount)} فقرة</span>
-            <span class="stat-chip">${U.formatNum(doc.wordCount)} كلمة</span>
-            <span class="stat-chip">زمن القراءة والإلقاء: ${U.formatDuration(doc.wordCount, S.state.prefs.wpm)}</span>
+            <span class="stat-chip">${U.formatNum(visStats.paragraphs)} فقرة صافية</span>
+            <span class="stat-chip">${U.formatNum(visStats.words)} كلمة</span>
+            <span class="stat-chip">زمن القراءة والإلقاء: ${U.formatDuration(visStats.words, S.state.prefs.wpm)}</span>
+            ${
+              visStats.filteredOutCount > 0
+                ? `<span class="stat-chip" style="color:var(--emerald); border-color:var(--emerald-border);">✓ استُبعدت ${U.formatNum(visStats.filteredOutCount)} فقرة رديئة</span>`
+                : ""
+            }
             ${
               editCount > 0
                 ? `<span class="stat-chip" style="color:var(--teal); border-color:var(--teal);">${U.formatNum(editCount)} تعديل محلي</span>`
@@ -450,36 +463,46 @@
 
   function renderToc(doc) {
     if (!_tocEl) return;
+    const S = window.QabasStore;
     const U = window.QabasUtils;
     const statsBadge = document.getElementById("tocStatsBadge");
-    if (statsBadge) {
-      statsBadge.textContent =
-        doc.kind === "topic"
-          ? `${doc.chapterCount} أبواب · ${doc.sectionCount} مبحثاً`
-          : `${doc.sectionCount} محاور`;
-    }
 
     if (doc.kind === "topic") {
-      _tocEl.innerHTML = (doc.chapters || [])
-        .map(
-          (ch) => `
+      let visChCount = 0;
+      let visSubCount = 0;
+      const html = (doc.chapters || [])
+        .map((ch) => {
+          const visSubs = (ch.subtopics || []).filter((sub) =>
+            (sub.paragraphs || []).some((p) => S.isParagraphQualityAllowed(p))
+          );
+          if (!visSubs.length) return "";
+          visChCount++;
+          visSubCount += visSubs.length;
+          return `
             <button class="toc-chapter" data-toc-jump="${ch.id}">${U.escapeHtml(ch.title)}</button>
-            ${(ch.subtopics || [])
+            ${visSubs
               .map(
                 (sub) =>
                   `<button class="toc-item" data-toc-jump="${sub.id}">${U.escapeHtml(sub.title)}</button>`
               )
               .join("")}
-          `
-        )
+          `;
+        })
+        .filter(Boolean)
         .join("");
+      _tocEl.innerHTML = html;
+      if (statsBadge) statsBadge.textContent = `${visChCount} أبواب · ${visSubCount} مبحثاً`;
     } else {
-      _tocEl.innerHTML = (doc.sections || [])
+      const visSecs = (doc.sections || []).filter((sec) =>
+        (sec.paragraphs || []).some((p) => S.isParagraphQualityAllowed(p))
+      );
+      _tocEl.innerHTML = visSecs
         .map(
           (sec, idx) =>
             `<button class="toc-item" data-toc-jump="${sec.id}">${idx + 1}. ${U.escapeHtml(sec.title)}</button>`
         )
         .join("");
+      if (statsBadge) statsBadge.textContent = `${visSecs.length} محاور`;
     }
   }
 
@@ -644,7 +667,7 @@
         for (const sub of ch.subtopics || []) {
           if (sub.id === sectionId) {
             const body = sub.paragraphs
-              .filter((p) => !(S.state.annotations[p.id] && S.state.annotations[p.id].hidden))
+              .filter((p) => S.isParagraphQualityAllowed(p) && !(S.state.annotations[p.id] && S.state.annotations[p.id].hidden))
               .map((p) => S.getEffectiveParagraphText(p.id))
               .join("\n\n");
             return `### ${sub.title}\n\n${body}`;
@@ -655,7 +678,7 @@
       for (const sec of doc.sections || []) {
         if (sec.id === sectionId) {
           const body = sec.paragraphs
-            .filter((p) => !(S.state.annotations[p.id] && S.state.annotations[p.id].hidden))
+            .filter((p) => S.isParagraphQualityAllowed(p) && !(S.state.annotations[p.id] && S.state.annotations[p.id].hidden))
             .map((p) => S.getEffectiveParagraphText(p.id))
             .join("\n\n");
           return `## ${sec.title}\n\n${body}`;

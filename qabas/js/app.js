@@ -70,6 +70,22 @@
     document.querySelectorAll("[data-set-copy]").forEach((b) => {
       b.classList.toggle("is-active", b.getAttribute("data-set-copy") === prefs.copyFormat);
     });
+    const qMode = prefs.qualityFilter || "clean";
+    document.querySelectorAll("[data-set-quality]").forEach((b) => {
+      b.classList.toggle("is-active", b.getAttribute("data-set-quality") === qMode);
+    });
+    const qBtn = el("qualityFilterBtn");
+    const qLbl = el("qualityFilterLabel");
+    if (qBtn && qLbl) {
+      qBtn.classList.toggle("is-active", qMode !== "all");
+      if (qMode === "clean") {
+        qLbl.textContent = "الصافي فقط ✓";
+      } else if (qMode === "high") {
+        qLbl.textContent = "الممتاز فقط ★";
+      } else {
+        qLbl.textContent = "عرض الكل";
+      }
+    }
 
     const fsVal = el("fontSizeVal");
     const fsRange = el("fontSizeRange");
@@ -106,8 +122,10 @@
   function updateTopCounts() {
     const U = window.QabasUtils;
     const S = window.QabasStore;
-    if (el("topicsCountBadge")) el("topicsCountBadge").textContent = U.formatNum(S.topics.length);
-    if (el("lessonsCountBadge")) el("lessonsCountBadge").textContent = U.formatNum(S.lessons.length);
+    const visTopics = S.topics.filter((t) => S.isDocQualityAllowed(t));
+    const visLessons = S.lessons.filter((l) => S.isDocQualityAllowed(l));
+    if (el("topicsCountBadge")) el("topicsCountBadge").textContent = U.formatNum(visTopics.length);
+    if (el("lessonsCountBadge")) el("lessonsCountBadge").textContent = U.formatNum(visLessons.length);
     if (el("customCountBadge")) el("customCountBadge").textContent = U.formatNum(S.state.customLessons.length);
     const bmCount = S.getAllBookmarkedAndAnnotated("all").length;
     if (el("bookmarksCountBadge")) el("bookmarksCountBadge").textContent = U.formatNum(bmCount);
@@ -163,9 +181,10 @@
     const showLessons =
       tab === "lessons" ||
       (tab !== "topics" && String(prefs.activeDocId || "").startsWith("L"));
-    const sourceList = showLessons ? S.lessons : S.topics;
+    const rawList = showLessons ? S.lessons : S.topics;
+    const sourceList = rawList.filter((d) => S.isDocQualityAllowed(d));
     headingEl.textContent = showLessons
-      ? `المجالس المستقلة (${U.formatNum(sourceList.length)})`
+      ? `المجالس الصافية (${U.formatNum(sourceList.length)})`
       : `الكتب الموضوعية (${U.formatNum(sourceList.length)})`;
 
     const filtered = sourceList.filter((d) => {
@@ -178,10 +197,11 @@
         const isActive = d.id === prefs.activeDocId;
         const isRead = !!S.state.readDocs[d.id];
         const edits = S.getDocEditCount(d.id);
+        const vis = S.getDocVisibleStats(d);
         const subLabel =
           d.kind === "topic"
-            ? `${d.chapterCount} أبواب · ${d.sectionCount} مبحثاً · ${U.formatNum(d.wordCount)} كلمة`
-            : `${d.sectionCount} محاور · ${U.formatNum(d.wordCount)} كلمة`;
+            ? `${d.chapterCount} أبواب · ${U.formatNum(vis.words)} كلمة`
+            : `${d.sectionCount} محاور · ${U.formatNum(vis.words)} كلمة`;
         return `
           <button class="doc-item ${isActive ? "is-active" : ""} ${isRead ? "is-read" : ""}" data-select-doc="${d.id}">
             <span class="doc-num">${d.num}</span>
@@ -189,6 +209,7 @@
               <span class="doc-title">${U.escapeHtml(d.title)}</span>
               <span class="doc-meta">
                 ${subLabel}
+                ${d.qTier === "low" ? ` · <span style="color:var(--rose);">تفريغ خام</span>` : ""}
                 ${edits > 0 ? ` · <strong>${edits} تعديل</strong>` : ""}
                 ${isRead ? ` · ✓ مقروء` : ""}
               </span>
@@ -248,11 +269,13 @@
       if (sidebarToc) sidebarToc.hidden = !!prefs.focusMode;
 
       let docId = prefs.activeDocId;
-      if (tab === "topics" && (!docId || !docId.startsWith("T"))) {
-        docId = "T01";
+      if (tab === "topics" && (!docId || !docId.startsWith("T") || !S.isDocQualityAllowed(docId))) {
+        const firstTopic = S.topics.find((t) => S.isDocQualityAllowed(t)) || S.topics[0];
+        docId = firstTopic ? firstTopic.id : "T01";
         S.updatePrefs({ activeDocId: docId });
-      } else if (tab === "lessons" && (!docId || !docId.startsWith("L"))) {
-        docId = S.lessons[0] ? S.lessons[0].id : "L01";
+      } else if (tab === "lessons" && (!docId || !docId.startsWith("L") || !S.isDocQualityAllowed(docId))) {
+        const firstLesson = S.lessons.find((l) => S.isDocQualityAllowed(l)) || S.lessons[0];
+        docId = firstLesson ? firstLesson.id : "L01";
         S.updatePrefs({ activeDocId: docId });
       }
       window.QabasReader.renderDoc(docId);
@@ -427,9 +450,10 @@
 
     state.forkContext = { docId: doc.id, sectionId: preselectedSectionId || null };
 
+    const allowedLessons = S.lessons.filter((l) => S.isDocQualityAllowed(l) || l.id === doc.id);
     const allDocsOptions = [
       ...S.topics.map((t) => `<option value="${t.id}" ${t.id === doc.id ? "selected" : ""}>كتاب ${t.num}: ${U.escapeHtml(t.title)}</option>`),
-      ...S.lessons.map((l) => `<option value="${l.id}" ${l.id === doc.id ? "selected" : ""}>${U.escapeHtml(l.title)}</option>`),
+      ...allowedLessons.map((l) => `<option value="${l.id}" ${l.id === doc.id ? "selected" : ""}>${U.escapeHtml(l.title)}</option>`),
     ].join("");
 
     renderForkModalContent(doc, preselectedSectionId, allDocsOptions);
@@ -578,22 +602,32 @@
       title = doc.title;
       if (doc.kind === "topic") {
         doc.chapters.forEach((ch) => {
-          items.push({ type: "h2", text: ch.title });
+          const chItems = [];
           ch.subtopics.forEach((sub) => {
-            items.push({ type: "h3", text: sub.title });
-            sub.paragraphs.forEach((p) => {
+            const subParas = sub.paragraphs.filter((p) => {
               const ann = S.state.annotations[p.id];
-              if (ann && ann.hidden) return;
-              items.push({ type: "p", text: S.getEffectiveParagraphText(p.id) });
+              return S.isParagraphQualityAllowed(p) && !(ann && ann.hidden);
+            });
+            if (!subParas.length) return;
+            chItems.push({ type: "h3", text: sub.title });
+            subParas.forEach((p) => {
+              chItems.push({ type: "p", text: S.getEffectiveParagraphText(p.id) });
             });
           });
+          if (chItems.length) {
+            items.push({ type: "h2", text: ch.title });
+            items.push(...chItems);
+          }
         });
       } else {
         doc.sections.forEach((sec) => {
-          items.push({ type: "h2", text: sec.title });
-          sec.paragraphs.forEach((p) => {
+          const secParas = sec.paragraphs.filter((p) => {
             const ann = S.state.annotations[p.id];
-            if (ann && ann.hidden) return;
+            return S.isParagraphQualityAllowed(p) && !(ann && ann.hidden);
+          });
+          if (!secParas.length) return;
+          items.push({ type: "h2", text: sec.title });
+          secParas.forEach((p) => {
             items.push({ type: "p", text: S.getEffectiveParagraphText(p.id) });
           });
         });
@@ -732,6 +766,19 @@
     });
 
     // Topbar actions
+    el("qualityFilterBtn")?.addEventListener("click", () => {
+      const cur = S.state.prefs.qualityFilter || "clean";
+      const next = cur === "clean" ? "high" : cur === "high" ? "all" : "clean";
+      S.updatePrefs({ qualityFilter: next });
+      syncActiveStage();
+      if (next === "clean") {
+        toast("الفلتر النشط: الصافي فقط (تم إخفاء جميع الفقرات والمجالس الرديئة)", "success");
+      } else if (next === "high") {
+        toast("الفلتر النشط: النصوص الممتازة المحررة فقط", "info");
+      } else {
+        toast("الفلتر النشط: عرض الكل بما في ذلك التفريغ الخام", "info");
+      }
+    });
     el("openSearchBtn")?.addEventListener("click", () => openSearchModal());
     el("splitModeBtn")?.addEventListener("click", () => toggleSplitMode());
     el("focusModeBtn")?.addEventListener("click", () => {
@@ -755,6 +802,12 @@
       if (wd) S.updatePrefs({ width: wd.getAttribute("data-set-width") });
       const cp = e.target.closest("[data-set-copy]");
       if (cp) S.updatePrefs({ copyFormat: cp.getAttribute("data-set-copy") });
+      const ql = e.target.closest("[data-set-quality]");
+      if (ql) {
+        S.updatePrefs({ qualityFilter: ql.getAttribute("data-set-quality") });
+        syncActiveStage();
+        return;
+      }
       const stepBtn = e.target.closest("[data-step-font]");
       if (stepBtn) {
         const delta = Number(stepBtn.getAttribute("data-step-font"));
