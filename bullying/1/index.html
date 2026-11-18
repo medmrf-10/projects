@@ -8343,7 +8343,7 @@ html[data-theme="light"] .char-meta,
 
     function renderFrame(now) {
       requestAnimationFrame(renderFrame);
-      if (document.hidden) return;
+      if (document.hidden || document.documentElement.getAttribute("data-project-locked") === "true") return;
 
       var pal = MOOD_PALETTES[currentMood] || MOOD_PALETTES.dusk;
       for (var k = 0; k < 3; k++) {
@@ -10821,5 +10821,4228 @@ html[data-theme="light"] .char-meta,
     })();
   </script>
 
+  <!-- === PRESENTATION STUDIO START === -->
+  <script id="ps-studio-script">
+/*!
+ * Presentation Studio — استوديو التحرير التفاعلي المتكامل للعروض التقديمية
+ * Self-contained, zero-dependency interactive editor for HTML presentations.
+ * Features:
+ *   1. Direct inline text editing (HTML & SVG text) + formatting toolbar
+ *   2. Add new text/speech frames (Editorial, Speech Bubble, Pill, Cinema Glass)
+ *   3. Add, delete, enlarge, shrink, flip & move characters (Native SVG/HTML + Built-in Gallery + Custom Upload)
+ *   4. Delete, reorder (drag & ▲/▼), duplicate & add pages/slides
+ *   5. Persistent local save (localStorage + IndexedDB) + Undo history
+ *   6. Byte-clean standalone local HTML file download with all edits baked in
+ *   7. Full Mobile & Desktop responsiveness (RTL Arabic + Western numerals 0-9)
+ */
+(function (global) {
+  "use strict";
+
+  if (global.__PRESENTATION_STUDIO_LOADED__) return;
+  global.__PRESENTATION_STUDIO_LOADED__ = true;
+
+  /* ==========================================================================
+     0. CAPTURE PRISTINE HTML SNAPSHOT BEFORE ANY ENGINE MUTATES THE DOM
+     ========================================================================== */
+  function capturePristineSnapshot() {
+    try {
+      var docClone = document.documentElement.cloneNode(true);
+      var removeSelectors = [
+        "#ps-baked-state",
+        "#ps-studio-styles",
+        "#ps-studio-root",
+        "#ps-svg-text-editor",
+        "[data-ps-overlay-layer]",
+        "#sa-safety-styles",
+        "#sp-stage-props-css",
+        "#project-gate-styles",
+        "#project-auth-gate",
+        "#project-auth-modal",
+        'script[src*="project-gate.js"]',
+        "script[data-project-id]"
+      ];
+      for (var i = 0; i < removeSelectors.length; i++) {
+        var nodes = docClone.querySelectorAll(removeSelectors[i]);
+        for (var j = 0; j < nodes.length; j++) {
+          if (nodes[j].parentNode) nodes[j].parentNode.removeChild(nodes[j]);
+        }
+      }
+      docClone.removeAttribute("data-ps-edit");
+      docClone.removeAttribute("data-ps-ready");
+      docClone.removeAttribute("data-project-locked");
+      var bodyClone = docClone.querySelector("body");
+      if (bodyClone) {
+        bodyClone.removeAttribute("data-ps-edit");
+      }
+      return "<!DOCTYPE html>\n" + docClone.outerHTML;
+    } catch (e) {
+      return "";
+    }
+  }
+
+  var INITIAL_CLEAN_HTML = capturePristineSnapshot();
+
+  function readBakedState() {
+    try {
+      var el = document.getElementById("ps-baked-state");
+      if (!el || !el.textContent) return null;
+      var parsed = JSON.parse(el.textContent);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  var BAKED_PAYLOAD = readBakedState();
+  if (BAKED_PAYLOAD && global.location && global.location.protocol === "file:") {
+    try { document.documentElement.setAttribute("data-ps-baked-local", "true"); } catch (e) {}
+  }
+
+  /* ==========================================================================
+     1. UTILITIES & SAFE HELPERS (WESTERN DIGITS 0-9 EXCLUSIVELY)
+     ========================================================================== */
+  function toWesternDigits(val) {
+    if (val === null || val === undefined) return "";
+    return String(val)
+      .replace(/[\u0660-\u0669]/g, function (d) {
+        return String(d.charCodeAt(0) - 0x0660);
+      })
+      .replace(/[\u06F0-\u06F9]/g, function (d) {
+        return String(d.charCodeAt(0) - 0x06f0);
+      });
+  }
+
+  function escHtml(val) {
+    return toWesternDigits(val)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function pad2(n) {
+    var num = Math.max(0, parseInt(n, 10) || 0);
+    return num < 10 ? "0" + num : String(num);
+  }
+
+  var _uidSeq = Date.now() % 100000;
+  function genUid(prefix) {
+    _uidSeq += 1;
+    return (prefix || "ps") + "_" + _uidSeq + "_" + Math.random().toString(36).slice(2, 6);
+  }
+
+  function deepClone(obj) {
+    if (obj === null || typeof obj !== "object") return obj;
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch (e) {
+      return obj;
+    }
+  }
+
+  function clamp(val, min, max) {
+    return Math.max(min, Math.min(max, val));
+  }
+
+  /* ==========================================================================
+     2. BUILT-IN SELF-CONTAINED CHARACTER SVG GALLERY (EDITORIAL + CAST)
+     ========================================================================== */
+  var EDITORIAL_CHARACTERS = [
+    {
+      id: "ed_crossed_boy",
+      name: "فتى طاوي الذراعين",
+      role: "المستهدف · رسم تحريري",
+      category: "editorial",
+      svg: function () {
+        return '<svg viewBox="0 0 220 290" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="فتى يطوي ذراعيه بحزن">' +
+          '<ellipse cx="110" cy="274" rx="76" ry="9" fill="#231F1D" opacity="0.14"/>' +
+          '<g transform="translate(110, 138)">' +
+            '<path d="M-76 132 L-72 36 C-68 6, -40 -6, 0 -6 C40 -6, 68 6, 72 36 L76 132 Z" fill="#8F979F" stroke="#231F1D" stroke-width="2.2" stroke-linejoin="round"/>' +
+            '<rect x="-68" y="116" width="136" height="16" rx="4" fill="#747C84" stroke="#231F1D" stroke-width="1.8"/>' +
+            '<polygon points="-22,-6 0,22 22,-6 11,-13 -11,-13" fill="#B94339" stroke="#231F1D" stroke-width="1.9" stroke-linejoin="round"/>' +
+            '<rect x="-13" y="-26" width="26" height="22" rx="9" fill="#E8AF8D"/>' +
+            '<circle cx="-42" cy="-60" r="7.5" fill="#E8AF8D" stroke="#231F1D" stroke-width="1.8"/>' +
+            '<circle cx="42" cy="-60" r="7.5" fill="#E8AF8D" stroke="#231F1D" stroke-width="1.8"/>' +
+            '<path d="M-40 -70 C-40 -108, 40 -108, 40 -70 C40 -34, 22 -15, 0 -15 C-22 -15, -40 -34, -40 -70 Z" fill="#F5C4A4" stroke="#231F1D" stroke-width="2.2"/>' +
+            '<path d="M-44 -66 C-50 -106, -20 -126, 8 -122 C35 -124, 52 -100, 44 -64 C36 -78, 25 -84, 15 -76 L11 -88 L0 -74 L-13 -88 L-18 -74 C-29 -82, -38 -76, -44 -66 Z" fill="#1D2733" stroke="#1D2733" stroke-width="1.5" stroke-linejoin="round"/>' +
+            '<path d="M-25 -67 Q-16 -73 -9 -65" fill="none" stroke="#1D2733" stroke-width="2.6" stroke-linecap="round"/>' +
+            '<path d="M9 -65 Q16 -73 25 -67" fill="none" stroke="#1D2733" stroke-width="2.6" stroke-linecap="round"/>' +
+            '<path d="M-23 -54 Q-16 -48 -9 -54" fill="none" stroke="#231F1D" stroke-width="2.1" stroke-linecap="round"/>' +
+            '<path d="M9 -54 Q16 -48 23 -54" fill="none" stroke="#231F1D" stroke-width="2.1" stroke-linecap="round"/>' +
+            '<ellipse cx="-22" cy="-43" rx="7" ry="4" fill="#E48D7E" opacity="0.55"/>' +
+            '<ellipse cx="22" cy="-43" rx="7" ry="4" fill="#E48D7E" opacity="0.55"/>' +
+            '<path d="M-8 -32 Q0 -38 8 -32" fill="none" stroke="#8C5343" stroke-width="2" stroke-linecap="round"/>' +
+            '<path d="M-73 40 C-70 80, -32 92, 44 83 L52 58 C-14 62, -42 52, -50 28 Z" fill="#9DA5AD" stroke="#231F1D" stroke-width="2" stroke-linejoin="round"/>' +
+            '<ellipse cx="50" cy="68" rx="12" ry="9" fill="#F5C4A4" stroke="#231F1D" stroke-width="1.8"/>' +
+            '<path d="M73 40 C70 85, 30 100, -46 92 L-54 66 C12 70, 42 60, 50 30 Z" fill="#818992" stroke="#231F1D" stroke-width="2" stroke-linejoin="round"/>' +
+            '<ellipse cx="-52" cy="78" rx="12" ry="9" fill="#E8AF8D" stroke="#231F1D" stroke-width="1.8"/>' +
+          '</g>' +
+        '</svg>';
+      }
+    },
+    {
+      id: "ed_silent_witness",
+      name: "شاهد صامت متردّد",
+      role: "المتفرّج · رسم تحريري",
+      category: "editorial",
+      svg: function () {
+        return '<svg viewBox="0 0 180 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="شاهد صامت متردّد">' +
+          '<ellipse cx="90" cy="206" rx="64" ry="8" fill="#231F1D" opacity="0.13"/>' +
+          '<g transform="translate(90, 68)">' +
+            '<path d="M-56 132 C-52 82, -30 64, 0 64 C30 64, 52 82, 56 132 Z" fill="#7D93A8" stroke="#231F1D" stroke-width="2"/>' +
+            '<path d="M-16 64 L0 82 L16 64" fill="#FAF6EE" stroke="#231F1D" stroke-width="1.8" stroke-linejoin="round"/>' +
+            '<rect x="-4" y="80" width="8" height="22" rx="3" fill="#63798F"/>' +
+            '<path d="M-52 88 L-66 132 L-45 132 L-38 98" fill="#F2C0A0" stroke="#231F1D" stroke-width="1.8"/>' +
+            '<rect x="-10" y="46" width="20" height="22" rx="8" fill="#E7B190"/>' +
+            '<ellipse cx="0" cy="22" rx="29" ry="32" fill="#F4C5A6" stroke="#231F1D" stroke-width="2"/>' +
+            '<circle cx="-29" cy="24" r="5.5" fill="#E7B190" stroke="#231F1D" stroke-width="1.6"/>' +
+            '<circle cx="29" cy="24" r="5.5" fill="#E7B190" stroke="#231F1D" stroke-width="1.6"/>' +
+            '<ellipse cx="-14" cy="28" rx="5.5" ry="3" fill="#E28B7E" opacity="0.55"/>' +
+            '<ellipse cx="14" cy="28" rx="5.5" ry="3" fill="#E28B7E" opacity="0.55"/>' +
+            '<path d="M-30 18 C-32 -10, -10 -18, 4 -14 C18 -17, 32 -6, 30 18 C22 4, 10 0, 0 4 C-10 0, -21 5, -30 18 Z" fill="#1E2329" stroke="#1E2329" stroke-width="1.5"/>' +
+            '<path d="M-16 12 Q-10 8 -5 11" fill="none" stroke="#231F1D" stroke-width="2" stroke-linecap="round"/>' +
+            '<path d="M5 11 Q10 8 16 12" fill="none" stroke="#231F1D" stroke-width="2" stroke-linecap="round"/>' +
+            '<circle cx="-10" cy="19" r="2.6" fill="#231F1D"/>' +
+            '<circle cx="10" cy="19" r="2.6" fill="#231F1D"/>' +
+            '<path d="M46 92 C52 72, 30 44, 8 34 C0 31, -4 38, 2 43 L18 56 L28 132 L52 132 Z" fill="#F4C5A6" stroke="#231F1D" stroke-width="1.9" stroke-linejoin="round"/>' +
+          '</g>' +
+        '</svg>';
+      }
+    },
+    {
+      id: "ed_phone_prison",
+      name: "طالب داخل شاشة الهاتف",
+      role: "العزلة الرقمية · رسم تحريري",
+      category: "editorial",
+      svg: function (uid) {
+        var patId = "ps_ging_" + uid;
+        return '<svg viewBox="0 0 210 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="طالب منكمش داخل شاشة الهاتف">' +
+          '<defs><pattern id="' + patId + '" width="22" height="22" patternUnits="userSpaceOnUse">' +
+            '<rect width="22" height="22" fill="#FAF6EE"/>' +
+            '<rect width="11" height="22" fill="#EADFD0" fill-opacity="0.45"/>' +
+            '<rect width="22" height="11" fill="#EADFD0" fill-opacity="0.45"/>' +
+          '</pattern></defs>' +
+          '<ellipse cx="102" cy="306" rx="82" ry="9" fill="#231F1D" opacity="0.12"/>' +
+          '<g transform="translate(14, 10)">' +
+            '<rect x="0" y="0" width="176" height="292" rx="26" fill="#231F1D" stroke="#231F1D" stroke-width="2"/>' +
+            '<circle cx="88" cy="13" r="2.6" fill="#FAF6EE"/>' +
+            '<rect x="66" y="21" width="44" height="4" rx="2" fill="#FAF6EE"/>' +
+            '<rect x="9" y="34" width="158" height="232" rx="6" fill="url(#' + patId + ')"/>' +
+            '<g transform="translate(86, 178)">' +
+              '<ellipse cx="-16" cy="88" rx="18" ry="8" fill="#FFFDF9" stroke="#231F1D" stroke-width="1.8"/>' +
+              '<ellipse cx="32" cy="85" rx="17" ry="8" fill="#FFFDF9" stroke="#231F1D" stroke-width="1.8"/>' +
+              '<path d="M-58 76 C-56 18, -34 -18, 2 -18 C36 -18, 52 14, 54 68 Z" fill="#C45B52" stroke="#231F1D" stroke-width="2" stroke-linejoin="round"/>' +
+              '<path d="M-50 82 C-48 34, -12 28, 2 52 C14 28, 48 32, 52 80 C30 86, -26 88, -50 82 Z" fill="#322C28" stroke="#231F1D" stroke-width="2" stroke-linejoin="round"/>' +
+              '<circle cx="2" cy="-16" r="26" fill="#F4C5A6" stroke="#231F1D" stroke-width="2"/>' +
+              '<path d="M-24 -18 C-26 -44, 28 -46, 28 -16 C20 -26, 8 -28, 0 -24 C-10 -28, -18 -24, -24 -18 Z" fill="#2A2421" stroke="#231F1D" stroke-width="1.8"/>' +
+              '<path d="M-36 22 C-32 2, -16 -8, -4 -12 L-2 6 L-18 34 Z" fill="#C45B52" stroke="#231F1D" stroke-width="1.8" stroke-linejoin="round"/>' +
+              '<path d="M38 22 C34 2, 18 -8, 6 -12 L4 6 L20 34 Z" fill="#C45B52" stroke="#231F1D" stroke-width="1.8" stroke-linejoin="round"/>' +
+              '<ellipse cx="-6" cy="-12" rx="8" ry="11" transform="rotate(-14 -6 -12)" fill="#F4C5A6" stroke="#231F1D" stroke-width="1.6"/>' +
+              '<ellipse cx="8" cy="-12" rx="8" ry="11" transform="rotate(14 8 -12)" fill="#F4C5A6" stroke="#231F1D" stroke-width="1.6"/>' +
+            '</g>' +
+          '</g>' +
+        '</svg>';
+      }
+    },
+    {
+      id: "ed_pointing_hands",
+      name: "أصابع الاتهام والسخرية",
+      role: "ضغط الجماعة · رسم تحريري",
+      category: "editorial",
+      svg: function () {
+        return '<svg viewBox="0 0 190 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="أصابع الاتهام">' +
+          '<g transform="translate(76, 56)">' +
+            '<g transform="rotate(-24)">' +
+              '<path d="M32 -18 L106 -18 L106 18 L32 18 Z" fill="#231F1D"/>' +
+              '<rect x="24" y="-15" width="10" height="30" rx="3" fill="#FAF6EE" stroke="#231F1D" stroke-width="1.6"/>' +
+              '<path d="M24 -9 L-14 -4 C-22 -3, -22 5, -13 6 L8 7 L0 14 C-5 18, 0 24, 6 20 L24 11 Z" fill="#F2BE9C" stroke="#231F1D" stroke-width="1.7" stroke-linejoin="round"/>' +
+            '</g>' +
+            '<g transform="translate(14, 38) rotate(-30)">' +
+              '<path d="M30 -15 L98 -15 L98 15 L30 15 Z" fill="#3A332D"/>' +
+              '<path d="M30 -8 L-16 -2 C-24 -1, -24 6, -15 7 L8 8 L-2 16 C-7 20, -1 26, 5 21 L30 10 Z" fill="#E8AE8B" stroke="#231F1D" stroke-width="1.7" stroke-linejoin="round"/>' +
+            '</g>' +
+          '</g>' +
+        '</svg>';
+      }
+    },
+    {
+      id: "ed_brave_defender",
+      name: "طالبة مدافعة مساندة",
+      role: "كاسرة الحلقة · رسم تحريري",
+      category: "editorial",
+      svg: function () {
+        return '<svg viewBox="0 0 210 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="طالبة مدافعة مساندة">' +
+          '<ellipse cx="105" cy="254" rx="68" ry="8" fill="#231F1D" opacity="0.13"/>' +
+          '<g transform="translate(105, 118)">' +
+            '<path d="M-38 -52 C-48 -20, -44 16, -34 26 L34 26 C44 16, 48 -20, 38 -52 Z" fill="#251F1D"/>' +
+            '<path d="M-64 130 C-58 66, -34 44, 0 44 C34 44, 58 66, 64 130 Z" fill="#3E6E58" stroke="#231F1D" stroke-width="2.1" stroke-linejoin="round"/>' +
+            '<path d="M-18 44 L0 72 L18 44" fill="#FAF6EE" stroke="#231F1D" stroke-width="1.8"/>' +
+            '<rect x="-11" y="24" width="22" height="24" rx="9" fill="#EBB696"/>' +
+            '<ellipse cx="0" cy="-8" rx="34" ry="37" fill="#F6C8AA" stroke="#231F1D" stroke-width="2.1"/>' +
+            '<path d="M-36 -14 C-38 -50, 38 -52, 36 -14 C24 -30, 8 -34, -6 -28 C-20 -32, -30 -24, -36 -14 Z" fill="#251F1D"/>' +
+            '<path d="M-18 -16 Q-11 -21 -5 -16" fill="none" stroke="#231F1D" stroke-width="2.2" stroke-linecap="round"/>' +
+            '<path d="M5 -16 Q11 -21 18 -16" fill="none" stroke="#231F1D" stroke-width="2.2" stroke-linecap="round"/>' +
+            '<circle cx="-12" cy="-7" r="2.8" fill="#231F1D"/>' +
+            '<circle cx="12" cy="-7" r="2.8" fill="#231F1D"/>' +
+            '<ellipse cx="-18" cy="3" rx="6" ry="3.5" fill="#E48D7E" opacity="0.5"/>' +
+            '<ellipse cx="18" cy="3" rx="6" ry="3.5" fill="#E48D7E" opacity="0.5"/>' +
+            '<path d="M-9 10 Q0 18 10 10" fill="none" stroke="#231F1D" stroke-width="2.1" stroke-linecap="round"/>' +
+            '<path d="M-56 68 L-88 46 C-95 42, -99 50, -92 56 L-58 92 Z" fill="#3E6E58" stroke="#231F1D" stroke-width="2" stroke-linejoin="round"/>' +
+            '<circle cx="-90" cy="49" r="9" fill="#F6C8AA" stroke="#231F1D" stroke-width="1.8"/>' +
+            '<circle cx="24" cy="84" r="13" fill="#FAF6EE" stroke="#231F1D" stroke-width="1.7"/>' +
+            '<path d="M19 84 L23 88 L30 79" fill="none" stroke="#3E6E58" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+          '</g>' +
+        '</svg>';
+      }
+    },
+    {
+      id: "ed_wise_counselor",
+      name: "مرشد نفسي / معلّم يقظ",
+      role: "الدعم التربوي · رسم تحريري",
+      category: "editorial",
+      svg: function () {
+        return '<svg viewBox="0 0 210 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="مرشد نفسي أو معلم يقظ">' +
+          '<ellipse cx="105" cy="264" rx="70" ry="8.5" fill="#231F1D" opacity="0.13"/>' +
+          '<g transform="translate(105, 122)">' +
+            '<path d="M-68 136 C-62 66, -36 44, 0 44 C36 44, 62 66, 68 136 Z" fill="#4A6B88" stroke="#231F1D" stroke-width="2.1"/>' +
+            '<polygon points="-20,44 0,84 20,44" fill="#FAF6EE" stroke="#231F1D" stroke-width="1.8"/>' +
+            '<polygon points="-5,54 5,54 7,86 0,94 -7,86" fill="#BA4F45"/>' +
+            '<rect x="-12" y="24" width="24" height="24" rx="8" fill="#E2AB8B"/>' +
+            '<ellipse cx="0" cy="-10" rx="33" ry="37" fill="#EFC0A2" stroke="#231F1D" stroke-width="2.1"/>' +
+            '<path d="M-34 -18 C-36 -52, 36 -52, 34 -18 C24 -32, -24 -32, -34 -18 Z" fill="#2E2925"/>' +
+            '<rect x="-24" y="-18" width="19" height="14" rx="5" fill="#FAF6EE" fill-opacity="0.45" stroke="#231F1D" stroke-width="2"/>' +
+            '<rect x="5" y="-18" width="19" height="14" rx="5" fill="#FAF6EE" fill-opacity="0.45" stroke="#231F1D" stroke-width="2"/>' +
+            '<line x1="-5" y1="-11" x2="5" y2="-11" stroke="#231F1D" stroke-width="2"/>' +
+            '<circle cx="-14" cy="-11" r="2.4" fill="#231F1D"/>' +
+            '<circle cx="14" cy="-11" r="2.4" fill="#231F1D"/>' +
+            '<path d="M-9 10 Q0 16 9 10" fill="none" stroke="#231F1D" stroke-width="2" stroke-linecap="round"/>' +
+            '<rect x="14" y="74" width="42" height="52" rx="6" fill="#FAF6EE" stroke="#231F1D" stroke-width="1.9"/>' +
+            '<line x1="22" y1="88" x2="48" y2="88" stroke="#BA4F45" stroke-width="2.4" stroke-linecap="round"/>' +
+            '<line x1="22" y1="100" x2="46" y2="100" stroke="#4A6B88" stroke-width="2" stroke-linecap="round"/>' +
+            '<circle cx="14" cy="98" r="9" fill="#EFC0A2" stroke="#231F1D" stroke-width="1.8"/>' +
+          '</g>' +
+        '</svg>';
+      }
+    },
+    {
+      id: "ed_confident_speaker",
+      name: "متحدّث / باحث واثق",
+      role: "عرض وتوعية · رسم تحريري",
+      category: "editorial",
+      svg: function () {
+        return '<svg viewBox="0 0 210 275" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="متحدث واثق">' +
+          '<ellipse cx="105" cy="259" rx="68" ry="8" fill="#231F1D" opacity="0.13"/>' +
+          '<g transform="translate(105, 120)">' +
+            '<path d="M-64 134 C-58 66, -34 44, 0 44 C34 44, 58 66, 64 134 Z" fill="#C45B52" stroke="#231F1D" stroke-width="2.1"/>' +
+            '<path d="M-16 44 L0 68 L16 44" fill="#FFFDF9" stroke="#231F1D" stroke-width="1.8"/>' +
+            '<rect x="-11" y="24" width="22" height="24" rx="8" fill="#E6AE8C"/>' +
+            '<ellipse cx="0" cy="-9" rx="33" ry="36" fill="#F4C3A3" stroke="#231F1D" stroke-width="2.1"/>' +
+            '<path d="M-34 -14 C-38 -50, 12 -56, 34 -28 C38 -18, 35 -10, 33 -6 C24 -24, -14 -28, -34 -14 Z" fill="#1E2329"/>' +
+            '<circle cx="-12" cy="-9" r="2.7" fill="#231F1D"/>' +
+            '<circle cx="12" cy="-9" r="2.7" fill="#231F1D"/>' +
+            '<path d="M-17 -18 Q-11 -22 -6 -18" fill="none" stroke="#231F1D" stroke-width="2.1" stroke-linecap="round"/>' +
+            '<path d="M6 -18 Q11 -22 17 -18" fill="none" stroke="#231F1D" stroke-width="2.1" stroke-linecap="round"/>' +
+            '<path d="M-9 9 Q0 17 10 9" fill="none" stroke="#231F1D" stroke-width="2.1" stroke-linecap="round"/>' +
+            '<path d="M52 66 L86 32 C92 26, 98 34, 92 41 L58 88 Z" fill="#C45B52" stroke="#231F1D" stroke-width="2" stroke-linejoin="round"/>' +
+            '<circle cx="89" cy="34" r="9.5" fill="#F4C3A3" stroke="#231F1D" stroke-width="1.8"/>' +
+          '</g>' +
+        '</svg>';
+      }
+    },
+    {
+      id: "ed_peer_chorus",
+      name: "مجموعة أقران (دائرة الشهود)",
+      role: "حضور الأقران · رسم تحريري",
+      category: "editorial",
+      svg: function () {
+        return '<svg viewBox="0 0 260 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="مجموعة أقران شهود">' +
+          '<ellipse cx="130" cy="194" rx="106" ry="9" fill="#231F1D" opacity="0.12"/>' +
+          '<g transform="translate(72, 102) scale(0.84)">' +
+            '<path d="M-46 102 C-42 56, -24 42, 0 42 C24 42, 42 56, 46 102 Z" fill="#9DA5AD" stroke="#231F1D" stroke-width="2"/>' +
+            '<circle cx="0" cy="10" r="24" fill="#EFC0A2" stroke="#231F1D" stroke-width="2"/>' +
+            '<path d="M-24 6 C-24 -20, 24 -20, 24 6 Z" fill="#2B2623"/>' +
+            '<circle cx="-8" cy="12" r="2.2" fill="#231F1D"/><circle cx="8" cy="12" r="2.2" fill="#231F1D"/>' +
+          '</g>' +
+          '<g transform="translate(188, 102) scale(0.84)">' +
+            '<path d="M-46 102 C-42 56, -24 42, 0 42 C24 42, 42 56, 46 102 Z" fill="#AE7424" stroke="#231F1D" stroke-width="2"/>' +
+            '<circle cx="0" cy="10" r="24" fill="#F5C6A8" stroke="#231F1D" stroke-width="2"/>' +
+            '<path d="M-24 6 C-24 -20, 24 -20, 24 6 Z" fill="#1E2329"/>' +
+            '<circle cx="-8" cy="12" r="2.2" fill="#231F1D"/><circle cx="8" cy="12" r="2.2" fill="#231F1D"/>' +
+          '</g>' +
+          '<g transform="translate(130, 88)">' +
+            '<path d="M-50 104 C-45 56, -26 42, 0 42 C26 42, 45 56, 50 104 Z" fill="#63798F" stroke="#231F1D" stroke-width="2.1"/>' +
+            '<circle cx="0" cy="8" r="26" fill="#F4C5A6" stroke="#231F1D" stroke-width="2.1"/>' +
+            '<path d="M-26 4 C-26 -24, 26 -24, 26 4 C16 -8, -16 -8, -26 4 Z" fill="#231F1D"/>' +
+            '<circle cx="-9" cy="10" r="2.5" fill="#231F1D"/><circle cx="9" cy="10" r="2.5" fill="#231F1D"/>' +
+            '<line x1="-6" y1="22" x2="6" y2="22" stroke="#231F1D" stroke-width="2" stroke-linecap="round"/>' +
+          '</g>' +
+        '</svg>';
+      }
+    }
+  ];
+
+  var CAST_CHARACTERS = [
+    { id: "sami", name: "سامي", role: "الطالب المستهدف", coat: "#0284c7", hair: "#1e293b", skin: "#f4c5a6", defaultMood: "sad" },
+    { id: "rami", name: "رامي", role: "المتنمّر القائد", coat: "#be123c", hair: "#0f172a", skin: "#e8b494", defaultMood: "smirk" },
+    { id: "ziad", name: "زياد", role: "المتنمّر-الضحية", coat: "#7e22ce", hair: "#1e1b4b", skin: "#eab898", defaultMood: "angry" },
+    { id: "layla", name: "ليلى", role: "المدافعة الشجاعة", coat: "#059669", hair: "#271c19", skin: "#f6c8aa", defaultMood: "empowered" },
+    { id: "karim", name: "كريم", role: "المساعد التابع", coat: "#d97706", hair: "#292524", skin: "#ecc0a1", defaultMood: "smirk" },
+    { id: "nada", name: "ندى", role: "المعزّزة بالضحك", coat: "#db2777", hair: "#3b1d2e", skin: "#f5c7a9", defaultMood: "laugh" },
+    { id: "tariq", name: "طارق", role: "المتفرّج الصامت", coat: "#475569", hair: "#1e293b", skin: "#efc0a2", defaultMood: "anxious" },
+    { id: "mona", name: "أ. منى", role: "المعلّمة اليقظة", coat: "#0d9488", hair: "#1c1917", skin: "#f3c3a4", defaultMood: "calm" },
+    { id: "adel", name: "د. عادل", role: "المرشد النفسي", coat: "#2563eb", hair: "#334155", skin: "#e7b494", defaultMood: "empathetic" },
+    { id: "sara", name: "سارة", role: "شاهدة الفضاء الرقمي", coat: "#6366f1", hair: "#1e1b4b", skin: "#f6c9ac", defaultMood: "shocked" }
+  ];
+
+  var CAST_MOODS = [
+    { id: "calm", label: "هادئ" },
+    { id: "sad", label: "حزين" },
+    { id: "anxious", label: "قلق" },
+    { id: "angry", label: "غاضب" },
+    { id: "smirk", label: "ساخر" },
+    { id: "shocked", label: "مصدوم" },
+    { id: "empowered", label: "متمكّن" },
+    { id: "empathetic", label: "متعاطف" }
+  ];
+
+  function renderFallbackCastSvg(charDef, mood) {
+    var m = mood || charDef.defaultMood || "calm";
+    var mouth = '<path d="M-8 12 Q0 17 8 12" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round"/>';
+    var brows = '<path d="M-17 -15 Q-11 -18 -6 -15 M6 -15 Q11 -18 17 -15" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round"/>';
+    if (m === "sad" || m === "anxious") {
+      mouth = '<path d="M-8 16 Q0 10 8 16" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round"/>';
+      brows = '<path d="M-18 -13 Q-11 -19 -6 -15 M6 -15 Q11 -19 18 -13" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round"/>';
+    } else if (m === "angry") {
+      mouth = '<line x1="-8" y1="14" x2="8" y2="14" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round"/>';
+      brows = '<path d="M-18 -19 L-6 -13 M18 -19 L6 -13" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/>';
+    } else if (m === "smirk") {
+      mouth = '<path d="M-7 14 Q3 17 10 9" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round"/>';
+    } else if (m === "shocked") {
+      mouth = '<ellipse cx="0" cy="14" rx="5" ry="6.5" fill="#1e293b"/>';
+    }
+    return '<svg viewBox="0 0 180 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + escHtml(charDef.name) + '">' +
+      '<ellipse cx="90" cy="236" rx="58" ry="8" fill="#0f172a" opacity="0.18"/>' +
+      '<g transform="translate(90, 106)">' +
+        '<path d="M-54 122 C-48 58, -28 40, 0 40 C28 40, 48 58, 54 122 Z" fill="' + charDef.coat + '" stroke="#1e293b" stroke-width="2.2"/>' +
+        '<path d="M-15 40 L0 62 L15 40" fill="#f8fafc" stroke="#1e293b" stroke-width="1.7"/>' +
+        '<rect x="-10" y="22" width="20" height="22" rx="8" fill="' + charDef.skin + '"/>' +
+        '<ellipse cx="0" cy="-8" rx="31" ry="34" fill="' + charDef.skin + '" stroke="#1e293b" stroke-width="2.1"/>' +
+        '<path d="M-32 -12 C-34 -46, 34 -46, 32 -12 C20 -26, -20 -26, -32 -12 Z" fill="' + charDef.hair + '"/>' +
+        brows +
+        '<circle cx="-11" cy="-6" r="2.8" fill="#1e293b"/>' +
+        '<circle cx="11" cy="-6" r="2.8" fill="#1e293b"/>' +
+        mouth +
+      '</g>' +
+    '</svg>';
+  }
+
+  function renderGalleryCharacterMarkup(item) {
+    var charId = item.charId;
+    var mood = item.mood || "calm";
+    var uid = item.id || genUid("char");
+
+    if (item.customDataUrl) {
+      return '<img class="ps-custom-char-img" src="' + escHtml(item.customDataUrl) + '" alt="' + escHtml(item.label || "شخصية مضافة") + '" draggable="false" />';
+    }
+
+    for (var i = 0; i < EDITORIAL_CHARACTERS.length; i++) {
+      if (EDITORIAL_CHARACTERS[i].id === charId) {
+        return EDITORIAL_CHARACTERS[i].svg(uid);
+      }
+    }
+
+    if (global.StoryArt && typeof global.StoryArt.renderCharacter === "function") {
+      try {
+        var html = global.StoryArt.renderCharacter(charId, mood, { showLabel: false });
+        if (html) return html;
+      } catch (e) {}
+    }
+
+    for (var c = 0; c < CAST_CHARACTERS.length; c++) {
+      if (CAST_CHARACTERS[c].id === charId) {
+        return renderFallbackCastSvg(CAST_CHARACTERS[c], mood);
+      }
+    }
+
+    return EDITORIAL_CHARACTERS[0].svg(uid);
+  }
+
+  /* ==========================================================================
+     3. FRAME STYLE PRESETS & COLOR SWATCHES
+     ========================================================================== */
+  var FRAME_STYLES = [
+    { id: "editorial", label: "إطار تحريري مؤطّر", defaultText: "اكتب الفكرة أو الفقرة الجديدة هنا..." },
+    { id: "bubble", label: "فقاعة حوار وكلام", defaultText: "اكتب حوار الشخصية هنا..." },
+    { id: "pill", label: "شريط كبسولة بارز", defaultText: "عنوان فرعي أو عنصر محوري جديد" },
+    { id: "cinema", label: "بطاقة زجاجية داكنة", defaultText: "ملاحظة تحليلية أو شاهد علمي..." }
+  ];
+
+  var FRAME_THEMES = [
+    { id: "warm", label: "كريمي دافئ", bg: "#EFE6DF", fg: "#231F1D", border: "#3A322C" },
+    { id: "ivory", label: "ورقي ناصع", bg: "#FFFDF9", fg: "#1E1B18", border: "#BA4F45" },
+    { id: "blush", label: "ترابي قرميدي", bg: "#F9E5E1", fg: "#2B1816", border: "#BA4F45" },
+    { id: "sage", label: "أخضر حكيم", bg: "#E4EFE9", fg: "#162920", border: "#3E6E58" },
+    { id: "sky", label: "أزرق هادئ", bg: "#E3EEF7", fg: "#132638", border: "#3B6990" },
+    { id: "obsidian", label: "داكن سينمائي", bg: "rgba(18, 22, 31, 0.92)", fg: "#F8FAFC", border: "rgba(148, 163, 184, 0.45)" }
+  ];
+
+  var TEXT_COLORS = [
+    { id: "default", label: "افتراضي", val: "" },
+    { id: "ink", label: "حبر داكن", val: "#231F1D" },
+    { id: "light", label: "أبيض ناصع", val: "#F8FAFC" },
+    { id: "terracotta", label: "قرميدي", val: "#BA4F45" },
+    { id: "ocean", label: "أزرق", val: "#0284C7" },
+    { id: "sage", label: "أخضر", val: "#2F6F55" },
+    { id: "amber", label: "كهرماني", val: "#D97706" }
+  ];
+
+  /* ==========================================================================
+     4. SCOPED RESPONSIVE CSS (MOBILE & DESKTOP, RTL ARABIC)
+     ========================================================================== */
+  function injectStudioStyles() {
+    if (document.getElementById("ps-studio-styles")) return;
+    var style = document.createElement("style");
+    style.id = "ps-studio-styles";
+    style.textContent = [
+      "/* Presentation Studio Scoped Styles */",
+      ":root {",
+      "  --ps-accent: #BA4F45;",
+      "  --ps-accent-2: #2563EB;",
+      "  --ps-ok: #15803D;",
+      "  --ps-danger: #DC2626;",
+      "  --ps-surface: rgba(25, 23, 22, 0.94);",
+      "  --ps-surface-2: rgba(42, 38, 36, 0.96);",
+      "  --ps-border: rgba(255, 255, 255, 0.16);",
+      "  --ps-text: #FAF6EE;",
+      "  --ps-muted: #C9BFB5;",
+      "  --ps-font: 'IBM Plex Sans Arabic', 'Alexandria', system-ui, -apple-system, sans-serif;",
+      "}",
+      "#ps-studio-root, #ps-studio-root * {",
+      "  box-sizing: border-box;",
+      "  font-family: var(--ps-font);",
+      "}",
+      "#ps-entry-pill {",
+      "  position: fixed;",
+      "  z-index: 9990;",
+      "  left: max(12px, env(safe-area-inset-left, 12px));",
+      "  bottom: calc(env(safe-area-inset-bottom, 0px) + 82px);",
+      "  display: inline-flex;",
+      "  align-items: center;",
+      "  gap: 7px;",
+      "  min-height: 42px;",
+      "  padding: 0 15px;",
+      "  border-radius: 999px;",
+      "  border: 1.5px solid rgba(255, 255, 255, 0.24);",
+      "  background: rgba(26, 23, 21, 0.88);",
+      "  backdrop-filter: blur(14px);",
+      "  -webkit-backdrop-filter: blur(14px);",
+      "  color: #FAF6EE;",
+      "  font-size: 13.5px;",
+      "  font-weight: 700;",
+      "  direction: rtl;",
+      "  cursor: pointer;",
+      "  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);",
+      "  transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;",
+      "}",
+      "#ps-entry-pill:hover {",
+      "  transform: translateY(-2px);",
+      "  background: #BA4F45;",
+      "  border-color: #FAF6EE;",
+      "}",
+      "#ps-entry-pill[hidden] { display: none !important; }",
+      "html[data-ps-baked-local='true'] a[href='../'], html[data-ps-baked-local='true'] a[href='../../'], html[data-ps-baked-local='true'] #portalBackLink, html[data-ps-baked-local='true'] .v1-hub-back, html[data-ps-baked-local='true'] .v3-hub-back, html[data-ps-baked-local='true'] .v3-hub-back + .capsule-divider { display: none !important; }",
+      ".ps-saved-dot {",
+      "  width: 8px; height: 8px; border-radius: 50%;",
+      "  background: #22C55E;",
+      "  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.28);",
+      "}",
+      "#ps-toolbar-dock {",
+      "  position: fixed;",
+      "  z-index: 9992;",
+      "  left: 50%;",
+      "  top: calc(env(safe-area-inset-top, 0px) + 62px);",
+      "  transform: translateX(-50%);",
+      "  max-width: calc(100vw - 16px);",
+      "  display: flex;",
+      "  align-items: center;",
+      "  justify-content: center;",
+      "  flex-wrap: wrap;",
+      "  gap: 5px;",
+      "  padding: 6px 10px;",
+      "  border-radius: 22px;",
+      "  background: var(--ps-surface);",
+      "  backdrop-filter: blur(18px);",
+      "  -webkit-backdrop-filter: blur(18px);",
+      "  border: 1.5px solid var(--ps-border);",
+      "  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38);",
+      "  direction: rtl;",
+      "}",
+      "#ps-toolbar-dock[hidden] { display: none !important; }",
+      ".ps-dock-btn {",
+      "  display: inline-flex;",
+      "  align-items: center;",
+      "  justify-content: center;",
+      "  gap: 5px;",
+      "  min-height: 36px;",
+      "  padding: 0 11px;",
+      "  border-radius: 999px;",
+      "  border: 1px solid rgba(255, 255, 255, 0.12);",
+      "  background: rgba(255, 255, 255, 0.07);",
+      "  color: var(--ps-text);",
+      "  font-size: 12.5px;",
+      "  font-weight: 700;",
+      "  white-space: nowrap;",
+      "  cursor: pointer;",
+      "  flex-shrink: 0;",
+      "  transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.14s ease;",
+      "}",
+      ".ps-dock-btn:hover:not(:disabled) {",
+      "  background: rgba(255, 255, 255, 0.16);",
+      "  border-color: rgba(255, 255, 255, 0.32);",
+      "}",
+      ".ps-dock-btn:disabled { opacity: 0.38; cursor: not-allowed; }",
+      ".ps-dock-btn.is-accent { background: #BA4F45; border-color: #E07A70; color: #FFFDF9; }",
+      ".ps-dock-btn.is-accent:hover { background: #A33F36; }",
+      ".ps-dock-btn.is-save { background: #15803D; border-color: #4ADE80; color: #FFFFFF; }",
+      ".ps-dock-btn.is-save:hover { background: #166534; }",
+      ".ps-dock-btn.is-download { background: #2563EB; border-color: #93C5FD; color: #FFFFFF; }",
+      ".ps-dock-btn.is-download:hover { background: #1D4ED8; }",
+      ".ps-dock-btn.is-done { background: #FAF6EE; color: #1E1B18; border-color: #FAF6EE; }",
+      ".ps-dock-sep { width: 1px; height: 22px; background: rgba(255,255,255,0.16); flex-shrink: 0; margin: 0 2px; }",
+      "#ps-edit-banner {",
+      "  position: fixed;",
+      "  z-index: 9989;",
+      "  left: 50%;",
+      "  top: 114px;",
+      "  transform: translateX(-50%);",
+      "  padding: 4px 13px;",
+      "  border-radius: 999px;",
+      "  background: rgba(186, 79, 69, 0.92);",
+      "  color: #FFFDF9;",
+      "  font-size: 11.5px;",
+      "  font-weight: 600;",
+      "  direction: rtl;",
+      "  white-space: nowrap;",
+      "  max-width: calc(100vw - 24px);",
+      "  overflow: hidden;",
+      "  text-overflow: ellipsis;",
+      "  pointer-events: none;",
+      "  box-shadow: 0 4px 14px rgba(0,0,0,0.2);",
+      "}",
+      "#ps-edit-banner[hidden] { display: none !important; }",
+      "html[data-ps-edit='true'] [data-ps-editable] {",
+      "  pointer-events: auto !important;",
+      "  cursor: text !important;",
+      "  outline: 1.5px dashed rgba(186, 79, 69, 0.42);",
+      "  outline-offset: 3px;",
+      "  border-radius: 6px;",
+      "  transition: outline-color 0.15s ease, background-color 0.15s ease;",
+      "}",
+      "html[data-ps-edit='true'] [data-ps-editable]:hover {",
+      "  outline-color: #BA4F45;",
+      "  background-color: rgba(186, 79, 69, 0.07);",
+      "}",
+      "html[data-ps-edit='true'] [data-ps-editable]:focus {",
+      "  outline: 2px solid #2563EB !important;",
+      "  outline-offset: 4px;",
+      "  background-color: rgba(37, 99, 235, 0.08);",
+      "}",
+      "html[data-ps-edit='true'] svg [data-ps-svg-text] {",
+      "  pointer-events: auto !important;",
+      "  cursor: pointer !important;",
+      "}",
+      "html[data-ps-edit='true'] svg [data-ps-svg-text]:hover {",
+      "  filter: drop-shadow(0 0 3px rgba(186, 79, 69, 0.85));",
+      "}",
+      "html[data-ps-edit='true'] [data-ps-native-char],",
+      "html[data-ps-edit='true'] .cinema-actor[data-present='true'],",
+      "html[data-ps-edit='true'] .motion-actor[data-present='true'] {",
+      "  pointer-events: auto !important;",
+      "  cursor: grab !important;",
+      "}",
+      "html[data-ps-edit='true'] [data-ps-native-char]:hover {",
+      "  filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.55));",
+      "}",
+      ".ps-stage-overlay {",
+      "  position: absolute;",
+      "  inset: 0;",
+      "  z-index: 45;",
+      "  pointer-events: none;",
+      "  overflow: visible;",
+      "}",
+      ".editorial-sheet { position: relative; }",
+      ".ps-frame-item {",
+      "  --ps-eff-w: min(var(--ps-w, 270px), calc(100% - 16px));",
+      "  position: absolute;",
+      "  left: clamp(calc(var(--ps-eff-w) / 2 + 8px), var(--ps-x, 50%), calc(100% - var(--ps-eff-w) / 2 - 8px));",
+      "  top: clamp(26px, var(--ps-y, 50%), calc(100% - 26px));",
+      "  width: var(--ps-eff-w);",
+      "  transform: translate(-50%, -50%) scale(var(--ps-scale, 1));",
+      "  transform-origin: center center;",
+      "  pointer-events: auto;",
+      "  direction: rtl;",
+      "  text-align: right;",
+      "  z-index: var(--ps-z, 46);",
+      "  background: var(--ps-bg, #EFE6DF);",
+      "  color: var(--ps-fg, #231F1D);",
+      "  border: 1.8px solid var(--ps-bd, #3A322C);",
+      "  border-radius: 16px;",
+      "  padding: 12px 15px;",
+      "  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.16);",
+      "  transition: box-shadow 0.15s ease;",
+      "}",
+      ".ps-frame-item[data-fstyle='pill'] {",
+      "  border-radius: 999px;",
+      "  padding: 9px 20px;",
+      "  text-align: center;",
+      "  font-weight: 700;",
+      "}",
+      ".ps-frame-item[data-fstyle='cinema'] {",
+      "  backdrop-filter: blur(14px);",
+      "  -webkit-backdrop-filter: blur(14px);",
+      "  border-radius: 14px;",
+      "}",
+      ".ps-frame-item[data-fstyle='bubble'] {",
+      "  border-radius: 20px;",
+      "}",
+      ".ps-frame-item[data-fstyle='bubble'][data-tail='bottom-right']::after,",
+      ".ps-frame-item[data-fstyle='bubble'][data-tail='bottom-left']::after {",
+      "  content: '';",
+      "  position: absolute;",
+      "  bottom: -11px;",
+      "  width: 18px;",
+      "  height: 18px;",
+      "  background: var(--ps-bg, #EFE6DF);",
+      "  border-bottom: 1.8px solid var(--ps-bd, #3A322C);",
+      "  border-right: 1.8px solid var(--ps-bd, #3A322C);",
+      "  transform: rotate(45deg);",
+      "}",
+      ".ps-frame-item[data-fstyle='bubble'][data-tail='bottom-right']::after { right: 26px; }",
+      ".ps-frame-item[data-fstyle='bubble'][data-tail='bottom-left']::after { left: 26px; }",
+      ".ps-frame-drag-bar {",
+      "  display: none;",
+      "  align-items: center;",
+      "  justify-content: space-between;",
+      "  gap: 6px;",
+      "  margin: -6px -8px 6px;",
+      "  padding: 3px 8px;",
+      "  border-radius: 9px;",
+      "  background: rgba(0, 0, 0, 0.08);",
+      "  font-size: 10.5px;",
+      "  font-weight: 700;",
+      "  cursor: grab;",
+      "  touch-action: none;",
+      "  user-select: none;",
+      "}",
+      "html[data-ps-edit='true'] .ps-frame-drag-bar { display: flex; }",
+      ".ps-frame-body {",
+      "  min-height: 1.5em;",
+      "  font-size: var(--ps-fs, 15px);",
+      "  line-height: 1.65;",
+      "  word-break: break-word;",
+      "  white-space: pre-wrap;",
+      "  outline: none;",
+      "}",
+      "html[data-ps-edit='true'] .ps-frame-item.is-selected {",
+      "  box-shadow: 0 0 0 2.5px #2563EB, 0 12px 28px rgba(0, 0, 0, 0.22);",
+      "}",
+      ".ps-char-item {",
+      "  position: absolute;",
+      "  left: var(--ps-x, 50%);",
+      "  top: var(--ps-y, 55%);",
+      "  width: clamp(78px, 18vw, 156px);",
+      "  transform: translate(-50%, -50%) scale(var(--ps-sx, 1), var(--ps-sy, 1));",
+      "  transform-origin: center center;",
+      "  pointer-events: none;",
+      "  z-index: var(--ps-z, 47);",
+      "  user-select: none;",
+      "}",
+      "html[data-ps-edit='true'] .ps-char-item {",
+      "  pointer-events: auto !important;",
+      "  cursor: grab;",
+      "  touch-action: none;",
+      "}",
+      ".ps-char-item svg, .ps-char-item .ps-custom-char-img {",
+      "  width: 100%;",
+      "  height: auto;",
+      "  display: block;",
+      "  pointer-events: none;",
+      "}",
+      "html[data-ps-edit='true'] .ps-char-item.is-selected {",
+      "  outline: 2.5px solid #2563EB;",
+      "  outline-offset: 4px;",
+      "  border-radius: 12px;",
+      "}",
+      "#ps-selection-ring {",
+      "  position: fixed;",
+      "  z-index: 9988;",
+      "  border: 2px solid #2563EB;",
+      "  border-radius: 10px;",
+      "  background: rgba(37, 99, 235, 0.05);",
+      "  pointer-events: none;",
+      "}",
+      "#ps-selection-ring[hidden] { display: none !important; }",
+      "#ps-resize-knob {",
+      "  position: absolute;",
+      "  left: -9px;",
+      "  bottom: -9px;",
+      "  width: 20px;",
+      "  height: 20px;",
+      "  border-radius: 50%;",
+      "  background: #2563EB;",
+      "  border: 2.5px solid #FFFFFF;",
+      "  box-shadow: 0 2px 8px rgba(0,0,0,0.35);",
+      "  pointer-events: auto;",
+      "  cursor: nwse-resize;",
+      "  touch-action: none;",
+      "}",
+      "#ps-context-bar {",
+      "  position: fixed;",
+      "  z-index: 9993;",
+      "  left: 50%;",
+      "  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);",
+      "  transform: translateX(-50%);",
+      "  max-width: calc(100vw - 16px);",
+      "  display: flex;",
+      "  align-items: center;",
+      "  flex-wrap: wrap;",
+      "  justify-content: center;",
+      "  gap: 5px;",
+      "  padding: 7px 11px;",
+      "  border-radius: 16px;",
+      "  background: var(--ps-surface);",
+      "  backdrop-filter: blur(16px);",
+      "  -webkit-backdrop-filter: blur(16px);",
+      "  border: 1.5px solid rgba(255, 255, 255, 0.2);",
+      "  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);",
+      "  color: var(--ps-text);",
+      "  direction: rtl;",
+      "}",
+      "#ps-context-bar[hidden] { display: none !important; }",
+      ".ps-ctx-btn {",
+      "  min-height: 32px;",
+      "  padding: 0 9px;",
+      "  border-radius: 9px;",
+      "  border: 1px solid rgba(255,255,255,0.16);",
+      "  background: rgba(255,255,255,0.09);",
+      "  color: #FAF6EE;",
+      "  font-size: 12px;",
+      "  font-weight: 700;",
+      "  cursor: pointer;",
+      "}",
+      ".ps-ctx-btn:hover { background: rgba(255,255,255,0.2); }",
+      ".ps-ctx-btn.is-danger { background: rgba(220, 38, 38, 0.25); border-color: #F87171; color: #FCA5A5; }",
+      ".ps-ctx-btn.is-danger:hover { background: #DC2626; color: #FFFFFF; }",
+      ".ps-ctx-slider {",
+      "  width: 88px;",
+      "  accent-color: #3B82F6;",
+      "  cursor: pointer;",
+      "}",
+      ".ps-swatch-dot {",
+      "  width: 22px; height: 22px; border-radius: 50%;",
+      "  border: 2px solid rgba(255,255,255,0.6);",
+      "  cursor: pointer; padding: 0;",
+      "}",
+      ".ps-modal-backdrop {",
+      "  position: fixed;",
+      "  inset: 0;",
+      "  z-index: 9995;",
+      "  background: rgba(10, 10, 12, 0.62);",
+      "  backdrop-filter: blur(6px);",
+      "  -webkit-backdrop-filter: blur(6px);",
+      "  display: flex;",
+      "  align-items: center;",
+      "  justify-content: center;",
+      "  padding: 16px;",
+      "  direction: rtl;",
+      "}",
+      ".ps-modal-backdrop[hidden] { display: none !important; }",
+      ".ps-sheet {",
+      "  width: min(680px, 100%);",
+      "  max-height: min(82dvh, 720px);",
+      "  background: #FAF6EE;",
+      "  color: #231F1D;",
+      "  border-radius: 22px;",
+      "  border: 1.5px solid #3A322C;",
+      "  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.42);",
+      "  display: flex;",
+      "  flex-direction: column;",
+      "  overflow: hidden;",
+      "}",
+      ".ps-sheet-head {",
+      "  display: flex;",
+      "  align-items: center;",
+      "  justify-content: space-between;",
+      "  gap: 10px;",
+      "  padding: 14px 18px;",
+      "  background: #EFE6DF;",
+      "  border-bottom: 1px solid rgba(58, 50, 44, 0.2);",
+      "}",
+      ".ps-sheet-title { margin: 0; font-size: 16px; font-weight: 800; color: #231F1D; }",
+      ".ps-close-btn {",
+      "  width: 34px; height: 34px; border-radius: 50%;",
+      "  border: 1.5px solid #3A322C; background: #FFFDF9;",
+      "  color: #231F1D; font-size: 16px; font-weight: 800; cursor: pointer;",
+      "}",
+      ".ps-sheet-tabs {",
+      "  display: flex; gap: 6px; flex-wrap: wrap;",
+      "  padding: 10px 16px; background: #F5EFE6;",
+      "  border-bottom: 1px solid rgba(58, 50, 44, 0.14);",
+      "}",
+      ".ps-tab-btn {",
+      "  min-height: 34px; padding: 0 13px; border-radius: 999px;",
+      "  border: 1.5px solid rgba(58, 50, 44, 0.35);",
+      "  background: #FFFDF9; color: #3A322C; font-size: 12.5px; font-weight: 700; cursor: pointer;",
+      "}",
+      ".ps-tab-btn.is-active { background: #231F1D; color: #FAF6EE; border-color: #231F1D; }",
+      ".ps-sheet-body {",
+      "  padding: 15px 16px 20px;",
+      "  overflow-y: auto;",
+      "  flex: 1;",
+      "}",
+      ".ps-char-grid {",
+      "  display: grid;",
+      "  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));",
+      "  gap: 10px;",
+      "}",
+      ".ps-char-card {",
+      "  display: flex; flex-direction: column; align-items: center; gap: 6px;",
+      "  padding: 10px 8px; border-radius: 16px;",
+      "  border: 1.5px solid rgba(58, 50, 44, 0.28);",
+      "  background: #FFFDF9; cursor: pointer;",
+      "  transition: transform 0.15s ease, border-color 0.15s ease;",
+      "}",
+      ".ps-char-card:hover { transform: translateY(-2px); border-color: #BA4F45; background: #FDF6F3; }",
+      ".ps-char-thumb { width: 78px; height: 96px; display: flex; align-items: center; justify-content: center; overflow: hidden; }",
+      ".ps-char-thumb svg { max-width: 100%; max-height: 100%; width: auto; height: auto; }",
+      ".ps-char-name { font-size: 12.5px; font-weight: 800; color: #231F1D; text-align: center; }",
+      ".ps-char-role { font-size: 10.5px; color: #6E6258; text-align: center; }",
+      ".ps-pages-top-actions {",
+      "  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;",
+      "}",
+      ".ps-action-pill {",
+      "  min-height: 38px; padding: 0 14px; border-radius: 999px;",
+      "  border: 1.5px solid #231F1D; background: #231F1D; color: #FAF6EE;",
+      "  font-size: 12.5px; font-weight: 700; cursor: pointer;",
+      "}",
+      ".ps-action-pill.is-secondary { background: #FFFDF9; color: #231F1D; }",
+      ".ps-pages-list { display: flex; flex-direction: column; gap: 8px; }",
+      ".ps-page-row {",
+      "  display: flex; align-items: center; gap: 8px;",
+      "  padding: 9px 11px; border-radius: 14px;",
+      "  border: 1.5px solid rgba(58, 50, 44, 0.25);",
+      "  background: #FFFDF9;",
+      "}",
+      ".ps-page-row.is-current { border-color: #BA4F45; background: #FDF3F1; }",
+      ".ps-page-row.is-dragging { opacity: 0.45; border-style: dashed; }",
+      ".ps-page-row.is-drop-target { border-color: #2563EB; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.28); }",
+      ".ps-drag-grip {",
+      "  cursor: grab; font-size: 16px; color: #786C61; padding: 4px 6px; user-select: none; touch-action: none;",
+      "}",
+      ".ps-page-num {",
+      "  min-width: 30px; height: 28px; border-radius: 8px;",
+      "  background: #EFE6DF; color: #231F1D; font-size: 12px; font-weight: 800;",
+      "  display: inline-grid; place-items: center; flex-shrink: 0;",
+      "}",
+      ".ps-page-info { flex: 1; min-width: 0; cursor: pointer; }",
+      ".ps-page-title { font-size: 13px; font-weight: 700; color: #231F1D; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }",
+      ".ps-page-sub { font-size: 11px; color: #756A60; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }",
+      ".ps-page-ctrls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }",
+      ".ps-mini-btn {",
+      "  min-width: 32px; height: 32px; padding: 0 7px; border-radius: 8px;",
+      "  border: 1px solid rgba(58, 50, 44, 0.28); background: #FAF6EE;",
+      "  color: #231F1D; font-size: 12px; font-weight: 700; cursor: pointer;",
+      "}",
+      ".ps-mini-btn:hover:not(:disabled) { background: #EFE6DF; }",
+      ".ps-mini-btn:disabled { opacity: 0.32; cursor: not-allowed; }",
+      ".ps-mini-btn.is-del { color: #B91C1C; border-color: rgba(185, 28, 28, 0.35); }",
+      ".ps-mini-btn.is-del:hover:not(:disabled) { background: #FEE2E2; }",
+      ".ps-frame-presets-grid {",
+      "  display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px;",
+      "}",
+      ".ps-preset-card {",
+      "  padding: 14px 12px; border-radius: 15px; border: 1.5px solid #3A322C;",
+      "  background: #FFFDF9; text-align: right; cursor: pointer;",
+      "}",
+      ".ps-preset-card:hover { background: #EFE6DF; border-color: #BA4F45; }",
+      "#ps-toast {",
+      "  position: fixed; z-index: 9999; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 64px); transform: translateX(-50%);",
+      "  padding: 9px 18px; border-radius: 999px; background: #15803D; color: #FFFFFF;",
+      "  font-size: 13px; font-weight: 700; direction: rtl; box-shadow: 0 10px 26px rgba(0,0,0,0.3);",
+      "  max-width: calc(100vw - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+      "  pointer-events: none; transition: opacity 0.2s ease;",
+      "}",
+      "html[data-ps-edit='true'] #ps-toast { top: calc(env(safe-area-inset-top, 0px) + 148px); }",
+      "#ps-toast[hidden] { display: none !important; }",
+      "@media (max-width: 820px) {",
+      "  #ps-entry-pill {",
+      "    bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);",
+      "    left: max(12px, env(safe-area-inset-left, 12px));",
+      "    min-height: 34px;",
+      "    padding: 0 12px;",
+      "    font-size: 11.5px;",
+      "  }",
+      "  html:has(#app-shell) #ps-entry-pill,",
+      "  html:has(#cinema-app) #ps-entry-pill {",
+      "    bottom: auto;",
+      "    top: calc(env(safe-area-inset-top, 0px) + 54px);",
+      "    left: max(10px, env(safe-area-inset-left, 10px));",
+      "  }",
+      "  html:has(.motion-topbar) #ps-entry-pill {",
+      "    bottom: calc(env(safe-area-inset-bottom, 0px) + 186px);",
+      "    left: max(10px, env(safe-area-inset-left, 10px));",
+      "  }",
+      "  html:has(#spatial-stage) #ps-entry-pill {",
+      "    bottom: auto;",
+      "    left: auto;",
+      "    top: calc(env(safe-area-inset-top, 0px) + 58px);",
+      "    right: max(12px, env(safe-area-inset-right, 12px));",
+      "  }",
+      "  body[data-view='scroll'] #ps-entry-pill {",
+      "    bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);",
+      "  }",
+      "  #ps-resize-knob {",
+      "    width: 26px;",
+      "    height: 26px;",
+      "    left: -12px;",
+      "    bottom: -12px;",
+      "  }",
+      "  #ps-toolbar-dock {",
+      "    top: auto;",
+      "    bottom: calc(env(safe-area-inset-bottom, 0px) + 68px);",
+      "    width: calc(100vw - 12px);",
+      "    border-radius: 18px;",
+      "    padding: 6px 6px;",
+      "    gap: 4px;",
+      "  }",
+      "  .ps-dock-btn {",
+      "    min-height: 32px;",
+      "    padding: 0 9px;",
+      "    font-size: 11.5px;",
+      "  }",
+      "  .ps-dock-sep { display: none; }",
+      "  #ps-edit-banner {",
+      "    top: calc(env(safe-area-inset-top, 0px) + 56px);",
+      "    font-size: 10.5px;",
+      "  }",
+      "  #ps-toast { top: calc(env(safe-area-inset-top, 0px) + 56px); font-size: 12px; }",
+      "  html[data-ps-edit='true'] #ps-toast { top: calc(env(safe-area-inset-top, 0px) + 88px); }",
+      "  #ps-context-bar {",
+      "    bottom: calc(env(safe-area-inset-bottom, 0px) + 148px);",
+      "    width: calc(100vw - 12px);",
+      "    padding: 6px 8px;",
+      "  }",
+      "  .ps-modal-backdrop { align-items: flex-end; padding: 0; }",
+      "  .ps-sheet {",
+      "    width: 100%;",
+      "    max-height: 82dvh;",
+      "    border-radius: 22px 22px 0 0;",
+      "    border-bottom: none;",
+      "    padding-bottom: env(safe-area-inset-bottom, 0px);",
+      "  }",
+      "  .ps-char-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }",
+      "}"
+    ].join("\n");
+    document.head.appendChild(style);
+  }
+
+  /* ==========================================================================
+     5. DETERMINISTIC ELEMENT PATHS FOR NATIVE TEXT & CHARACTER OVERRIDES
+     ========================================================================== */
+  var EPHEMERAL_ID_RE = /^(sa|sp|ging|s\d+|uid|clip|grad|ps_|ref-card-|slide-sheet-)/i;
+  var UNIQUE_SLIDE_CLASSES = [
+    "sheet-title",
+    "sheet-subtitle",
+    "sheet-kicker",
+    "lexicon-quote",
+    "art-caption",
+    "caption-text",
+    "source-chip"
+  ];
+
+  function getStableLandmarksSelector(el, stopRoot) {
+    if (!el || el.nodeType !== 1) return "";
+    if (el.id && !EPHEMERAL_ID_RE.test(el.id)) {
+      return "#" + CSS.escape(el.id);
+    }
+    if (stopRoot && el.classList) {
+      for (var u = 0; u < UNIQUE_SLIDE_CLASSES.length; u++) {
+        var uCls = UNIQUE_SLIDE_CLASSES[u];
+        if (el.classList.contains(uCls) && stopRoot.querySelectorAll("." + uCls).length === 1) {
+          return "." + uCls;
+        }
+      }
+    }
+    var parts = [];
+    var cur = el;
+    while (cur && cur !== stopRoot && cur.nodeType === 1) {
+      if (cur.id && !EPHEMERAL_ID_RE.test(cur.id)) {
+        parts.unshift("#" + CSS.escape(cur.id));
+        break;
+      }
+      var tag = cur.tagName.toLowerCase();
+      var nth = 1;
+      var sib = cur.previousElementSibling;
+      while (sib) {
+        if (sib.tagName === cur.tagName && !sib.hasAttribute("data-ps-overlay-layer") && !sib.hasAttribute("data-ps-ignore")) {
+          nth += 1;
+        }
+        sib = sib.previousElementSibling;
+      }
+      parts.unshift(tag + ":nth-of-type(" + nth + ")");
+      cur = cur.parentElement;
+    }
+    return parts.join(" > ");
+  }
+
+  function extractEditableText(el) {
+    if (!el) return "";
+    var out = "";
+    function walk(node) {
+      var children = node.childNodes;
+      for (var i = 0; i < children.length; i++) {
+        var ch = children[i];
+        if (ch.nodeType === 3) {
+          out += ch.nodeValue || "";
+        } else if (ch.nodeType === 1) {
+          var tg = ch.tagName.toUpperCase();
+          if (tg === "BR") {
+            out += "\n";
+          } else {
+            var isBlock = (tg === "DIV" || tg === "P" || tg === "LI");
+            if (isBlock && out.length > 0 && out.charAt(out.length - 1) !== "\n") {
+              out += "\n";
+            }
+            walk(ch);
+          }
+        }
+      }
+    }
+    walk(el);
+    return out.replace(/\u200B/g, "").replace(/\r\n/g, "\n");
+  }
+
+  function insertNewlineAtCaret(editableEl) {
+    try {
+      var sel = global.getSelection ? global.getSelection() : null;
+      if (!sel || !sel.rangeCount || !editableEl.contains(sel.anchorNode)) {
+        editableEl.textContent = (editableEl.textContent || "").replace(/\u200B/g, "") + "\n";
+        return;
+      }
+      var range = sel.getRangeAt(0);
+      range.deleteContents();
+      var atEnd = false;
+      var probe = range.cloneRange();
+      probe.selectNodeContents(editableEl);
+      probe.setStart(range.endContainer, range.endOffset);
+      if ((probe.toString() || "").replace(/\u200B/g, "").length === 0) {
+        atEnd = true;
+      }
+      var nlNode = document.createTextNode(atEnd ? "\n\u200B" : "\n");
+      range.insertNode(nlNode);
+      range.setStart(nlNode, 1);
+      range.setEnd(nlNode, 1);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) {
+      editableEl.textContent = (editableEl.textContent || "").replace(/\u200B/g, "") + "\n";
+    }
+  }
+
+  /* ==========================================================================
+     6. MULTI-ENGINE ADAPTERS (EDITORIAL, STORY, CINEMA, MOTION, ATLAS, GENERIC)
+     ========================================================================== */
+  function detectEngineAdapter(onAfterRenderCallback) {
+    /* 1. Edition 5: Editorial Notebook (window.EDITORIAL_SLIDES) */
+    if (Array.isArray(global.EDITORIAL_SLIDES) && document.getElementById("slidesContainer")) {
+      var slidesRef = global.EDITORIAL_SLIDES;
+      var slidesContainer = document.getElementById("slidesContainer");
+      var baseSlidesMap = {};
+      var initialOrder = [];
+
+      function snapshotEditorialOrig(s) {
+        if (s && !s._psOrig) {
+          s._psOrig = {
+            title: s.title,
+            subtitle: s.subtitle,
+            kicker: s.kicker,
+            lead: s.lead,
+            artCaption: s.artCaption
+          };
+        }
+      }
+
+      for (var i = 0; i < slidesRef.length; i++) {
+        var uid = "page-" + i;
+        slidesRef[i]._psUid = uid;
+        snapshotEditorialOrig(slidesRef[i]);
+        if (Array.isArray(slidesRef[i].pills)) {
+          for (var p = 0; p < slidesRef[i].pills.length; p++) {
+            var pill = slidesRef[i].pills[p];
+            if (typeof pill.target === "number" && !pill._psTargetUid) {
+              pill._psTargetUid = "page-" + (pill.target - 1);
+            }
+          }
+        }
+        baseSlidesMap[uid] = slidesRef[i];
+        initialOrder.push(uid);
+      }
+
+      if (global.EditorialArt && typeof global.EditorialArt.render === "function" && !global.EditorialArt._psWrapped) {
+        var origArtRender = global.EditorialArt.render;
+        global.EditorialArt.render = function (sceneKey) {
+          if (sceneKey === "blankStudio") {
+            return '<svg viewBox="0 0 500 370" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="لوحة فارغة مخصّصة">' +
+              '<rect x="24" y="24" width="452" height="322" rx="24" fill="#EFE6DF" fill-opacity="0.45" stroke="#3A322C" stroke-width="1.3" stroke-dasharray="7 6"/>' +
+            '</svg>';
+          }
+          return origArtRender.apply(this, arguments);
+        };
+        global.EditorialArt._psWrapped = true;
+      }
+
+      var obsPaused = false;
+      var observer = new MutationObserver(function (mutations) {
+        if (obsPaused) return;
+        var hasSlideMutation = false;
+        for (var m = 0; m < mutations.length; m++) {
+          var t = mutations[m].target;
+          if (!t || t.nodeType !== 1) continue;
+          if (t.closest && t.closest("[data-ps-overlay-layer], [data-ps-editable], [data-ps-svg-wrap], [data-ps-ignore]")) {
+            continue;
+          }
+          if (t === slidesContainer || (t.classList && t.classList.contains("editorial-sheet")) || t.id === "inlineRefsGrid") {
+            hasSlideMutation = true;
+            break;
+          }
+        }
+        if (!hasSlideMutation) return;
+        obsPaused = true;
+        try {
+          onAfterRenderCallback();
+        } finally {
+          obsPaused = false;
+        }
+      });
+      observer.observe(slidesContainer, { childList: true, subtree: true });
+      slidesContainer.addEventListener("click", function (ev) {
+        if (obsPaused) return;
+        if (ev.target && ev.target.closest && ev.target.closest("[data-widget]")) {
+          obsPaused = true;
+          try {
+            onAfterRenderCallback();
+          } finally {
+            obsPaused = false;
+          }
+        }
+      });
+
+      return {
+        kind: "editorial",
+        initialOrder: initialOrder,
+        getCurrentIndex: function () {
+          var sheet = slidesContainer.querySelector(".editorial-sheet[data-slide-idx]");
+          if (!sheet) return 0;
+          if (document.body.getAttribute("data-view") === "scroll") {
+            var allSheets = slidesContainer.querySelectorAll(".editorial-sheet[data-slide-idx]");
+            for (var s = 0; s < allSheets.length; s++) {
+              var r = allSheets[s].getBoundingClientRect();
+              if (r.bottom > 120) return parseInt(allSheets[s].getAttribute("data-slide-idx"), 10) || 0;
+            }
+          }
+          return clamp(parseInt(sheet.getAttribute("data-slide-idx"), 10) || 0, 0, Math.max(0, slidesRef.length - 1));
+        },
+        getCurrentPageUid: function () {
+          var idx = this.getCurrentIndex();
+          return slidesRef[idx] ? slidesRef[idx]._psUid : initialOrder[0];
+        },
+        getPages: function () {
+          return slidesRef.map(function (s, idx) {
+            return {
+              uid: s._psUid || ("page-" + idx),
+              index: idx,
+              title: toWesternDigits(s.title || ("صفحة " + (idx + 1))),
+              subtitle: toWesternDigits(s.axisTitle || s.subtitle || s.lead || "")
+            };
+          });
+        },
+        goTo: function (idx) {
+          var target = clamp(idx, 0, Math.max(0, slidesRef.length - 1));
+          var tmpBtn = document.createElement("button");
+          tmpBtn.type = "button";
+          tmpBtn.setAttribute("data-jump", String(target));
+          tmpBtn.setAttribute("data-ps-ignore", "1");
+          tmpBtn.style.display = "none";
+          obsPaused = true;
+          slidesContainer.appendChild(tmpBtn);
+          tmpBtn.click();
+          if (tmpBtn.parentNode) tmpBtn.parentNode.removeChild(tmpBtn);
+          obsPaused = false;
+          onAfterRenderCallback();
+        },
+        rebuildPages: function (orderUids, customPagesMap, targetActiveIdx) {
+          var nextSlides = [];
+          for (var i = 0; i < orderUids.length; i++) {
+            var u = orderUids[i];
+            if (baseSlidesMap[u]) {
+              nextSlides.push(baseSlidesMap[u]);
+            } else if (customPagesMap && customPagesMap[u]) {
+              var desc = customPagesMap[u];
+              var built = null;
+              if (desc.kind === "clone" && baseSlidesMap[desc.sourceUid]) {
+                built = deepClone(baseSlidesMap[desc.sourceUid]);
+                delete built._psOrig;
+              } else {
+                built = {
+                  id: 900 + i,
+                  axisNum: 1,
+                  axisTitle: desc.axisTitle || "صفحة مخصّصة",
+                  layout: "wide",
+                  kicker: desc.kicker || "إضافة مخصّصة",
+                  title: desc.title || "عنوان الصفحة الجديدة",
+                  subtitle: desc.subtitle || "يمكنك تعديل هذا النص أو إضافة إطارات وشخصيات جديدة بحرية.",
+                  lead: desc.lead || "اكتب المحتوى التحليلي أو الحواري الجديد هنا مباشرةً.",
+                  art: "blankStudio",
+                  artCaption: ""
+                };
+              }
+              built._psUid = u;
+              snapshotEditorialOrig(built);
+              baseSlidesMap[u] = built;
+              nextSlides.push(built);
+            }
+          }
+          if (!nextSlides.length && initialOrder.length) {
+            nextSlides.push(baseSlidesMap[initialOrder[0]]);
+          }
+          slidesRef.length = 0;
+          for (var k = 0; k < nextSlides.length; k++) {
+            slidesRef.push(nextSlides[k]);
+          }
+          var uidToIdx = {};
+          for (var m = 0; m < slidesRef.length; m++) {
+            uidToIdx[slidesRef[m]._psUid] = m;
+          }
+          for (var n = 0; n < slidesRef.length; n++) {
+            var pills = slidesRef[n].pills;
+            if (Array.isArray(pills)) {
+              for (var q = 0; q < pills.length; q++) {
+                var tUid = pills[q]._psTargetUid;
+                if (tUid && typeof uidToIdx[tUid] === "number") {
+                  pills[q].target = uidToIdx[tUid] + 1;
+                }
+              }
+            }
+          }
+          this.goTo(typeof targetActiveIdx === "number" ? targetActiveIdx : this.getCurrentIndex());
+        },
+        getStageTargets: function () {
+          var sheets = slidesContainer.querySelectorAll(".editorial-sheet[data-slide-idx]");
+          var list = [];
+          for (var i = 0; i < sheets.length; i++) {
+            var sIdx = parseInt(sheets[i].getAttribute("data-slide-idx"), 10) || 0;
+            var sObj = slidesRef[sIdx];
+            if (sObj) {
+              list.push({
+                pageUid: sObj._psUid,
+                textRoot: sheets[i],
+                overlayHost: sheets[i],
+                charRoot: sheets[i]
+              });
+            }
+          }
+          return list;
+        },
+        syncModelText: function (pageUid, el, plainText) {
+          var sObj = baseSlidesMap[pageUid];
+          if (!sObj || !el) return;
+          if (el.classList.contains("sheet-title")) sObj.title = plainText;
+          else if (el.classList.contains("sheet-subtitle")) sObj.subtitle = plainText;
+          else if (el.classList.contains("editorial-lead") && !sObj.widget) sObj.lead = plainText;
+          else if (el.classList.contains("art-caption")) sObj.artCaption = plainText;
+        },
+        hydrateModelTexts: function (pagesMap) {
+          var map = pagesMap || {};
+          for (var uid in baseSlidesMap) {
+            if (!Object.prototype.hasOwnProperty.call(baseSlidesMap, uid)) continue;
+            var sObj = baseSlidesMap[uid];
+            if (sObj._psOrig) {
+              sObj.title = sObj._psOrig.title;
+              sObj.subtitle = sObj._psOrig.subtitle;
+              sObj.kicker = sObj._psOrig.kicker;
+              sObj.lead = sObj._psOrig.lead;
+              sObj.artCaption = sObj._psOrig.artCaption;
+            }
+            var tMap = map[uid] && map[uid].textOverrides ? map[uid].textOverrides : null;
+            if (!tMap) continue;
+            var titleOv = tMap[".sheet-title"] ||
+              tMap["div:nth-of-type(1) > div:nth-of-type(1) > h1:nth-of-type(1)"] ||
+              tMap["div:nth-of-type(1) > div:nth-of-type(1) > h2:nth-of-type(1)"];
+            if (titleOv && typeof titleOv.text === "string" && !titleOv.hidden) sObj.title = titleOv.text;
+            var subOv = tMap[".sheet-subtitle"];
+            if (subOv && typeof subOv.text === "string" && !subOv.hidden) sObj.subtitle = subOv.text;
+            var capOv = tMap[".art-caption"];
+            if (capOv && typeof capOv.text === "string" && !capOv.hidden) sObj.artCaption = capOv.text;
+          }
+        }
+      };
+    }
+
+    /* 2. Edition 3 (`motion`), Edition 2 (`cinema`), Edition 1 (`story`) */
+    var beatEngine = null;
+    var engineKind = "";
+    if (global.MotionEngine && document.getElementById("motion-app")) {
+      beatEngine = global.MotionEngine;
+      engineKind = "motion";
+    } else if (global.CinemaEngine && document.getElementById("cinema-app")) {
+      beatEngine = global.CinemaEngine;
+      engineKind = "cinema";
+    } else if (global.StoryEngine && document.getElementById("app-shell")) {
+      beatEngine = global.StoryEngine;
+      engineKind = "story";
+    }
+
+    if (beatEngine && Array.isArray(beatEngine.beats)) {
+      var baseBeatsMap = {};
+      var beatInitialOrder = [];
+      function snapshotBeatOrig(bt) {
+        if (bt && !bt._psOrig) {
+          bt._psOrig = { caption: bt.caption };
+        }
+      }
+      for (var b = 0; b < beatEngine.beats.length; b++) {
+        var bUid = "page-" + b;
+        beatEngine.beats[b]._psUid = bUid;
+        snapshotBeatOrig(beatEngine.beats[b]);
+        baseBeatsMap[bUid] = beatEngine.beats[b];
+        beatInitialOrder.push(bUid);
+      }
+
+      var hookMethod = engineKind === "story" ? "_renderBeat" : "_applyBeat";
+      if (typeof beatEngine[hookMethod] === "function" && !beatEngine._psHooked) {
+        var origBeatFn = beatEngine[hookMethod];
+        beatEngine[hookMethod] = function () {
+          var res = origBeatFn.apply(this, arguments);
+          onAfterRenderCallback();
+          return res;
+        };
+        beatEngine._psHooked = true;
+      }
+
+      var castHookMethod = engineKind === "cinema" ? "_applyActorsMap" : (engineKind === "motion" ? "_applyCastMap" : "");
+      if (castHookMethod && typeof beatEngine[castHookMethod] === "function" && !beatEngine._psCastHooked) {
+        var origCastFn = beatEngine[castHookMethod];
+        beatEngine[castHookMethod] = function () {
+          var res = origCastFn.apply(this, arguments);
+          onAfterRenderCallback();
+          return res;
+        };
+        beatEngine._psCastHooked = true;
+      }
+
+      function syncStoryNavigationUI() {
+        if (engineKind !== "story" || typeof beatEngine._buildChaptersIndex !== "function") return;
+        beatEngine.chapters = beatEngine._buildChaptersIndex();
+        var total = beatEngine.beats.length;
+        var els = beatEngine._els || {};
+        if (els.progressTrack) {
+          var oldTicks = els.progressTrack.querySelectorAll(".chapter-tick");
+          for (var t = 0; t < oldTicks.length; t++) {
+            if (oldTicks[t].parentNode) oldTicks[t].parentNode.removeChild(oldTicks[t]);
+          }
+          for (var c = 0; c < beatEngine.chapters.length; c++) {
+            var ch = beatEngine.chapters[c];
+            var pct = Math.max(0, Math.min(100, ch.startPct)).toFixed(2);
+            var tickBtn = document.createElement("button");
+            tickBtn.type = "button";
+            tickBtn.className = "chapter-tick";
+            tickBtn.setAttribute("data-chapter-tick", String(ch.chapter));
+            tickBtn.setAttribute("data-goto-index", String(ch.firstIndex));
+            tickBtn.style.insetInlineStart = pct + "%";
+            tickBtn.title = (ch.chapter + 1) + ". " + ch.title;
+            tickBtn.setAttribute("aria-label", tickBtn.title);
+            els.progressTrack.appendChild(tickBtn);
+          }
+          els.chapterTicks = Array.prototype.slice.call(els.progressTrack.querySelectorAll(".chapter-tick"));
+        }
+        if (els.jumpDrawer) {
+          var badge = els.jumpDrawer.querySelector(".se-modal-badge");
+          if (badge) badge.textContent = beatEngine.chapters.length + " فصول • " + total + " لقطة";
+          var chBar = els.jumpDrawer.querySelector(".se-chapter-bar");
+          if (chBar) {
+            chBar.innerHTML = beatEngine.chapters.map(function (ch) {
+              return '<button type="button" class="se-ch-chip" data-drawer-chapter="' + ch.chapter + '" data-goto-index="' + ch.firstIndex + '">' +
+                (ch.chapter + 1) + '. ' + escHtml(ch.title) + '</button>';
+            }).join("");
+            els.drawerChips = Array.prototype.slice.call(chBar.querySelectorAll("[data-drawer-chapter]"));
+          }
+          var drBody = els.jumpDrawer.querySelector(".se-drawer-body");
+          if (drBody) {
+            drBody.innerHTML = beatEngine.chapters.map(function (ch) {
+              var firstNum = ch.items[0] ? (ch.items[0].beat.num || ch.firstIndex + 1) : (ch.firstIndex + 1);
+              var lastNum = ch.items[ch.items.length - 1] ? (ch.items[ch.items.length - 1].beat.num || ch.lastIndex + 1) : (ch.lastIndex + 1);
+              var tiles = ch.items.map(function (entry) {
+                var bt = entry.beat;
+                var bNum = bt.num || (entry.index + 1);
+                var snippet = toWesternDigits(bt.caption || "");
+                return '<button type="button" class="se-beat-tile' + (entry.index === beatEngine.currentIndex ? ' is-current' : '') + '" data-goto-index="' + entry.index + '">' +
+                  '<span class="se-beat-num">' + bNum + '</span>' +
+                  '<span class="se-beat-snippet">' + escHtml(snippet) + '</span>' +
+                '</button>';
+              }).join("");
+              return '<div class="se-ch-section" data-ch-group="' + ch.chapter + '">' +
+                '<div class="se-ch-heading"><span>الفصل ' + (ch.chapter + 1) + ': ' + escHtml(ch.title) + '</span>' +
+                '<span class="se-ch-range">اللقطات ' + firstNum + ' – ' + lastNum + '</span></div>' +
+                '<div class="se-beats-grid">' + tiles + '</div></div>';
+            }).join("");
+            els.beatTiles = Array.prototype.slice.call(drBody.querySelectorAll(".se-beat-tile"));
+          }
+        }
+        if (els.counter) {
+          els.counter.textContent = (clamp(beatEngine.currentIndex || 0, 0, Math.max(0, total - 1)) + 1) + " / " + total;
+        }
+      }
+
+      return {
+        kind: engineKind,
+        initialOrder: beatInitialOrder,
+        getCurrentIndex: function () {
+          return clamp(beatEngine.currentIndex || 0, 0, Math.max(0, beatEngine.beats.length - 1));
+        },
+        getCurrentPageUid: function () {
+          var idx = this.getCurrentIndex();
+          return beatEngine.beats[idx] ? beatEngine.beats[idx]._psUid : beatInitialOrder[0];
+        },
+        getPages: function () {
+          return beatEngine.beats.map(function (bt, idx) {
+            var cap = bt.caption || bt.title || bt.sceneTitle || ("صفحة " + (idx + 1));
+            var sub = bt.chapterTitle || bt.sceneTitle || bt.actTitle || "";
+            return {
+              uid: bt._psUid || ("page-" + idx),
+              index: idx,
+              title: toWesternDigits(cap).slice(0, 68),
+              subtitle: toWesternDigits(sub)
+            };
+          });
+        },
+        goTo: function (idx) {
+          var target = clamp(idx, 0, Math.max(0, beatEngine.beats.length - 1));
+          beatEngine.currentIndex = target;
+          if (engineKind === "story") {
+            beatEngine._renderBeat(target, null, "init", true);
+          } else {
+            beatEngine._applyBeat(target, null, true);
+          }
+        },
+        rebuildPages: function (orderUids, customPagesMap, targetActiveIdx) {
+          var nextBeats = [];
+          for (var i = 0; i < orderUids.length; i++) {
+            var u = orderUids[i];
+            if (baseBeatsMap[u]) {
+              nextBeats.push(baseBeatsMap[u]);
+            } else if (customPagesMap && customPagesMap[u]) {
+              var desc = customPagesMap[u];
+              var templateBeat = baseBeatsMap[desc.sourceUid] || baseBeatsMap[beatInitialOrder[0]];
+              var cloned = Object.assign({}, templateBeat);
+              delete cloned._psOrig;
+              if (desc.kind !== "clone") {
+                cloned.caption = desc.title || "صفحة مخصّصة جديدة — اضغط هنا لتعديل الكلام المكتوب";
+                cloned.actors = {};
+                cloned.cast = {};
+                if (engineKind === "story") {
+                  cloned.visualHtml = function () {
+                    return '<div class="sp-custom-blank" style="min-height:220px;display:flex;align-items:center;justify-content:center;"></div>';
+                  };
+                }
+              }
+              cloned._psUid = u;
+              snapshotBeatOrig(cloned);
+              baseBeatsMap[u] = cloned;
+              nextBeats.push(cloned);
+            }
+          }
+          if (!nextBeats.length && beatInitialOrder.length) {
+            nextBeats.push(baseBeatsMap[beatInitialOrder[0]]);
+          }
+          for (var j = 0; j < nextBeats.length; j++) {
+            nextBeats[j].num = j + 1;
+          }
+          beatEngine.beats = nextBeats;
+
+          if (engineKind === "story") {
+            syncStoryNavigationUI();
+          } else if (engineKind === "cinema") {
+            if (typeof beatEngine._buildScenesIndex === "function") beatEngine._buildScenesIndex();
+            if (typeof beatEngine._renderTimelineMarkers === "function") beatEngine._renderTimelineMarkers();
+            if (typeof beatEngine._renderDrawerContents === "function") beatEngine._renderDrawerContents();
+          } else if (engineKind === "motion") {
+            if (typeof beatEngine._indexActs === "function") beatEngine._indexActs();
+            if (typeof beatEngine._renderScrubberNodes === "function") beatEngine._renderScrubberNodes();
+            if (typeof beatEngine._renderMatrixDrawer === "function") beatEngine._renderMatrixDrawer();
+          }
+
+          var safeIdx = clamp(typeof targetActiveIdx === "number" ? targetActiveIdx : beatEngine.currentIndex, 0, nextBeats.length - 1);
+          this.goTo(safeIdx);
+        },
+        getStageTargets: function () {
+          var pageUid = this.getCurrentPageUid();
+          if (engineKind === "story") {
+            var shell = document.getElementById("app-shell");
+            var viewport = document.getElementById("stage-viewport") || shell;
+            return [{ pageUid: pageUid, textRoot: shell, overlayHost: viewport, charRoot: viewport }];
+          }
+          if (engineKind === "cinema") {
+            var app = document.getElementById("cinema-app");
+            var frame = document.getElementById("stage-frame") || app;
+            return [{ pageUid: pageUid, textRoot: app, overlayHost: frame, charRoot: frame }];
+          }
+          var mApp = document.getElementById("motion-app");
+          var touchSurf = document.getElementById("stage-touch-surface") || mApp;
+          return [{ pageUid: pageUid, textRoot: mApp, overlayHost: touchSurf, charRoot: touchSurf }];
+        },
+        syncModelText: function (pageUid, el, plainText) {
+          var bt = baseBeatsMap[pageUid];
+          if (!bt || !el) return;
+          if (el.classList.contains("caption-text") || el.id === "subtitle-text") {
+            bt.caption = plainText;
+            if (engineKind === "story") syncStoryNavigationUI();
+            else if (engineKind === "cinema" && typeof beatEngine._renderDrawerContents === "function") beatEngine._renderDrawerContents();
+            else if (engineKind === "motion" && typeof beatEngine._renderMatrixDrawer === "function") beatEngine._renderMatrixDrawer();
+          }
+        },
+        hydrateModelTexts: function (pagesMap) {
+          var map = pagesMap || {};
+          for (var uid in baseBeatsMap) {
+            if (!Object.prototype.hasOwnProperty.call(baseBeatsMap, uid)) continue;
+            var bt = baseBeatsMap[uid];
+            if (bt._psOrig) bt.caption = bt._psOrig.caption;
+            var tMap = map[uid] && map[uid].textOverrides ? map[uid].textOverrides : null;
+            if (!tMap) continue;
+            var capOv = tMap[".caption-text"] || tMap["#subtitle-text"];
+            if (capOv && typeof capOv.text === "string" && !capOv.hidden) {
+              bt.caption = capOv.text;
+            }
+          }
+          if (engineKind === "story") syncStoryNavigationUI();
+          else if (engineKind === "cinema" && typeof beatEngine._renderDrawerContents === "function") beatEngine._renderDrawerContents();
+          else if (engineKind === "motion" && typeof beatEngine._renderMatrixDrawer === "function") beatEngine._renderMatrixDrawer();
+        }
+      };
+    }
+
+    /* 3. Edition 4: Spatial Atlas (window.AtharAtlas) */
+    if (global.AtharAtlas && Array.isArray(global.AtharAtlas.beats) && document.getElementById("atlas-root")) {
+      var atlas = global.AtharAtlas;
+      var baseAtlasMap = {};
+      var atlasInitialOrder = [];
+      function snapshotAtlasOrig(bt) {
+        if (bt && !bt._psOrig) {
+          bt._psOrig = { sentence: bt.sentence, focus: bt.focus, epigraph: bt.epigraph };
+        }
+      }
+      for (var a = 0; a < atlas.beats.length; a++) {
+        var aUid = "page-" + a;
+        atlas.beats[a]._psUid = aUid;
+        snapshotAtlasOrig(atlas.beats[a]);
+        baseAtlasMap[aUid] = atlas.beats[a];
+        atlasInitialOrder.push(aUid);
+      }
+
+      if (typeof atlas.goTo === "function" && !atlas._psHooked) {
+        var origAtlasGoTo = atlas.goTo;
+        atlas.goTo = function () {
+          var res = origAtlasGoTo.apply(this, arguments);
+          onAfterRenderCallback();
+          return res;
+        };
+        atlas._psHooked = true;
+      }
+
+      return {
+        kind: "atlas",
+        initialOrder: atlasInitialOrder,
+        getCurrentIndex: function () {
+          return clamp(atlas.idx || 0, 0, Math.max(0, atlas.beats.length - 1));
+        },
+        getCurrentPageUid: function () {
+          var idx = this.getCurrentIndex();
+          return atlas.beats[idx] ? atlas.beats[idx]._psUid : atlasInitialOrder[0];
+        },
+        getPages: function () {
+          return atlas.beats.map(function (bt, idx) {
+            return {
+              uid: bt._psUid || ("page-" + idx),
+              index: idx,
+              title: toWesternDigits(bt.sentence || ("صفحة " + (idx + 1))).slice(0, 68),
+              subtitle: toWesternDigits(bt.epigraph || "")
+            };
+          });
+        },
+        goTo: function (idx) {
+          atlas.goTo(clamp(idx, 0, Math.max(0, atlas.beats.length - 1)), true);
+        },
+        rebuildPages: function (orderUids, customPagesMap, targetActiveIdx) {
+          var nextBeats = [];
+          for (var i = 0; i < orderUids.length; i++) {
+            var u = orderUids[i];
+            if (baseAtlasMap[u]) {
+              nextBeats.push(baseAtlasMap[u]);
+            } else if (customPagesMap && customPagesMap[u]) {
+              var desc = customPagesMap[u];
+              var src = baseAtlasMap[desc.sourceUid] || baseAtlasMap[atlasInitialOrder[0]];
+              var clone = deepClone(src);
+              delete clone._psOrig;
+              if (desc.kind !== "clone") {
+                clone.sentence = desc.title || "صفحة مخصّصة جديدة — اضغط هنا لتعديل الكلام المكتوب";
+                clone.focus = "";
+                clone.lab = null;
+              }
+              clone._psUid = u;
+              snapshotAtlasOrig(clone);
+              baseAtlasMap[u] = clone;
+              nextBeats.push(clone);
+            }
+          }
+          if (!nextBeats.length && atlasInitialOrder.length) {
+            nextBeats.push(baseAtlasMap[atlasInitialOrder[0]]);
+          }
+          atlas.beats = nextBeats;
+          atlas.movFirstBeat = {};
+          atlas.movBeatsList = {};
+          for (var k = 0; k < nextBeats.length; k++) {
+            var mv = nextBeats[k].mov || 1;
+            if (atlas.movFirstBeat[mv] === undefined) atlas.movFirstBeat[mv] = k;
+            if (!atlas.movBeatsList[mv]) atlas.movBeatsList[mv] = [];
+            nextBeats[k]._intraIdx = atlas.movBeatsList[mv].length;
+            atlas.movBeatsList[mv].push(k);
+          }
+          if (typeof atlas._buildSpineAndPips === "function") atlas._buildSpineAndPips();
+          if (typeof atlas._buildMatrixModal === "function") atlas._buildMatrixModal();
+          this.goTo(typeof targetActiveIdx === "number" ? targetActiveIdx : atlas.idx);
+        },
+        getStageTargets: function () {
+          var root = document.getElementById("atlas-root");
+          var stage = document.getElementById("spatial-stage") || root;
+          return [{ pageUid: this.getCurrentPageUid(), textRoot: root, overlayHost: stage, charRoot: stage }];
+        },
+        syncModelText: function (pageUid, el, plainText) {
+          var bt = baseAtlasMap[pageUid];
+          if (!bt || !el) return;
+          if (el.id === "ed-sentence") {
+            bt.sentence = plainText;
+            bt.focus = "";
+            if (typeof atlas._buildMatrixModal === "function") atlas._buildMatrixModal();
+          } else if (el.id === "ed-epigraph" || (el.parentElement && el.parentElement.id === "ed-epigraph")) {
+            bt.epigraph = plainText;
+          }
+        },
+        hydrateModelTexts: function (pagesMap) {
+          var map = pagesMap || {};
+          for (var uid in baseAtlasMap) {
+            if (!Object.prototype.hasOwnProperty.call(baseAtlasMap, uid)) continue;
+            var bt = baseAtlasMap[uid];
+            if (bt._psOrig) {
+              bt.sentence = bt._psOrig.sentence;
+              bt.focus = bt._psOrig.focus;
+              bt.epigraph = bt._psOrig.epigraph;
+            }
+            var tMap = map[uid] && map[uid].textOverrides ? map[uid].textOverrides : null;
+            if (!tMap) continue;
+            var sOv = tMap["#ed-sentence"];
+            if (sOv && typeof sOv.text === "string" && !sOv.hidden) {
+              bt.sentence = sOv.text;
+              bt.focus = "";
+            }
+            var eOv = tMap["#ed-epigraph > span:nth-of-type(1)"] || tMap["#ed-epigraph"];
+            if (eOv && typeof eOv.text === "string" && !eOv.hidden) {
+              bt.epigraph = eOv.text;
+            }
+          }
+          if (typeof atlas._buildMatrixModal === "function") atlas._buildMatrixModal();
+        }
+      };
+    }
+
+    /* 4. Generic Static HTML Deck Fallback (.slide / section / article / body) */
+    var genericNodes = Array.prototype.slice.call(
+      document.querySelectorAll(".slide, [data-slide], main > section, main > article")
+    );
+    if (!genericNodes.length) genericNodes = [document.body];
+    var genMap = {};
+    var genOrder = [];
+    var genCurIdx = 0;
+    for (var g = 0; g < genericNodes.length; g++) {
+      var gUid = "page-" + g;
+      genericNodes[g].setAttribute("data-ps-page-uid", gUid);
+      genMap[gUid] = genericNodes[g];
+      genOrder.push(gUid);
+    }
+
+    return {
+      kind: "generic",
+      initialOrder: genOrder,
+      getCurrentIndex: function () { return genCurIdx; },
+      getCurrentPageUid: function () { return genericNodes[genCurIdx] ? genericNodes[genCurIdx].getAttribute("data-ps-page-uid") : genOrder[0]; },
+      getPages: function () {
+        return genericNodes.map(function (el, idx) {
+          var h = el.querySelector("h1, h2, h3, p");
+          return {
+            uid: el.getAttribute("data-ps-page-uid") || ("page-" + idx),
+            index: idx,
+            title: toWesternDigits(h ? h.textContent.trim() : ("صفحة " + (idx + 1))).slice(0, 60),
+            subtitle: ""
+          };
+        });
+      },
+      goTo: function (idx) {
+        genCurIdx = clamp(idx, 0, Math.max(0, genericNodes.length - 1));
+        if (genericNodes[genCurIdx] && genericNodes[genCurIdx] !== document.body) {
+          genericNodes[genCurIdx].scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        onAfterRenderCallback();
+      },
+      rebuildPages: function (orderUids, customPagesMap, targetActiveIdx) {
+        var parent = genericNodes[0] ? genericNodes[0].parentNode : null;
+        if (!parent || genericNodes[0] === document.body) return;
+        var nextList = [];
+        for (var i = 0; i < orderUids.length; i++) {
+          var u = orderUids[i];
+          if (genMap[u]) {
+            parent.appendChild(genMap[u]);
+            nextList.push(genMap[u]);
+          } else if (customPagesMap && customPagesMap[u]) {
+            var src = genMap[customPagesMap[u].sourceUid] || genericNodes[0];
+            var clone = src.cloneNode(true);
+            clone.setAttribute("data-ps-page-uid", u);
+            parent.appendChild(clone);
+            genMap[u] = clone;
+            nextList.push(clone);
+          }
+        }
+        for (var key in genMap) {
+          if (nextList.indexOf(genMap[key]) === -1 && genMap[key].parentNode) {
+            genMap[key].parentNode.removeChild(genMap[key]);
+          }
+        }
+        genericNodes = nextList;
+        this.goTo(typeof targetActiveIdx === "number" ? targetActiveIdx : genCurIdx);
+      },
+      getStageTargets: function () {
+        return genericNodes.map(function (el) {
+          if (getComputedStyle(el).position === "static") el.style.position = "relative";
+          return {
+            pageUid: el.getAttribute("data-ps-page-uid"),
+            textRoot: el,
+            overlayHost: el,
+            charRoot: el
+          };
+        });
+      },
+      syncModelText: function () {},
+      hydrateModelTexts: function () {}
+    };
+  }
+
+  /* ==========================================================================
+     7. PERSISTENCE ENGINE (LOCALSTORAGE + INDEXEDDB LARGE ASSET SUPPORT)
+     ========================================================================== */
+  function getStorageKey(exportId) {
+    var pathKey = (global.location && global.location.pathname) ? global.location.pathname : (document.title || "presentation");
+    return "ps_studio_state_v1::" + (exportId || "origin") + "::" + pathKey;
+  }
+
+  function idbSave(key, payload) {
+    try {
+      if (!global.indexedDB) return;
+      var req = global.indexedDB.open("PresentationStudioDB", 1);
+      req.onupgradeneeded = function (e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains("states")) {
+          db.createObjectStore("states");
+        }
+      };
+      req.onsuccess = function (e) {
+        var db = e.target.result;
+        var tx = db.transaction("states", "readwrite");
+        tx.objectStore("states").put(payload, key);
+      };
+    } catch (e) {}
+  }
+
+  function idbLoad(key, callback) {
+    try {
+      if (!global.indexedDB) {
+        callback(null);
+        return;
+      }
+      var req = global.indexedDB.open("PresentationStudioDB", 1);
+      req.onupgradeneeded = function (e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains("states")) {
+          db.createObjectStore("states");
+        }
+      };
+      req.onsuccess = function (e) {
+        try {
+          var db = e.target.result;
+          if (!db.objectStoreNames.contains("states")) {
+            callback(null);
+            return;
+          }
+          var getReq = db.transaction("states", "readonly").objectStore("states").get(key);
+          getReq.onsuccess = function () {
+            callback(getReq.result || null);
+          };
+          getReq.onerror = function () {
+            callback(null);
+          };
+        } catch (err) {
+          callback(null);
+        }
+      };
+      req.onerror = function () {
+        callback(null);
+      };
+    } catch (e) {
+      callback(null);
+    }
+  }
+
+  function idbClear(key) {
+    try {
+      if (!global.indexedDB) return;
+      var req = global.indexedDB.open("PresentationStudioDB", 1);
+      req.onsuccess = function (e) {
+        var db = e.target.result;
+        if (db.objectStoreNames.contains("states")) {
+          db.transaction("states", "readwrite").objectStore("states").delete(key);
+        }
+      };
+    } catch (e) {}
+  }
+
+  function optimizeUploadedImageFile(file, callback) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var rawDataUrl = String(reader.result || "");
+      if (!rawDataUrl || String(file.type || "").indexOf("svg") !== -1) {
+        callback(rawDataUrl);
+        return;
+      }
+      var img = new Image();
+      img.onload = function () {
+        var maxDim = 1100;
+        var w = img.naturalWidth || img.width || 0;
+        var h = img.naturalHeight || img.height || 0;
+        if (w > 0 && h > 0 && (w > maxDim || h > maxDim || file.size > 350 * 1024)) {
+          var ratio = Math.min(1, maxDim / Math.max(w, h));
+          var cw = Math.max(1, Math.round(w * ratio));
+          var ch = Math.max(1, Math.round(h * ratio));
+          try {
+            var canvas = document.createElement("canvas");
+            canvas.width = cw;
+            canvas.height = ch;
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, cw, ch);
+            var webp = canvas.toDataURL("image/webp", 0.86);
+            if (webp && webp.indexOf("data:image/webp") === 0 && webp.length < rawDataUrl.length) {
+              callback(webp);
+              return;
+            }
+            var png = canvas.toDataURL("image/png");
+            if (png && png.length < rawDataUrl.length) {
+              callback(png);
+              return;
+            }
+          } catch (err) {}
+        }
+        callback(rawDataUrl);
+      };
+      img.onerror = function () {
+        callback(rawDataUrl);
+      };
+      img.src = rawDataUrl;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ==========================================================================
+     8. MAIN PRESENTATION STUDIO CONTROLLER
+     ========================================================================== */
+  function createStudio() {
+    injectStudioStyles();
+
+    var adapter = null;
+    var exportScopeId = (BAKED_PAYLOAD && BAKED_PAYLOAD.exportId) ? BAKED_PAYLOAD.exportId : "origin";
+    var storageKey = getStorageKey(exportScopeId);
+
+    var studioState = {
+      version: 1,
+      exportId: exportScopeId,
+      readonly: Boolean(BAKED_PAYLOAD && BAKED_PAYLOAD.readonly),
+      savedAt: 0,
+      pageOrder: [],
+      customPages: {},
+      pages: {}
+    };
+
+    var editMode = false;
+    var hasSavedEdits = false;
+    var undoStack = [];
+    var selection = null;
+    var activeModal = null;
+    var activeCharTab = "editorial";
+    var selectedCastMood = "calm";
+    var autoSaveTimer = null;
+    var toastTimer = null;
+
+    function ensurePageRecord(pageUid) {
+      if (!studioState.pages[pageUid]) {
+        studioState.pages[pageUid] = {
+          textOverrides: {},
+          frames: [],
+          addedChars: [],
+          nativeCharOverrides: {}
+        };
+      }
+      return studioState.pages[pageUid];
+    }
+
+    function pushUndoSnapshot() {
+      var snap = deepClone({
+        pageOrder: studioState.pageOrder,
+        customPages: studioState.customPages,
+        pages: studioState.pages
+      });
+      undoStack.push(snap);
+      if (undoStack.length > 25) undoStack.shift();
+      syncDockState();
+    }
+
+    function performUndo() {
+      if (!undoStack.length) return;
+      var prev = undoStack.pop();
+      var curUid = adapter.getCurrentPageUid();
+      studioState.pageOrder = prev.pageOrder;
+      studioState.customPages = prev.customPages || {};
+      studioState.pages = prev.pages || {};
+      activeTextUndoKey = null;
+      clearSelection();
+      resetPersistentModifiedElements();
+      adapter.hydrateModelTexts(studioState.pages);
+      var nextIdx = studioState.pageOrder.indexOf(curUid);
+      adapter.rebuildPages(studioState.pageOrder, studioState.customPages, nextIdx >= 0 ? nextIdx : 0);
+      applyAllStageOverrides();
+      scheduleAutoSave();
+      syncDockState();
+      showToast("تم التراجع عن آخر خطوة ↶");
+    }
+
+    function loadInitialState(initialOrder) {
+      studioState.pageOrder = initialOrder.slice();
+      var loaded = null;
+
+      if (BAKED_PAYLOAD && BAKED_PAYLOAD.state) {
+        loaded = deepClone(BAKED_PAYLOAD.state);
+      }
+
+      try {
+        var raw = global.localStorage ? global.localStorage.getItem(storageKey) : null;
+        if (raw) {
+          var localParsed = JSON.parse(raw);
+          if (localParsed && (!loaded || (localParsed.savedAt || 0) >= (loaded.savedAt || 0))) {
+            loaded = localParsed;
+          }
+        }
+      } catch (e) {}
+
+      if (loaded) {
+        if (Array.isArray(loaded.pageOrder) && loaded.pageOrder.length) {
+          studioState.pageOrder = loaded.pageOrder.slice();
+        }
+        studioState.customPages = loaded.customPages || {};
+        studioState.pages = loaded.pages || {};
+        studioState.savedAt = loaded.savedAt || Date.now();
+        hasSavedEdits = true;
+      }
+    }
+
+    function saveNow(showNotification) {
+      studioState.savedAt = Date.now();
+      hasSavedEdits = true;
+      var serialized = JSON.stringify(studioState);
+      var savedOk = false;
+      try {
+        if (global.localStorage) {
+          global.localStorage.setItem(storageKey, serialized);
+          savedOk = true;
+        }
+      } catch (e) {}
+      idbSave(storageKey, studioState);
+      updateEntryBadge();
+      if (showNotification) {
+        showToast(savedOk ? "تم حفظ جميع التغييرات محلياً ✓" : "تم حفظ التغييرات في قاعدة المتصفح ✓");
+      }
+      return savedOk;
+    }
+
+    function scheduleAutoSave() {
+      if (autoSaveTimer) clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(function () {
+        saveNow(false);
+      }, 350);
+    }
+
+    function resetAllChanges() {
+      try {
+        if (global.localStorage) global.localStorage.removeItem(storageKey);
+      } catch (e) {}
+      idbClear(storageKey);
+      undoStack = [];
+      activeTextUndoKey = null;
+      studioState.savedAt = 0;
+      studioState.pageOrder = adapter.initialOrder.slice();
+      studioState.customPages = {};
+      studioState.pages = {};
+      hasSavedEdits = false;
+      clearSelection();
+      resetPersistentModifiedElements();
+      adapter.hydrateModelTexts(studioState.pages);
+      adapter.rebuildPages(studioState.pageOrder, studioState.customPages, 0);
+      applyAllStageOverrides();
+      updateEntryBadge();
+      closeModal();
+      showToast("تمت استعادة النسخة الأصلية للعرض ✓");
+    }
+
+    /* ----------------------------------------------------------------------
+       9. EXPORT STANDALONE LOCAL HTML FILE WITH ALL EDITS BAKED IN
+       ---------------------------------------------------------------------- */
+    function buildStandaloneHtmlString(opts) {
+      var options = opts || {};
+      saveNow(false);
+
+      var baseHtml = INITIAL_CLEAN_HTML || capturePristineSnapshot();
+      var newExportId = "exp_" + Date.now().toString(36);
+      var exportPayload = {
+        exportId: newExportId,
+        readonly: Boolean(options.readonly),
+        exportedAt: Date.now(),
+        state: deepClone(studioState)
+      };
+
+      var safeJson = JSON.stringify(exportPayload).replace(/</g, "\\u003c");
+      var bakedTag = "<" + 'script id="ps-baked-state" type="application/json">' + safeJson + "<" + "/script>\n";
+
+      var scriptAnchor = "<" + 'script id="ps-studio-script"';
+      var anchorPos = baseHtml.indexOf(scriptAnchor);
+      if (anchorPos !== -1) {
+        return baseHtml.slice(0, anchorPos) + bakedTag + baseHtml.slice(anchorPos);
+      }
+
+      var bodyClose = baseHtml.lastIndexOf("<" + "/body>");
+      if (bodyClose !== -1) {
+        return baseHtml.slice(0, bodyClose) + bakedTag + baseHtml.slice(bodyClose);
+      }
+      return baseHtml + "\n" + bakedTag;
+    }
+
+    function downloadStandaloneHtml(opts) {
+      var options = opts || {};
+      var htmlContent = buildStandaloneHtmlString(options);
+      var rawBase = "presentation";
+      try {
+        var rawPath = (global.location && global.location.pathname) ? global.location.pathname : "";
+        var segs = rawPath.replace(/\/+$/, "").split("/").filter(Boolean);
+        var lastSeg = segs.length ? segs[segs.length - 1] : "";
+        if (lastSeg && /\.html?$/i.test(lastSeg) && !/^index\.html?$/i.test(lastSeg)) {
+          rawBase = lastSeg.replace(/\.html?$/i, "").replace(/-edited(-\d+)?$/i, "");
+        } else if (lastSeg && /^[1-9]\d*$/.test(lastSeg)) {
+          var prevSeg = segs.length > 1 ? segs[segs.length - 2] : "presentation";
+          rawBase = prevSeg + "-edition-" + lastSeg;
+        } else if (segs.length > 1 && /^index\.html?$/i.test(lastSeg) && /^[1-9]\d*$/.test(segs[segs.length - 2])) {
+          var projSeg = segs.length > 2 ? segs[segs.length - 3] : "presentation";
+          rawBase = projSeg + "-edition-" + segs[segs.length - 2];
+        } else if (lastSeg && !/^index\.html?$/i.test(lastSeg)) {
+          rawBase = lastSeg;
+        } else if (document.title) {
+          rawBase = "bullying-presentation";
+        }
+      } catch (e) {}
+
+      var fileName = options.fileName || (rawBase + "-edited.html");
+      if (!/\.html?$/i.test(fileName)) fileName += ".html";
+
+      var blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.setAttribute("data-ps-ignore", "1");
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(function () {
+        if (link.parentNode) link.parentNode.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 1800);
+
+      showToast("تم تنزيل ملف HTML المحلي بكامل تعديلاتك ✓");
+      return fileName;
+    }
+
+    /* ----------------------------------------------------------------------
+       10. BUILD STUDIO UI DOM
+       ---------------------------------------------------------------------- */
+    var rootEl = document.createElement("div");
+    rootEl.id = "ps-studio-root";
+    rootEl.setAttribute("data-ps-ignore", "1");
+    rootEl.innerHTML = [
+      '<button type="button" id="ps-entry-pill" title="فتح استوديو التعديل التفاعلي">',
+      '  <span id="ps-saved-indicator" class="ps-saved-dot" hidden></span>',
+      '  <span>تعديل العرض ✎</span>',
+      '</button>',
+
+      '<div id="ps-toolbar-dock" role="toolbar" aria-label="أدوات استوديو التحرير" hidden>',
+      '  <button type="button" class="ps-dock-btn is-accent" data-ps-act="open-frames" title="إضافة إطار جديد لكلام أو حوار">+ إطار كلام</button>',
+      '  <button type="button" class="ps-dock-btn is-accent" data-ps-act="open-chars" title="إضافة أو إدارة الشخصيات">+ شخصية</button>',
+      '  <button type="button" class="ps-dock-btn" data-ps-act="open-pages" title="حذف الصفحات أو إعادة ترتيبها أو نسخها">الصفحات (<span id="ps-pages-count">0</span>)</button>',
+      '  <span class="ps-dock-sep" aria-hidden="true"></span>',
+      '  <button type="button" class="ps-dock-btn" id="ps-btn-undo" data-ps-act="undo" disabled title="تراجع عن آخر تعديل (Ctrl+Z)">تراجع ↶</button>',
+      '  <button type="button" class="ps-dock-btn is-save" data-ps-act="save" title="حفظ التغييرات محلياً (Ctrl+S)">حفظ ✓</button>',
+      '  <button type="button" class="ps-dock-btn is-download" data-ps-act="download" title="تنزيل العرض كملف HTML محلي مستقل">تنزيل HTML ⬇</button>',
+      '  <button type="button" class="ps-dock-btn" data-ps-act="open-more" title="خيارات متقدمة واستعادة الأصل">⚙</button>',
+      '  <button type="button" class="ps-dock-btn is-done" data-ps-act="exit-edit" title="إغلاق وضع التعديل والمعاينة">تم ✕</button>',
+      '</div>',
+
+      '<div id="ps-edit-banner" hidden>وضع التعديل مفعّل: اضغط أي كلام لتعديله، أو اضغط أي شخصية لتكبيرها/تصغيرها/تحريكها/حذفها</div>',
+
+      '<div id="ps-selection-ring" hidden>',
+      '  <div id="ps-resize-knob" title="اسحب لتكبير أو تصغير العنصر"></div>',
+      '</div>',
+
+      '<div id="ps-context-bar" hidden></div>',
+      '<div id="ps-modal-host" class="ps-modal-backdrop" hidden></div>',
+      '<div id="ps-toast" role="status" aria-live="polite" hidden></div>'
+    ].join("");
+    document.body.appendChild(rootEl);
+
+    var ui = {
+      entryPill: document.getElementById("ps-entry-pill"),
+      savedDot: document.getElementById("ps-saved-indicator"),
+      dock: document.getElementById("ps-toolbar-dock"),
+      pagesCount: document.getElementById("ps-pages-count"),
+      btnUndo: document.getElementById("ps-btn-undo"),
+      banner: document.getElementById("ps-edit-banner"),
+      ring: document.getElementById("ps-selection-ring"),
+      resizeKnob: document.getElementById("ps-resize-knob"),
+      ctxBar: document.getElementById("ps-context-bar"),
+      modalHost: document.getElementById("ps-modal-host"),
+      toast: document.getElementById("ps-toast")
+    };
+
+    function showToast(msg) {
+      if (!ui.toast) return;
+      ui.toast.textContent = toWesternDigits(msg);
+      ui.toast.hidden = false;
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        ui.toast.hidden = true;
+      }, 2500);
+    }
+
+    function updateEntryBadge() {
+      ui.savedDot.hidden = !hasSavedEdits;
+      if (studioState.readonly && String(global.location.hash || "") !== "#edit") {
+        ui.entryPill.hidden = true;
+      } else {
+        ui.entryPill.hidden = editMode;
+      }
+    }
+
+    function syncDockState() {
+      if (!adapter) return;
+      ui.pagesCount.textContent = String(adapter.getPages().length);
+      ui.btnUndo.disabled = undoStack.length === 0;
+    }
+
+    function setEditMode(active) {
+      editMode = Boolean(active);
+      document.documentElement.setAttribute("data-ps-edit", editMode ? "true" : "false");
+      document.body.setAttribute("data-ps-edit", editMode ? "true" : "false");
+      ui.dock.hidden = !editMode;
+      ui.banner.hidden = !editMode;
+      updateEntryBadge();
+      if (!editMode) {
+        clearSelection();
+        disableAllInlineContentEditable();
+      } else {
+        syncDockState();
+        applyAllStageOverrides();
+      }
+    }
+
+    /* ----------------------------------------------------------------------
+       11. APPLYING & INDEXING TEXT, FRAMES & CHARACTERS ON ACTIVE STAGES
+       ---------------------------------------------------------------------- */
+    var EDITABLE_TEXT_SELECTOR = [
+      "h1", "h2", "h3", "h4",
+      ".sheet-title", ".sheet-subtitle", ".sheet-kicker", ".editorial-lead", ".lexicon-quote",
+      ".editorial-points li", ".mini-card p", ".mini-card-head > span",
+      ".metric-val", ".metric-lbl", ".chapter-pill-right > span:last-child", ".art-caption",
+      ".lab-feedback-box", ".lab-scenario-text", ".protocol-steps li",
+      ".caption-text", ".source-chip", "#subtitle-text", "#subtitle-source", "#hud-scene-title", "#act-super-title",
+      "#kinetic-stat-val", "#kinetic-stat-lbl", ".kinetic-stat", ".kinetic-label",
+      ".k-pill > span:last-child", ".tele-chip > span:last-child", ".actor-whisper", ".actor-callout",
+      "#ed-mov-title", "#ed-epigraph > span", "#ed-sentence", "#ed-metric-val", "#ed-metric-lbl",
+      "#stage-sculpture-caption", ".spatial-pin",
+      ".char-name-tag", ".char-role-tag", ".sp-badge"
+    ].join(", ");
+
+    var NATIVE_HTML_CHAR_SELECTOR = [
+      ".char-pod", ".sp-char-actor", ".sp-bigstat-char", ".sp-shield-char", ".sp-scale-pan-actor",
+      ".cinema-actor", ".motion-actor"
+    ].join(", ");
+
+    function resetPersistentModifiedElements() {
+      var modChars = document.querySelectorAll("[data-ps-char-modified='1']");
+      for (var i = 0; i < modChars.length; i++) {
+        var el = modChars[i];
+        el.style.translate = "";
+        el.style.scale = "";
+        if (el.getAttribute("data-ps-was-hidden") === "1") {
+          el.style.display = "";
+          el.removeAttribute("data-ps-was-hidden");
+        }
+        el.removeAttribute("data-ps-char-modified");
+      }
+      var modTexts = document.querySelectorAll("[data-ps-text-modified='1']");
+      for (var j = 0; j < modTexts.length; j++) {
+        var tEl = modTexts[j];
+        if (tEl.__psOrigHtml !== undefined && document.activeElement !== tEl) {
+          tEl.innerHTML = tEl.__psOrigHtml;
+        }
+        tEl.style.fontSize = "";
+        tEl.style.color = "";
+        tEl.style.fontWeight = "";
+        tEl.style.textAlign = "";
+        tEl.style.whiteSpace = "";
+        if (tEl.getAttribute("data-ps-was-hidden") === "1") {
+          tEl.style.display = "";
+          tEl.removeAttribute("data-ps-was-hidden");
+        }
+        tEl.removeAttribute("data-ps-text-modified");
+      }
+    }
+
+    function disableAllInlineContentEditable() {
+      var nodes = document.querySelectorAll("[data-ps-editable][contenteditable='true']");
+      for (var i = 0; i < nodes.length; i++) {
+        nodes[i].removeAttribute("contenteditable");
+      }
+    }
+
+    function indexNativeSvgCharacterGroups(stageTarget) {
+      var svgs = stageTarget.charRoot.querySelectorAll(".art-stage-frame svg, .stage-scene svg");
+      for (var s = 0; s < svgs.length; s++) {
+        var svg = svgs[s];
+        if (svg.closest("[data-ps-overlay-layer]")) continue;
+        if (svg.closest(".char-pod, .sp-char-actor, .cinema-actor, .motion-actor")) continue;
+
+        var groupContainers = [svg];
+        for (var gc = 0; gc < svg.children.length; gc++) {
+          var topChild = svg.children[gc];
+          if (
+            topChild.tagName &&
+            topChild.tagName.toLowerCase() === "g" &&
+            topChild.hasAttribute("clip-path") &&
+            topChild.querySelectorAll(":scope > g").length >= 2
+          ) {
+            groupContainers.push(topChild);
+          }
+        }
+
+        var gIndex = 0;
+        for (var pIdx = 0; pIdx < groupContainers.length; pIdx++) {
+          var parentNode = groupContainers[pIdx];
+          var children = Array.prototype.slice.call(parentNode.children);
+          for (var c = 0; c < children.length; c++) {
+            var child = children[c];
+            var tag = child.tagName ? child.tagName.toLowerCase() : "";
+            if (tag !== "g") continue;
+            if (groupContainers.indexOf(child) !== -1) continue;
+
+            var charKey = child.getAttribute("data-ps-char-key");
+            if (!charKey) {
+              charKey = "svg_g_" + s + "_" + gIndex;
+              var wrap = document.createElementNS("http://www.w3.org/2000/svg", "g");
+              wrap.setAttribute("data-ps-svg-wrap", "1");
+              wrap.setAttribute("data-ps-char-key", charKey);
+              wrap.setAttribute("data-ps-native-char", "svg");
+              wrap.setAttribute("data-ps-page-uid", stageTarget.pageUid);
+              parentNode.insertBefore(wrap, child);
+              wrap.appendChild(child);
+              child.setAttribute("data-ps-wrapped-inner", "1");
+            }
+            gIndex += 1;
+          }
+        }
+      }
+    }
+
+    function applySvgWrapTransform(wrapEl, ov) {
+      if (!wrapEl) return;
+      if (ov && ov.hidden) {
+        wrapEl.style.display = "none";
+        return;
+      }
+      wrapEl.style.display = "";
+      var dx = (ov && typeof ov.dx === "number") ? ov.dx : 0;
+      var dy = (ov && typeof ov.dy === "number") ? ov.dy : 0;
+      var sc = (ov && typeof ov.scale === "number") ? ov.scale : 1;
+      var flip = Boolean(ov && ov.flip);
+      if (dx === 0 && dy === 0 && sc === 1 && !flip) {
+        wrapEl.removeAttribute("transform");
+        return;
+      }
+
+      var cx = typeof ov.cx === "number" ? ov.cx : null;
+      var cy = typeof ov.cy === "number" ? ov.cy : null;
+      if (cx === null || cy === null) {
+        try {
+          var inner = wrapEl.firstElementChild || wrapEl;
+          var bb = inner.getBBox();
+          var ctm = inner.getCTM();
+          var svgEl = wrapEl.ownerSVGElement;
+          var svgCtm = svgEl ? svgEl.getCTM() : null;
+          if (ctm && svgCtm) {
+            var rel = svgCtm.inverse().multiply(ctm);
+            var rawCx = bb.x + bb.width / 2;
+            var rawCy = bb.y + bb.height / 2;
+            cx = rel.a * rawCx + rel.c * rawCy + rel.e;
+            cy = rel.b * rawCx + rel.d * rawCy + rel.f;
+          } else {
+            cx = bb.x + bb.width / 2;
+            cy = bb.y + bb.height / 2;
+          }
+          ov.cx = Math.round(cx * 10) / 10;
+          ov.cy = Math.round(cy * 10) / 10;
+        } catch (e) {
+          cx = 250;
+          cy = 185;
+        }
+      }
+
+      var sx = flip ? -sc : sc;
+      var sy = sc;
+      var xform = "translate(" + dx.toFixed(1) + "," + dy.toFixed(1) + ") " +
+                  "translate(" + cx.toFixed(1) + "," + cy.toFixed(1) + ") " +
+                  "scale(" + sx.toFixed(3) + "," + sy.toFixed(3) + ") " +
+                  "translate(" + (-cx).toFixed(1) + "," + (-cy).toFixed(1) + ")";
+      wrapEl.setAttribute("transform", xform);
+    }
+
+    function applyHtmlCharTransform(el, ov, hostEl) {
+      if (!el) return;
+      el.setAttribute("data-ps-char-modified", "1");
+      if (ov && ov.hidden) {
+        el.style.display = "none";
+        el.setAttribute("data-ps-was-hidden", "1");
+        return;
+      }
+      if (el.getAttribute("data-ps-was-hidden") === "1") {
+        el.style.display = "";
+        el.removeAttribute("data-ps-was-hidden");
+      }
+      var dxPct = (ov && typeof ov.dxPct === "number") ? ov.dxPct : 0;
+      var dyPct = (ov && typeof ov.dyPct === "number") ? ov.dyPct : 0;
+      var sc = (ov && typeof ov.scale === "number") ? ov.scale : 1;
+      var flip = Boolean(ov && ov.flip);
+
+      var w = (hostEl && hostEl.clientWidth) ? hostEl.clientWidth : global.innerWidth;
+      var h = (hostEl && hostEl.clientHeight) ? hostEl.clientHeight : global.innerHeight;
+      var pxX = (dxPct / 100) * w;
+      var pxY = (dyPct / 100) * h;
+
+      el.style.translate = (dxPct === 0 && dyPct === 0) ? "" : (pxX.toFixed(1) + "px " + pxY.toFixed(1) + "px");
+      el.style.scale = (sc === 1 && !flip) ? "" : ((flip ? -sc : sc).toFixed(3) + " " + sc.toFixed(3));
+    }
+
+    function applyStageTarget(stageTarget) {
+      var pageUid = stageTarget.pageUid;
+      var pageRec = studioState.pages[pageUid];
+
+      var textNodes = stageTarget.textRoot.querySelectorAll(EDITABLE_TEXT_SELECTOR);
+      for (var i = 0; i < textNodes.length; i++) {
+        var tEl = textNodes[i];
+        if (tEl.closest("#ps-studio-root, [data-ps-overlay-layer], .toc-drawer, .refs-drawer, #refs-modal, #jump-drawer")) continue;
+        var tKey = tEl.getAttribute("data-ps-text-key");
+        if (!tKey) {
+          tKey = getStableLandmarksSelector(tEl, stageTarget.textRoot);
+          tEl.setAttribute("data-ps-text-key", tKey);
+        }
+        tEl.setAttribute("data-ps-editable", "1");
+        tEl.setAttribute("data-ps-page-uid", pageUid);
+
+        var tOv = pageRec && pageRec.textOverrides ? pageRec.textOverrides[tKey] : null;
+        if (!tOv && pageRec && pageRec.textOverrides && tKey === ".sheet-title") {
+          tOv = pageRec.textOverrides["div:nth-of-type(1) > div:nth-of-type(1) > h1:nth-of-type(1)"] ||
+                pageRec.textOverrides["div:nth-of-type(1) > div:nth-of-type(1) > h2:nth-of-type(1)"] || null;
+        }
+        if (tOv) {
+          if (tEl.__psOrigHtml === undefined) {
+            tEl.__psOrigHtml = tEl.innerHTML;
+          }
+          tEl.setAttribute("data-ps-text-modified", "1");
+          if (tOv.hidden) {
+            tEl.style.display = "none";
+            tEl.setAttribute("data-ps-was-hidden", "1");
+          } else {
+            if (typeof tOv.text === "string" && document.activeElement !== tEl) {
+              tEl.textContent = tOv.text;
+              if (tOv.text.indexOf("\n") !== -1) {
+                tEl.style.whiteSpace = "pre-line";
+              }
+            }
+            if (tOv.fontSize) tEl.style.fontSize = tOv.fontSize;
+            if (tOv.color !== undefined) tEl.style.color = tOv.color;
+            if (tOv.fontWeight) tEl.style.fontWeight = tOv.fontWeight;
+            if (tOv.textAlign) tEl.style.textAlign = tOv.textAlign;
+          }
+        }
+      }
+
+      var svgTexts = stageTarget.textRoot.querySelectorAll(".art-stage-frame svg text, .stage-scene svg text");
+      for (var st = 0; st < svgTexts.length; st++) {
+        var stEl = svgTexts[st];
+        if (stEl.closest("[data-ps-overlay-layer]")) continue;
+        var stKey = stEl.getAttribute("data-ps-text-key") || ("svg_txt_" + st);
+        stEl.setAttribute("data-ps-text-key", stKey);
+        stEl.setAttribute("data-ps-svg-text", "1");
+        stEl.setAttribute("data-ps-page-uid", pageUid);
+        var stOv = pageRec && pageRec.textOverrides ? pageRec.textOverrides[stKey] : null;
+        if (stOv) {
+          if (stOv.hidden) stEl.style.display = "none";
+          else if (typeof stOv.text === "string") stEl.textContent = stOv.text;
+        }
+      }
+
+      indexNativeSvgCharacterGroups(stageTarget);
+      var svgWraps = stageTarget.charRoot.querySelectorAll("g[data-ps-svg-wrap='1']");
+      for (var w = 0; w < svgWraps.length; w++) {
+        var wEl = svgWraps[w];
+        var cKey = wEl.getAttribute("data-ps-char-key");
+        var cOv = pageRec && pageRec.nativeCharOverrides ? pageRec.nativeCharOverrides[cKey] : null;
+        if (cOv) applySvgWrapTransform(wEl, cOv);
+      }
+
+      var htmlChars = stageTarget.charRoot.querySelectorAll(NATIVE_HTML_CHAR_SELECTOR);
+      for (var h = 0; h < htmlChars.length; h++) {
+        var hEl = htmlChars[h];
+        if (hEl.closest("[data-ps-overlay-layer]")) continue;
+        if ((hEl.classList.contains("cinema-actor") || hEl.classList.contains("motion-actor")) && hEl.getAttribute("data-present") !== "true") {
+          continue;
+        }
+        var actorId = hEl.getAttribute("data-actor-id") || hEl.getAttribute("data-char-id");
+        var hKey = actorId ? ("actor_" + actorId) : ("html_char_" + h);
+        hEl.setAttribute("data-ps-char-key", hKey);
+        hEl.setAttribute("data-ps-native-char", "html");
+        hEl.setAttribute("data-ps-page-uid", pageUid);
+        var hOv = pageRec && pageRec.nativeCharOverrides ? pageRec.nativeCharOverrides[hKey] : null;
+        if (hOv) applyHtmlCharTransform(hEl, hOv, stageTarget.overlayHost);
+      }
+
+      renderOverlayItems(stageTarget);
+    }
+
+    function renderOverlayItems(stageTarget) {
+      var host = stageTarget.overlayHost;
+      if (!host) return;
+      var pageUid = stageTarget.pageUid;
+      var pageRec = studioState.pages[pageUid];
+
+      var layer = host.querySelector(":scope > .ps-stage-overlay");
+      var hasCustomItems = pageRec && ((pageRec.frames && pageRec.frames.length > 0) || (pageRec.addedChars && pageRec.addedChars.length > 0));
+
+      if (!hasCustomItems && !editMode) {
+        if (layer && layer.parentNode) layer.parentNode.removeChild(layer);
+        return;
+      }
+
+      if (!layer) {
+        layer = document.createElement("div");
+        layer.className = "ps-stage-overlay";
+        layer.setAttribute("data-ps-overlay-layer", "1");
+        layer.setAttribute("data-ps-page-uid", pageUid);
+        layer.addEventListener("pointerdown", function (ev) {
+          if (editMode) ev.stopPropagation();
+        });
+        layer.addEventListener("wheel", function (ev) {
+          if (editMode) ev.stopPropagation();
+        }, { passive: true });
+        host.appendChild(layer);
+      } else {
+        layer.setAttribute("data-ps-page-uid", pageUid);
+      }
+
+      var frames = (pageRec && pageRec.frames) ? pageRec.frames : [];
+      var chars = (pageRec && pageRec.addedChars) ? pageRec.addedChars : [];
+
+      var activeFocusedFrameId = null;
+      if (document.activeElement && document.activeElement.closest(".ps-frame-item")) {
+        activeFocusedFrameId = document.activeElement.closest(".ps-frame-item").getAttribute("data-ps-frame-id");
+      }
+
+      var existingFrames = {};
+      var fNodes = layer.querySelectorAll(".ps-frame-item");
+      for (var i = 0; i < fNodes.length; i++) {
+        existingFrames[fNodes[i].getAttribute("data-ps-frame-id")] = fNodes[i];
+      }
+
+      var validFrameIds = {};
+      for (var f = 0; f < frames.length; f++) {
+        var fm = frames[f];
+        validFrameIds[fm.id] = true;
+        var fEl = existingFrames[fm.id];
+        if (!fEl) {
+          fEl = document.createElement("div");
+          fEl.className = "ps-frame-item";
+          fEl.setAttribute("data-ps-frame-id", fm.id);
+          fEl.setAttribute("data-ps-page-uid", pageUid);
+          fEl.innerHTML =
+            '<div class="ps-frame-drag-bar" data-ps-drag-frame="1">' +
+              '<span>⠿ اسحب لتحريك الإطار</span>' +
+              '<button type="button" class="ps-mini-btn is-del" style="min-width:22px;height:20px;padding:0 5px;font-size:10px;" data-ps-del-frame="' + escHtml(fm.id) + '" title="حذف الإطار">✕</button>' +
+            '</div>' +
+            '<div class="ps-frame-body" data-ps-frame-body="1"></div>';
+          layer.appendChild(fEl);
+        }
+
+        var themeObj = FRAME_THEMES[0];
+        for (var th = 0; th < FRAME_THEMES.length; th++) {
+          if (FRAME_THEMES[th].id === fm.theme) themeObj = FRAME_THEMES[th];
+        }
+
+        fEl.setAttribute("data-fstyle", fm.style || "editorial");
+        fEl.setAttribute("data-tail", fm.tail || "bottom-right");
+        fEl.style.setProperty("--ps-x", (typeof fm.x === "number" ? fm.x : 50).toFixed(2) + "%");
+        fEl.style.setProperty("--ps-y", (typeof fm.y === "number" ? fm.y : 50).toFixed(2) + "%");
+        fEl.style.setProperty("--ps-w", (fm.width || 270) + "px");
+        fEl.style.setProperty("--ps-scale", String(fm.scale || 1));
+        fEl.style.setProperty("--ps-fs", (fm.fontSize || 15) + "px");
+        fEl.style.setProperty("--ps-bg", themeObj.bg);
+        fEl.style.setProperty("--ps-fg", themeObj.fg);
+        fEl.style.setProperty("--ps-bd", themeObj.border);
+        fEl.style.setProperty("--ps-z", String(fm.z || 46));
+        fEl.classList.toggle("is-selected", Boolean(selection && selection.kind === "frame" && selection.id === fm.id));
+
+        var bodyEl = fEl.querySelector(".ps-frame-body");
+        if (bodyEl) {
+          if (editMode) bodyEl.setAttribute("contenteditable", "true");
+          else bodyEl.removeAttribute("contenteditable");
+          if (activeFocusedFrameId !== fm.id) {
+            bodyEl.textContent = fm.text || "";
+          }
+        }
+      }
+
+      for (var oldFid in existingFrames) {
+        if (!validFrameIds[oldFid] && existingFrames[oldFid].parentNode) {
+          existingFrames[oldFid].parentNode.removeChild(existingFrames[oldFid]);
+        }
+      }
+
+      var existingChars = {};
+      var cNodes = layer.querySelectorAll(".ps-char-item");
+      for (var k = 0; k < cNodes.length; k++) {
+        existingChars[cNodes[k].getAttribute("data-ps-added-char-id")] = cNodes[k];
+      }
+
+      var validCharIds = {};
+      for (var c = 0; c < chars.length; c++) {
+        var ch = chars[c];
+        validCharIds[ch.id] = true;
+        var cEl = existingChars[ch.id];
+        var sig = (ch.charId || "custom") + "::" + (ch.mood || "") + "::" + (ch.customDataUrl ? ch.customDataUrl.length : 0);
+        if (!cEl) {
+          cEl = document.createElement("div");
+          cEl.className = "ps-char-item";
+          cEl.setAttribute("data-ps-added-char-id", ch.id);
+          cEl.setAttribute("data-ps-page-uid", pageUid);
+          layer.appendChild(cEl);
+        }
+        if (cEl.getAttribute("data-ps-sig") !== sig) {
+          cEl.innerHTML = renderGalleryCharacterMarkup(ch);
+          cEl.setAttribute("data-ps-sig", sig);
+        }
+        var sc = typeof ch.scale === "number" ? ch.scale : 1;
+        var sx = ch.flip ? -sc : sc;
+        cEl.style.setProperty("--ps-x", (typeof ch.x === "number" ? ch.x : 50).toFixed(2) + "%");
+        cEl.style.setProperty("--ps-y", (typeof ch.y === "number" ? ch.y : 55).toFixed(2) + "%");
+        cEl.style.setProperty("--ps-sx", sx.toFixed(3));
+        cEl.style.setProperty("--ps-sy", sc.toFixed(3));
+        cEl.style.setProperty("--ps-z", String(ch.z || 47));
+        cEl.classList.toggle("is-selected", Boolean(selection && selection.kind === "addedChar" && selection.id === ch.id));
+      }
+
+      for (var oldCid in existingChars) {
+        if (!validCharIds[oldCid] && existingChars[oldCid].parentNode) {
+          existingChars[oldCid].parentNode.removeChild(existingChars[oldCid]);
+        }
+      }
+    }
+
+    function applyAllStageOverrides() {
+      if (!adapter) return;
+      resetPersistentModifiedElements();
+      var targets = adapter.getStageTargets();
+      for (var i = 0; i < targets.length; i++) {
+        applyStageTarget(targets[i]);
+      }
+      syncSelectionRing();
+      syncDockState();
+    }
+
+    /* ----------------------------------------------------------------------
+       12. SELECTION RING & CONTEXTUAL INSPECTOR TOOLBAR
+       ---------------------------------------------------------------------- */
+    function clearSelection() {
+      selection = null;
+      ui.ring.hidden = true;
+      ui.ctxBar.hidden = true;
+      var selNodes = document.querySelectorAll(".ps-frame-item.is-selected, .ps-char-item.is-selected");
+      for (var i = 0; i < selNodes.length; i++) selNodes[i].classList.remove("is-selected");
+    }
+
+    function syncSelectionRing() {
+      if (!editMode || !selection || !selection.el || !document.body.contains(selection.el)) {
+        ui.ring.hidden = true;
+        if (selection && (!selection.el || !document.body.contains(selection.el))) {
+          ui.ctxBar.hidden = true;
+          selection = null;
+        }
+        return;
+      }
+
+      if (selection.kind === "text") {
+        ui.ring.hidden = true;
+        return;
+      }
+
+      var rect = selection.el.getBoundingClientRect();
+      if (rect.width < 2 && rect.height < 2) {
+        ui.ring.hidden = true;
+        return;
+      }
+      ui.ring.style.left = (rect.left - 4) + "px";
+      ui.ring.style.top = (rect.top - 4) + "px";
+      ui.ring.style.width = (rect.width + 8) + "px";
+      ui.ring.style.height = (rect.height + 8) + "px";
+      ui.ring.hidden = false;
+    }
+
+    function selectItem(selObj) {
+      selection = selObj;
+      var allSel = document.querySelectorAll(".ps-frame-item.is-selected, .ps-char-item.is-selected");
+      for (var i = 0; i < allSel.length; i++) allSel[i].classList.remove("is-selected");
+      if (selection && selection.el && (selection.kind === "frame" || selection.kind === "addedChar")) {
+        selection.el.classList.add("is-selected");
+      }
+      renderContextBar();
+      syncSelectionRing();
+    }
+
+    function getSelectedModel() {
+      if (!selection) return null;
+      var pageRec = ensurePageRecord(selection.pageUid);
+      if (selection.kind === "frame") {
+        for (var i = 0; i < pageRec.frames.length; i++) {
+          if (pageRec.frames[i].id === selection.id) return pageRec.frames[i];
+        }
+      }
+      if (selection.kind === "addedChar") {
+        for (var j = 0; j < pageRec.addedChars.length; j++) {
+          if (pageRec.addedChars[j].id === selection.id) return pageRec.addedChars[j];
+        }
+      }
+      if (selection.kind === "nativeChar") {
+        if (!pageRec.nativeCharOverrides[selection.id]) {
+          pageRec.nativeCharOverrides[selection.id] = { scale: 1, dx: 0, dy: 0, dxPct: 0, dyPct: 0, flip: false, hidden: false };
+        }
+        return pageRec.nativeCharOverrides[selection.id];
+      }
+      if (selection.kind === "text") {
+        if (!pageRec.textOverrides[selection.id]) {
+          pageRec.textOverrides[selection.id] = {};
+        }
+        return pageRec.textOverrides[selection.id];
+      }
+      return null;
+    }
+
+    function renderContextBar() {
+      if (!editMode || !selection) {
+        ui.ctxBar.hidden = true;
+        return;
+      }
+
+      var model = getSelectedModel();
+      if (!model) {
+        ui.ctxBar.hidden = true;
+        return;
+      }
+
+      if (selection.kind === "addedChar" || selection.kind === "nativeChar") {
+        var curScale = Math.round((model.scale || 1) * 100);
+        var isAdded = selection.kind === "addedChar";
+        var moodSelectHtml = "";
+        if (isAdded && model.charId && model.charId.indexOf("ed_") !== 0 && !model.customDataUrl) {
+          moodSelectHtml = '<select class="ps-ctx-btn" data-ctx-act="char-mood" aria-label="تغيير تعبير الشخصية">' +
+            CAST_MOODS.map(function (m) {
+              return '<option value="' + m.id + '"' + (m.id === model.mood ? " selected" : "") + '>' + m.label + '</option>';
+            }).join("") +
+          '</select>';
+        }
+        ui.ctxBar.innerHTML =
+          '<span style="font-size:12px;font-weight:800;padding:0 4px;">الشخصية (' + curScale + '%)</span>' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="scale-up" title="تكبير الشخصية">تكبير +</button>' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="scale-down" title="تصغير الشخصية">تصغير −</button>' +
+          '<input type="range" class="ps-ctx-slider" data-ctx-act="scale-slider" min="30" max="260" value="' + curScale + '" aria-label="حجم الشخصية" />' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="flip" title="عكس اتجاه الشخصية أفقياً">عكس ⇄</button>' +
+          moodSelectHtml +
+          (isAdded ? '<button type="button" class="ps-ctx-btn" data-ctx-act="dup-char" title="تكرار الشخصية">نسخ</button>' : '') +
+          '<button type="button" class="ps-ctx-btn is-danger" data-ctx-act="del-item" title="حذف الشخصية من الصفحة">حذف 🗑</button>';
+        ui.ctxBar.hidden = false;
+        return;
+      }
+
+      if (selection.kind === "frame") {
+        var swatches = FRAME_THEMES.map(function (th) {
+          return '<button type="button" class="ps-swatch-dot" data-ctx-act="frame-theme" data-val="' + th.id + '" title="' + th.label + '" style="background:' + th.bg + ';border-color:' + (model.theme === th.id ? '#3B82F6' : th.border) + '"></button>';
+        }).join("");
+
+        var tailBtn = model.style === "bubble"
+          ? '<button type="button" class="ps-ctx-btn" data-ctx-act="frame-tail" title="تغيير اتجاه ذيل فقاعة الكلام">ذيل الفقاعة ▾</button>'
+          : '';
+
+        ui.ctxBar.innerHTML =
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="frame-style" title="تبديل شكل الإطار">النمط ❖</button>' +
+          tailBtn +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="frame-wider" title="توسيع عرض الإطار">عرض +</button>' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="frame-narrower" title="تضييق عرض الإطار">عرض −</button>' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="frame-font-up" title="تكبير خط الإطار">A+</button>' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="frame-font-down" title="تصغير خط الإطار">A−</button>' +
+          swatches +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="dup-frame" title="نسخ الإطار">نسخ</button>' +
+          '<button type="button" class="ps-ctx-btn is-danger" data-ctx-act="del-item" title="حذف الإطار">حذف 🗑</button>';
+        ui.ctxBar.hidden = false;
+        return;
+      }
+
+      if (selection.kind === "text") {
+        var textColorsHtml = TEXT_COLORS.map(function (tc) {
+          var bg = tc.val || "linear-gradient(135deg,#231F1D 50%,#FAF6EE 50%)";
+          return '<button type="button" class="ps-swatch-dot" data-ctx-act="text-color" data-val="' + tc.val + '" title="لون: ' + tc.label + '" style="background:' + bg + '"></button>';
+        }).join("");
+
+        ui.ctxBar.innerHTML =
+          '<span style="font-size:11.5px;font-weight:700;">تنسيق النص:</span>' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="text-bigger">A+</button>' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="text-smaller">A−</button>' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="text-bold">عريض B</button>' +
+          '<button type="button" class="ps-ctx-btn" data-ctx-act="text-align">محاذاة</button>' +
+          textColorsHtml +
+          '<button type="button" class="ps-ctx-btn is-danger" data-ctx-act="del-item" title="إخفاء أو حذف هذا النص">حذف النص 🗑</button>';
+        ui.ctxBar.hidden = false;
+      }
+    }
+
+    /* ----------------------------------------------------------------------
+       13. ACTIONS: ADD FRAMES, ADD/RESIZE/DELETE CHARACTERS, MANAGE PAGES
+       ---------------------------------------------------------------------- */
+    function addTextFrame(presetId) {
+      pushUndoSnapshot();
+      var pageUid = adapter.getCurrentPageUid();
+      var pageRec = ensurePageRecord(pageUid);
+      var count = pageRec.frames.length;
+      var preset = FRAME_STYLES[0];
+      for (var i = 0; i < FRAME_STYLES.length; i++) {
+        if (FRAME_STYLES[i].id === presetId) preset = FRAME_STYLES[i];
+      }
+
+      var defaultTheme = (adapter.kind === "cinema" || adapter.kind === "motion") && preset.id === "cinema" ? "obsidian" : "warm";
+      var newFrame = {
+        id: genUid("frame"),
+        style: preset.id,
+        theme: defaultTheme,
+        tail: "bottom-right",
+        text: preset.defaultText,
+        x: clamp(46 + (count % 4) * 4, 22, 78),
+        y: clamp(42 + (count % 4) * 6, 22, 78),
+        width: preset.id === "pill" ? 290 : 275,
+        scale: 1,
+        fontSize: 15,
+        z: 48 + count
+      };
+      pageRec.frames.push(newFrame);
+      closeModal();
+      applyAllStageOverrides();
+      scheduleAutoSave();
+
+      var mounted = document.querySelector('.ps-frame-item[data-ps-frame-id="' + newFrame.id + '"]');
+      if (mounted) {
+        selectItem({ kind: "frame", pageUid: pageUid, id: newFrame.id, el: mounted });
+        var body = mounted.querySelector(".ps-frame-body");
+        if (body) {
+          body.focus();
+          try {
+            var range = document.createRange();
+            range.selectNodeContents(body);
+            var sel = global.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          } catch (e) {}
+        }
+      }
+      showToast("تمت إضافة إطار الكلام الجديد — اكتب النص واسحبه لأي موضع ✓");
+    }
+
+    function addCharacterToStage(charSpec) {
+      pushUndoSnapshot();
+      var pageUid = adapter.getCurrentPageUid();
+      var pageRec = ensurePageRecord(pageUid);
+      var count = pageRec.addedChars.length;
+      var newChar = {
+        id: genUid("char"),
+        charId: charSpec.charId || "ed_crossed_boy",
+        mood: charSpec.mood || selectedCastMood || "calm",
+        label: charSpec.label || "شخصية",
+        customDataUrl: charSpec.customDataUrl || "",
+        x: clamp(32 + (count % 5) * 9, 18, 82),
+        y: clamp(54 + (count % 3) * 6, 24, 80),
+        scale: 1,
+        flip: false,
+        z: 50 + count
+      };
+      pageRec.addedChars.push(newChar);
+      closeModal();
+      applyAllStageOverrides();
+      scheduleAutoSave();
+
+      var mounted = document.querySelector('.ps-char-item[data-ps-added-char-id="' + newChar.id + '"]');
+      if (mounted) {
+        selectItem({ kind: "addedChar", pageUid: pageUid, id: newChar.id, el: mounted });
+      }
+      showToast("تمت إضافة الشخصية — يمكنك تكبيرها وتصغيرها وتحريكها بحرية ✓");
+    }
+
+    function scaleSelectedCharacter(nextScale, recordUndo) {
+      if (!selection) return;
+      var model = getSelectedModel();
+      if (!model) return;
+      if (recordUndo) pushUndoSnapshot();
+      model.scale = clamp(Math.round(nextScale * 100) / 100, 0.25, 3.0);
+      applyAllStageOverrides();
+      renderContextBar();
+      scheduleAutoSave();
+    }
+
+    function deleteSelectedItem() {
+      if (!selection) return;
+      pushUndoSnapshot();
+      var pageRec = ensurePageRecord(selection.pageUid);
+
+      if (selection.kind === "frame") {
+        pageRec.frames = pageRec.frames.filter(function (f) { return f.id !== selection.id; });
+        clearSelection();
+        applyAllStageOverrides();
+        scheduleAutoSave();
+        showToast("تم حذف الإطار ✓");
+        return;
+      }
+
+      if (selection.kind === "addedChar") {
+        pageRec.addedChars = pageRec.addedChars.filter(function (c) { return c.id !== selection.id; });
+        clearSelection();
+        applyAllStageOverrides();
+        scheduleAutoSave();
+        showToast("تم حذف الشخصية ✓");
+        return;
+      }
+
+      if (selection.kind === "nativeChar") {
+        var ov = getSelectedModel();
+        ov.hidden = true;
+        clearSelection();
+        applyAllStageOverrides();
+        scheduleAutoSave();
+        showToast("تم حذف الشخصية من الصفحة ✓");
+        return;
+      }
+
+      if (selection.kind === "text") {
+        var tOv = getSelectedModel();
+        tOv.hidden = true;
+        clearSelection();
+        applyAllStageOverrides();
+        scheduleAutoSave();
+        showToast("تم إخفاء النص من الصفحة ✓");
+      }
+    }
+
+    function movePageInOrder(fromIdx, toIdx) {
+      var order = studioState.pageOrder;
+      if (fromIdx < 0 || fromIdx >= order.length || toIdx < 0 || toIdx >= order.length || fromIdx === toIdx) return;
+      pushUndoSnapshot();
+      var activeUid = adapter.getCurrentPageUid();
+      var moved = order.splice(fromIdx, 1)[0];
+      order.splice(toIdx, 0, moved);
+      var newActiveIdx = order.indexOf(activeUid);
+      adapter.rebuildPages(order, studioState.customPages, newActiveIdx >= 0 ? newActiveIdx : toIdx);
+      scheduleAutoSave();
+      syncDockState();
+      if (activeModal === "pages") renderPagesModal();
+    }
+
+    function deletePageAtIndex(idx) {
+      var order = studioState.pageOrder;
+      if (order.length <= 1) {
+        showToast("لا يمكن حذف الصفحة الوحيدة المتبقية في العرض");
+        return;
+      }
+      if (idx < 0 || idx >= order.length) return;
+      pushUndoSnapshot();
+      var curIdx = adapter.getCurrentIndex();
+      order.splice(idx, 1);
+      var nextActiveIdx = curIdx;
+      if (idx < curIdx) nextActiveIdx = curIdx - 1;
+      else if (nextActiveIdx >= order.length) nextActiveIdx = order.length - 1;
+
+      clearSelection();
+      adapter.rebuildPages(order, studioState.customPages, Math.max(0, nextActiveIdx));
+      scheduleAutoSave();
+      syncDockState();
+      if (activeModal === "pages") renderPagesModal();
+      showToast("تم حذف الصفحة وتحديث الترقيم ✓");
+    }
+
+    function duplicatePageAtIndex(idx) {
+      var order = studioState.pageOrder;
+      if (idx < 0 || idx >= order.length) return;
+      pushUndoSnapshot();
+      var srcUid = order[idx];
+      var newUid = genUid("custom_page");
+      if (studioState.customPages[srcUid]) {
+        studioState.customPages[newUid] = deepClone(studioState.customPages[srcUid]);
+      } else {
+        studioState.customPages[newUid] = {
+          kind: "clone",
+          sourceUid: srcUid
+        };
+      }
+      if (studioState.pages[srcUid]) {
+        studioState.pages[newUid] = deepClone(studioState.pages[srcUid]);
+        var pRec = studioState.pages[newUid];
+        if (Array.isArray(pRec.frames)) {
+          pRec.frames.forEach(function (f) { f.id = genUid("frame"); });
+        }
+        if (Array.isArray(pRec.addedChars)) {
+          pRec.addedChars.forEach(function (c) { c.id = genUid("char"); });
+        }
+      }
+      order.splice(idx + 1, 0, newUid);
+      adapter.rebuildPages(order, studioState.customPages, idx + 1);
+      scheduleAutoSave();
+      syncDockState();
+      if (activeModal === "pages") renderPagesModal();
+      showToast("تم نسخ الصفحة وإدراجها بنجاح ✓");
+    }
+
+    function addNewBlankPage() {
+      pushUndoSnapshot();
+      var curIdx = adapter.getCurrentIndex();
+      var newUid = genUid("custom_page");
+      studioState.customPages[newUid] = {
+        kind: "blank",
+        sourceUid: adapter.initialOrder[0],
+        title: "صفحة مخصّصة جديدة",
+        subtitle: "اضغط على أي نص لتعديله أو أضف إطارات كلام وشخصيات جديدة",
+        lead: "اكتب الأفكار أو المشاهد الإضافية هنا بحرية تامة."
+      };
+      studioState.pageOrder.splice(curIdx + 1, 0, newUid);
+      adapter.rebuildPages(studioState.pageOrder, studioState.customPages, curIdx + 1);
+      scheduleAutoSave();
+      syncDockState();
+      if (activeModal === "pages") renderPagesModal();
+      showToast("تمت إضافة صفحة جديدة جاهزة للتخصيص ✓");
+    }
+
+    /* ----------------------------------------------------------------------
+       14. MODALS: FRAME PICKER, CHARACTER STUDIO, PAGE SORTER, MORE SETTINGS
+       ---------------------------------------------------------------------- */
+    function closeModal() {
+      activeModal = null;
+      ui.modalHost.hidden = true;
+      ui.modalHost.innerHTML = "";
+    }
+
+    function openFramesModal() {
+      activeModal = "frames";
+      var cardsHtml = FRAME_STYLES.map(function (st) {
+        return '<button type="button" class="ps-preset-card" data-add-frame="' + st.id + '">' +
+          '<div style="font-size:14px;font-weight:800;color:#231F1D;margin-bottom:5px;">' + escHtml(st.label) + '</div>' +
+          '<div style="font-size:12px;color:#6E6258;line-height:1.5;">' + escHtml(st.defaultText) + '</div>' +
+        '</button>';
+      }).join("");
+
+      ui.modalHost.innerHTML =
+        '<div class="ps-sheet" role="dialog" aria-label="إضافة إطار كلام جديد">' +
+          '<div class="ps-sheet-head">' +
+            '<h2 class="ps-sheet-title">إضافة إطار لكلام جديد</h2>' +
+            '<button type="button" class="ps-close-btn" data-ps-close-modal="1">✕</button>' +
+          '</div>' +
+          '<div class="ps-sheet-body">' +
+            '<p style="margin:0 0 12px;font-size:13px;color:#5C5249;">اختر شكل الإطار لإضافته فوق الصفحة الحالية ثم اكتب بداخله واسحبه لأي مكان:</p>' +
+            '<div class="ps-frame-presets-grid">' + cardsHtml + '</div>' +
+          '</div>' +
+        '</div>';
+      ui.modalHost.hidden = false;
+    }
+
+    function collectCurrentPageCharactersList() {
+      var list = [];
+      var pageUid = adapter.getCurrentPageUid();
+      var pageRec = ensurePageRecord(pageUid);
+
+      for (var i = 0; i < pageRec.addedChars.length; i++) {
+        var ac = pageRec.addedChars[i];
+        list.push({
+          kind: "addedChar",
+          id: ac.id,
+          name: ac.label || "شخصية مضافة " + (i + 1),
+          scale: ac.scale || 1,
+          hidden: false
+        });
+      }
+
+      var targets = adapter.getStageTargets();
+      var curTarget = targets[0];
+      for (var t = 0; t < targets.length; t++) {
+        if (targets[t].pageUid === pageUid) curTarget = targets[t];
+      }
+      if (curTarget) {
+        var nativeNodes = curTarget.charRoot.querySelectorAll("[data-ps-native-char]");
+        for (var n = 0; n < nativeNodes.length; n++) {
+          var nEl = nativeNodes[n];
+          var key = nEl.getAttribute("data-ps-char-key");
+          if (!key) continue;
+          var ov = pageRec.nativeCharOverrides[key] || {};
+          var label = nEl.getAttribute("data-actor-id") || ("عنصر/شخصية في المشهد #" + (n + 1));
+          list.push({
+            kind: "nativeChar",
+            id: key,
+            el: nEl,
+            name: toWesternDigits(label),
+            scale: ov.scale || 1,
+            hidden: Boolean(ov.hidden)
+          });
+        }
+      }
+      return list;
+    }
+
+    function renderCharsModal() {
+      activeModal = "chars";
+      var bodyHtml = "";
+
+      if (activeCharTab === "editorial") {
+        bodyHtml = '<div class="ps-char-grid">' +
+          EDITORIAL_CHARACTERS.map(function (c) {
+            return '<button type="button" class="ps-char-card" data-pick-char="' + c.id + '" data-pick-label="' + escHtml(c.name) + '">' +
+              '<div class="ps-char-thumb">' + c.svg("thumb_" + c.id) + '</div>' +
+              '<span class="ps-char-name">' + escHtml(c.name) + '</span>' +
+              '<span class="ps-char-role">' + escHtml(c.role) + '</span>' +
+            '</button>';
+          }).join("") +
+        '</div>';
+      } else if (activeCharTab === "cast") {
+        var moodPills = '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;align-items:center;">' +
+          '<span style="font-size:12px;font-weight:700;">التعبير الانفعالي:</span>' +
+          CAST_MOODS.map(function (m) {
+            var act = m.id === selectedCastMood ? " is-active" : "";
+            return '<button type="button" class="ps-tab-btn' + act + '" style="min-height:28px;padding:0 10px;font-size:11.5px;" data-set-cast-mood="' + m.id + '">' + m.label + '</button>';
+          }).join("") +
+        '</div>';
+
+        bodyHtml = moodPills + '<div class="ps-char-grid">' +
+          CAST_CHARACTERS.map(function (c) {
+            var thumb = renderGalleryCharacterMarkup({ charId: c.id, mood: selectedCastMood, id: "th_" + c.id });
+            return '<button type="button" class="ps-char-card" data-pick-char="' + c.id + '" data-pick-mood="' + selectedCastMood + '" data-pick-label="' + escHtml(c.name) + '">' +
+              '<div class="ps-char-thumb">' + thumb + '</div>' +
+              '<span class="ps-char-name">' + escHtml(c.name) + '</span>' +
+              '<span class="ps-char-role">' + escHtml(c.role) + '</span>' +
+            '</button>';
+          }).join("") +
+        '</div>';
+      } else if (activeCharTab === "upload") {
+        bodyHtml =
+          '<div style="padding:22px;border:2px dashed #3A322C;border-radius:18px;text-align:center;background:#FFFDF9;">' +
+            '<p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#231F1D;">ارفع شخصية أو رسمة خاصة من جهازك (PNG / JPG / SVG / WebP)</p>' +
+            '<p style="margin:0 0 16px;font-size:12px;color:#6E6258;">تُدمج الصورة محلياً داخل العرض وتُحفظ تلقائياً عند تنزيل ملف HTML دون الحاجة لاتصال بالإنترنت.</p>' +
+            '<label class="ps-action-pill" style="display:inline-flex;align-items:center;cursor:pointer;">' +
+              '<span>اختيار ملف صورة من الجهاز 📁</span>' +
+              '<input type="file" id="ps-custom-char-file" accept="image/*" style="display:none;" />' +
+            '</label>' +
+          '</div>';
+      } else if (activeCharTab === "onpage") {
+        var pageChars = collectCurrentPageCharactersList();
+        if (!pageChars.length) {
+          bodyHtml = '<p style="text-align:center;color:#6E6258;padding:18px;">لا توجد شخصيات على هذه الصفحة بعد — أضف شخصية من التبويبات أعلاه.</p>';
+        } else {
+          bodyHtml = '<div class="ps-pages-list">' +
+            pageChars.map(function (pc) {
+              var pct = Math.round((pc.scale || 1) * 100) + "%";
+              return '<div class="ps-page-row">' +
+                '<div class="ps-page-info">' +
+                  '<div class="ps-page-title">' + escHtml(pc.name) + (pc.hidden ? " (مخفية)" : " — الحجم: " + pct) + '</div>' +
+                '</div>' +
+                '<div class="ps-page-ctrls">' +
+                  (pc.hidden
+                    ? '<button type="button" class="ps-mini-btn" data-onpage-act="restore" data-kind="' + pc.kind + '" data-id="' + escHtml(pc.id) + '">استعادة ↺</button>'
+                    : '<button type="button" class="ps-mini-btn" data-onpage-act="up" data-kind="' + pc.kind + '" data-id="' + escHtml(pc.id) + '" title="تكبير">+</button>' +
+                      '<button type="button" class="ps-mini-btn" data-onpage-act="down" data-kind="' + pc.kind + '" data-id="' + escHtml(pc.id) + '" title="تصغير">−</button>' +
+                      '<button type="button" class="ps-mini-btn is-del" data-onpage-act="del" data-kind="' + pc.kind + '" data-id="' + escHtml(pc.id) + '" title="حذف">حذف 🗑</button>'
+                  ) +
+                '</div>' +
+              '</div>';
+            }).join("") +
+          '</div>';
+        }
+      }
+
+      ui.modalHost.innerHTML =
+        '<div class="ps-sheet" role="dialog" aria-label="استوديو الشخصيات">' +
+          '<div class="ps-sheet-head">' +
+            '<h2 class="ps-sheet-title">إضافة وإدارة الشخصيات</h2>' +
+            '<button type="button" class="ps-close-btn" data-ps-close-modal="1">✕</button>' +
+          '</div>' +
+          '<div class="ps-sheet-tabs">' +
+            '<button type="button" class="ps-tab-btn' + (activeCharTab === "editorial" ? " is-active" : "") + '" data-char-tab="editorial">شخصيات مصوّرة (8)</button>' +
+            '<button type="button" class="ps-tab-btn' + (activeCharTab === "cast" ? " is-active" : "") + '" data-char-tab="cast">طاقم القصة (10)</button>' +
+            '<button type="button" class="ps-tab-btn' + (activeCharTab === "onpage" ? " is-active" : "") + '" data-char-tab="onpage">شخصيات الصفحة الحالية</button>' +
+            '<button type="button" class="ps-tab-btn' + (activeCharTab === "upload" ? " is-active" : "") + '" data-char-tab="upload">رفع صورة مخصّصة</button>' +
+          '</div>' +
+          '<div class="ps-sheet-body">' + bodyHtml + '</div>' +
+        '</div>';
+      ui.modalHost.hidden = false;
+
+      var fileInput = document.getElementById("ps-custom-char-file");
+      if (fileInput) {
+        fileInput.addEventListener("change", function (ev) {
+          var file = ev.target.files && ev.target.files[0];
+          if (!file) return;
+          optimizeUploadedImageFile(file, function (optimizedDataUrl) {
+            addCharacterToStage({
+              charId: "custom_upload",
+              label: file.name.replace(/\.[^.]+$/, "") || "شخصية مخصّصة",
+              customDataUrl: optimizedDataUrl
+            });
+          });
+        });
+      }
+    }
+
+    function renderPagesModal() {
+      activeModal = "pages";
+      var pages = adapter.getPages();
+      var curIdx = adapter.getCurrentIndex();
+      var canDelete = pages.length > 1;
+
+      var rowsHtml = pages.map(function (p, idx) {
+        var editedRec = studioState.pages[p.uid];
+        var isEdited = Boolean(editedRec && (
+          Object.keys(editedRec.textOverrides || {}).length ||
+          (editedRec.frames && editedRec.frames.length) ||
+          (editedRec.addedChars && editedRec.addedChars.length) ||
+          Object.keys(editedRec.nativeCharOverrides || {}).length
+        ));
+
+        return '<div class="ps-page-row' + (idx === curIdx ? ' is-current' : '') + '" draggable="true" data-page-row-idx="' + idx + '">' +
+          '<span class="ps-drag-grip" title="اسحب لإعادة ترتيب الصفحة">⠿</span>' +
+          '<span class="ps-page-num">' + pad2(idx + 1) + '</span>' +
+          '<div class="ps-page-info" data-page-jump="' + idx + '">' +
+            '<div class="ps-page-title">' + escHtml(p.title) + (isEdited ? ' • معدّلة' : '') + '</div>' +
+            (p.subtitle ? '<div class="ps-page-sub">' + escHtml(p.subtitle) + '</div>' : '') +
+          '</div>' +
+          '<div class="ps-page-ctrls">' +
+            '<button type="button" class="ps-mini-btn" data-page-move-up="' + idx + '"' + (idx === 0 ? ' disabled' : '') + ' title="تقديم الصفحة للأعلى">▲</button>' +
+            '<button type="button" class="ps-mini-btn" data-page-move-down="' + idx + '"' + (idx === pages.length - 1 ? ' disabled' : '') + ' title="تأخير الصفحة للأسفل">▼</button>' +
+            '<button type="button" class="ps-mini-btn" data-page-dup="' + idx + '" title="نسخ وتكرار هذه الصفحة">نسخ</button>' +
+            '<button type="button" class="ps-mini-btn is-del" data-page-del="' + idx + '"' + (!canDelete ? ' disabled' : '') + ' title="حذف هذه الصفحة">حذف 🗑</button>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+
+      ui.modalHost.innerHTML =
+        '<div class="ps-sheet" role="dialog" aria-label="إدارة وترتيب الصفحات">' +
+          '<div class="ps-sheet-head">' +
+            '<h2 class="ps-sheet-title">إدارة الصفحات (' + pages.length + ' صفحة)</h2>' +
+            '<button type="button" class="ps-close-btn" data-ps-close-modal="1">✕</button>' +
+          '</div>' +
+          '<div class="ps-sheet-body">' +
+            '<div class="ps-pages-top-actions">' +
+              '<button type="button" class="ps-action-pill" data-page-add-blank="1">+ إضافة صفحة جديدة</button>' +
+              '<button type="button" class="ps-action-pill is-secondary" data-page-dup="' + curIdx + '">نسخ الصفحة الحالية</button>' +
+            '</div>' +
+            '<div class="ps-pages-list" id="ps-pages-sortable">' + rowsHtml + '</div>' +
+          '</div>' +
+        '</div>';
+      ui.modalHost.hidden = false;
+
+      var listEl = document.getElementById("ps-pages-sortable");
+      var dragSrcIdx = null;
+      if (listEl) {
+        listEl.addEventListener("dragstart", function (e) {
+          var row = e.target.closest("[data-page-row-idx]");
+          if (!row) return;
+          dragSrcIdx = parseInt(row.getAttribute("data-page-row-idx"), 10);
+          row.classList.add("is-dragging");
+          if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+        });
+        listEl.addEventListener("dragend", function (e) {
+          var row = e.target.closest("[data-page-row-idx]");
+          if (row) row.classList.remove("is-dragging");
+        });
+        listEl.addEventListener("dragover", function (e) {
+          e.preventDefault();
+        });
+        listEl.addEventListener("drop", function (e) {
+          e.preventDefault();
+          var targetRow = e.target.closest("[data-page-row-idx]");
+          if (!targetRow || dragSrcIdx === null) return;
+          var dropIdx = parseInt(targetRow.getAttribute("data-page-row-idx"), 10);
+          if (!isNaN(dropIdx) && dropIdx !== dragSrcIdx) {
+            movePageInOrder(dragSrcIdx, dropIdx);
+          }
+          dragSrcIdx = null;
+        });
+
+        /* Mobile Touch / Pointer Grip Reordering on .ps-drag-grip */
+        var ptrSortIdx = null;
+        var ptrHoverIdx = null;
+        listEl.addEventListener("pointerdown", function (e) {
+          if (e.pointerType === "mouse") return;
+          var grip = e.target.closest(".ps-drag-grip");
+          var row = grip ? grip.closest("[data-page-row-idx]") : null;
+          if (!row) return;
+          e.preventDefault();
+          ptrSortIdx = parseInt(row.getAttribute("data-page-row-idx"), 10);
+          ptrHoverIdx = ptrSortIdx;
+          row.classList.add("is-dragging");
+          if (grip.setPointerCapture) {
+            try { grip.setPointerCapture(e.pointerId); } catch (err) {}
+          }
+        });
+        listEl.addEventListener("pointermove", function (e) {
+          if (ptrSortIdx === null) return;
+          e.preventDefault();
+          var hit = document.elementFromPoint(e.clientX, e.clientY);
+          var overRow = hit && hit.closest ? hit.closest("[data-page-row-idx]") : null;
+          var rows = listEl.querySelectorAll("[data-page-row-idx]");
+          for (var r = 0; r < rows.length; r++) rows[r].classList.remove("is-drop-target");
+          if (overRow) {
+            var overIdx = parseInt(overRow.getAttribute("data-page-row-idx"), 10);
+            if (!isNaN(overIdx)) {
+              ptrHoverIdx = overIdx;
+              if (overIdx !== ptrSortIdx) overRow.classList.add("is-drop-target");
+            }
+          }
+        });
+        var finishPtrSort = function () {
+          if (ptrSortIdx === null) return;
+          var from = ptrSortIdx;
+          var to = ptrHoverIdx;
+          ptrSortIdx = null;
+          ptrHoverIdx = null;
+          var rows = listEl.querySelectorAll("[data-page-row-idx]");
+          for (var r = 0; r < rows.length; r++) {
+            rows[r].classList.remove("is-dragging", "is-drop-target");
+          }
+          if (typeof to === "number" && to !== from) {
+            movePageInOrder(from, to);
+          }
+        };
+        listEl.addEventListener("pointerup", finishPtrSort);
+        listEl.addEventListener("pointercancel", finishPtrSort);
+      }
+    }
+
+    function openMoreModal() {
+      activeModal = "more";
+      var pageUid = adapter.getCurrentPageUid();
+      var pageRec = ensurePageRecord(pageUid);
+      var hiddenCharsCount = Object.keys(pageRec.nativeCharOverrides || {}).filter(function (k) {
+        return pageRec.nativeCharOverrides[k] && pageRec.nativeCharOverrides[k].hidden;
+      }).length;
+      var hiddenTextsCount = Object.keys(pageRec.textOverrides || {}).filter(function (k) {
+        return pageRec.textOverrides[k] && pageRec.textOverrides[k].hidden;
+      }).length;
+
+      ui.modalHost.innerHTML =
+        '<div class="ps-sheet" role="dialog" aria-label="خيارات الحفظ والتصدير">' +
+          '<div class="ps-sheet-head">' +
+            '<h2 class="ps-sheet-title">خيارات الحفظ وتنزيل ملف HTML</h2>' +
+            '<button type="button" class="ps-close-btn" data-ps-close-modal="1">✕</button>' +
+          '</div>' +
+          '<div class="ps-sheet-body" style="display:flex;flex-direction:column;gap:10px;">' +
+            '<button type="button" class="ps-action-pill" data-more-act="download-editable">تنزيل ملف HTML محلي قابل للتعديل مستقبلاً ⬇</button>' +
+            '<button type="button" class="ps-action-pill is-secondary" data-more-act="download-readonly">تنزيل نسخة عرض نهائية للمشاهدين (قراءة فقط) ⬇</button>' +
+            ((hiddenCharsCount || hiddenTextsCount)
+              ? '<button type="button" class="ps-action-pill is-secondary" data-more-act="restore-page-hidden">استعادة العناصر المخفية في هذه الصفحة (' + (hiddenCharsCount + hiddenTextsCount) + ') ↺</button>'
+              : '') +
+            '<hr style="border:none;border-top:1px solid rgba(58,50,44,0.18);width:100%;margin:4px 0;" />' +
+            '<button type="button" class="ps-action-pill is-secondary" style="border-color:#B91C1C;color:#B91C1C;" data-more-act="reset-all">إعادة العرض بالكامل للنسخة الأصلية (مسح التعديلات)</button>' +
+          '</div>' +
+        '</div>';
+      ui.modalHost.hidden = false;
+    }
+
+    function openSvgTextModal(svgTxt) {
+      if (!svgTxt) return;
+      activeModal = "svgtext";
+      var curVal = svgTxt.textContent || "";
+      ui.modalHost.innerHTML =
+        '<div class="ps-sheet" role="dialog" aria-label="تعديل نص الرسم التوضيحي" style="max-width:440px;">' +
+          '<div class="ps-sheet-head">' +
+            '<h2 class="ps-sheet-title">تعديل النص داخل الرسم</h2>' +
+            '<button type="button" class="ps-close-btn" data-ps-close-modal="1">✕</button>' +
+          '</div>' +
+          '<div class="ps-sheet-body" style="display:flex;flex-direction:column;gap:12px;">' +
+            '<input type="text" id="ps-svg-txt-input" value="' + escHtml(curVal) + '" style="width:100%;min-height:42px;padding:8px 12px;border-radius:12px;border:1.5px solid #3A322C;font-size:14px;direction:rtl;" />' +
+            '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+              '<button type="button" class="ps-action-pill is-secondary" data-ps-close-modal="1">إلغاء</button>' +
+              '<button type="button" class="ps-action-pill" id="ps-svg-txt-save">حفظ النص ✓</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      ui.modalHost.hidden = false;
+      var inp = document.getElementById("ps-svg-txt-input");
+      var saveBtn = document.getElementById("ps-svg-txt-save");
+      if (inp) {
+        inp.focus();
+        inp.select();
+      }
+      function commitSvgText() {
+        if (!inp) return;
+        var updated = inp.value;
+        if (updated !== curVal) {
+          pushUndoSnapshot();
+          var stPageUid = svgTxt.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid();
+          var stKey = svgTxt.getAttribute("data-ps-text-key");
+          var stRec = ensurePageRecord(stPageUid);
+          stRec.textOverrides[stKey] = Object.assign(stRec.textOverrides[stKey] || {}, { text: updated, hidden: false });
+          svgTxt.textContent = updated;
+          scheduleAutoSave();
+        }
+        closeModal();
+      }
+      if (saveBtn) saveBtn.addEventListener("click", commitSvgText);
+      if (inp) {
+        inp.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            commitSvgText();
+          }
+        });
+      }
+    }
+
+    /* ----------------------------------------------------------------------
+       15. POINTER DRAGGING, CORNER RESIZING, INLINE EDITING & EVENT SHIELDS
+       ---------------------------------------------------------------------- */
+    var dragSession = null;
+    var pinchSession = null;
+    var activeTextUndoKey = null;
+
+    function ensureTextUndoSnapshotOnce(sessionKey) {
+      if (activeTextUndoKey !== sessionKey) {
+        pushUndoSnapshot();
+        activeTextUndoKey = sessionKey;
+      }
+    }
+
+    function bindGlobalInteractions() {
+      rootEl.addEventListener("pointerdown", function (e) {
+        if (e.target && e.target.getAttribute && e.target.getAttribute("data-ctx-act") === "scale-slider") {
+          pushUndoSnapshot();
+        }
+        e.stopPropagation();
+      });
+      rootEl.addEventListener("wheel", function (e) {
+        e.stopPropagation();
+      }, { passive: true });
+
+      ui.entryPill.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        setEditMode(true);
+      });
+
+      ui.dock.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-ps-act]");
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var act = btn.getAttribute("data-ps-act");
+        if (act === "open-frames") openFramesModal();
+        else if (act === "open-chars") renderCharsModal();
+        else if (act === "open-pages") renderPagesModal();
+        else if (act === "undo") performUndo();
+        else if (act === "save") saveNow(true);
+        else if (act === "download") downloadStandaloneHtml({ readonly: false });
+        else if (act === "open-more") openMoreModal();
+        else if (act === "exit-edit") setEditMode(false);
+      });
+
+      ui.ctxBar.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-ctx-act]");
+        if (!btn || !selection) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var act = btn.getAttribute("data-ctx-act");
+        var model = getSelectedModel();
+        if (!model) return;
+
+        if (act === "scale-up") scaleSelectedCharacter((model.scale || 1) + 0.15, true);
+        else if (act === "scale-down") scaleSelectedCharacter((model.scale || 1) - 0.15, true);
+        else if (act === "flip") {
+          pushUndoSnapshot();
+          model.flip = !model.flip;
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "dup-char") {
+          pushUndoSnapshot();
+          var pageRec = ensurePageRecord(selection.pageUid);
+          var copy = deepClone(model);
+          copy.id = genUid("char");
+          copy.x = clamp((copy.x || 50) + 6, 12, 88);
+          copy.y = clamp((copy.y || 50) + 4, 15, 85);
+          pageRec.addedChars.push(copy);
+          applyAllStageOverrides();
+          var copyEl = document.querySelector('.ps-char-item[data-ps-added-char-id="' + copy.id + '"]');
+          if (copyEl) selectItem({ kind: "addedChar", pageUid: selection.pageUid, id: copy.id, el: copyEl });
+          scheduleAutoSave();
+        } else if (act === "frame-style") {
+          pushUndoSnapshot();
+          var orderStyles = ["editorial", "bubble", "pill", "cinema"];
+          var nextSt = orderStyles[(orderStyles.indexOf(model.style || "editorial") + 1) % orderStyles.length];
+          model.style = nextSt;
+          applyAllStageOverrides();
+          renderContextBar();
+          scheduleAutoSave();
+        } else if (act === "frame-tail") {
+          pushUndoSnapshot();
+          var tails = ["bottom-right", "bottom-left", "none"];
+          model.tail = tails[(tails.indexOf(model.tail || "bottom-right") + 1) % tails.length];
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "frame-wider") {
+          pushUndoSnapshot();
+          model.width = clamp((model.width || 270) + 32, 140, 680);
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "frame-narrower") {
+          pushUndoSnapshot();
+          model.width = clamp((model.width || 270) - 32, 140, 680);
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "frame-font-up") {
+          pushUndoSnapshot();
+          model.fontSize = clamp((model.fontSize || 15) + 2, 11, 38);
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "frame-font-down") {
+          pushUndoSnapshot();
+          model.fontSize = clamp((model.fontSize || 15) - 2, 11, 38);
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "frame-theme") {
+          pushUndoSnapshot();
+          model.theme = btn.getAttribute("data-val") || "warm";
+          applyAllStageOverrides();
+          renderContextBar();
+          scheduleAutoSave();
+        } else if (act === "dup-frame") {
+          pushUndoSnapshot();
+          var fRec = ensurePageRecord(selection.pageUid);
+          var fCopy = deepClone(model);
+          fCopy.id = genUid("frame");
+          fCopy.x = clamp((fCopy.x || 50) + 5, 15, 85);
+          fCopy.y = clamp((fCopy.y || 50) + 6, 15, 85);
+          fRec.frames.push(fCopy);
+          applyAllStageOverrides();
+          var fCopyEl = document.querySelector('.ps-frame-item[data-ps-frame-id="' + fCopy.id + '"]');
+          if (fCopyEl) selectItem({ kind: "frame", pageUid: selection.pageUid, id: fCopy.id, el: fCopyEl });
+          scheduleAutoSave();
+        } else if (act === "text-bigger" || act === "text-smaller") {
+          pushUndoSnapshot();
+          var curPx = parseFloat(getComputedStyle(selection.el).fontSize) || 16;
+          var nextPx = clamp(curPx + (act === "text-bigger" ? 2 : -2), 11, 56);
+          model.fontSize = nextPx + "px";
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "text-bold") {
+          pushUndoSnapshot();
+          model.fontWeight = model.fontWeight === "800" ? "400" : "800";
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "text-align") {
+          pushUndoSnapshot();
+          var aligns = ["right", "center", "left"];
+          model.textAlign = aligns[(aligns.indexOf(model.textAlign || "right") + 1) % aligns.length];
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "text-color") {
+          pushUndoSnapshot();
+          model.color = btn.getAttribute("data-val") || "";
+          applyAllStageOverrides();
+          scheduleAutoSave();
+        } else if (act === "del-item") {
+          deleteSelectedItem();
+        }
+      });
+
+      ui.ctxBar.addEventListener("input", function (e) {
+        if (e.target && e.target.getAttribute("data-ctx-act") === "scale-slider") {
+          var val = parseInt(e.target.value, 10) || 100;
+          scaleSelectedCharacter(val / 100, false);
+        }
+      });
+
+      ui.ctxBar.addEventListener("change", function (e) {
+        if (e.target && e.target.getAttribute("data-ctx-act") === "char-mood" && selection) {
+          var m = getSelectedModel();
+          if (m) {
+            pushUndoSnapshot();
+            m.mood = e.target.value;
+            applyAllStageOverrides();
+            scheduleAutoSave();
+          }
+        }
+      });
+
+      ui.modalHost.addEventListener("click", function (e) {
+        if (e.target === ui.modalHost || e.target.closest("[data-ps-close-modal]")) {
+          closeModal();
+          return;
+        }
+        var addFrameBtn = e.target.closest("[data-add-frame]");
+        if (addFrameBtn) {
+          addTextFrame(addFrameBtn.getAttribute("data-add-frame"));
+          return;
+        }
+        var charTabBtn = e.target.closest("[data-char-tab]");
+        if (charTabBtn) {
+          activeCharTab = charTabBtn.getAttribute("data-char-tab");
+          renderCharsModal();
+          return;
+        }
+        var moodBtn = e.target.closest("[data-set-cast-mood]");
+        if (moodBtn) {
+          selectedCastMood = moodBtn.getAttribute("data-set-cast-mood");
+          renderCharsModal();
+          return;
+        }
+        var pickChar = e.target.closest("[data-pick-char]");
+        if (pickChar) {
+          addCharacterToStage({
+            charId: pickChar.getAttribute("data-pick-char"),
+            mood: pickChar.getAttribute("data-pick-mood") || selectedCastMood,
+            label: pickChar.getAttribute("data-pick-label") || "شخصية"
+          });
+          return;
+        }
+        var onpageBtn = e.target.closest("[data-onpage-act]");
+        if (onpageBtn) {
+          var opAct = onpageBtn.getAttribute("data-onpage-act");
+          var kind = onpageBtn.getAttribute("data-kind");
+          var id = onpageBtn.getAttribute("data-id");
+          var pUid = adapter.getCurrentPageUid();
+          var pRec = ensurePageRecord(pUid);
+          pushUndoSnapshot();
+          if (kind === "addedChar") {
+            if (opAct === "del") {
+              pRec.addedChars = pRec.addedChars.filter(function (c) { return c.id !== id; });
+            } else {
+              pRec.addedChars.forEach(function (c) {
+                if (c.id === id) c.scale = clamp((c.scale || 1) + (opAct === "up" ? 0.18 : -0.18), 0.25, 3.0);
+              });
+            }
+          } else {
+            if (!pRec.nativeCharOverrides[id]) pRec.nativeCharOverrides[id] = { scale: 1, dx: 0, dy: 0, dxPct: 0, dyPct: 0, flip: false, hidden: false };
+            var ov = pRec.nativeCharOverrides[id];
+            if (opAct === "del") ov.hidden = true;
+            else if (opAct === "restore") ov.hidden = false;
+            else ov.scale = clamp((ov.scale || 1) + (opAct === "up" ? 0.18 : -0.18), 0.25, 3.0);
+          }
+          applyAllStageOverrides();
+          scheduleAutoSave();
+          renderCharsModal();
+          return;
+        }
+
+        var jumpEl = e.target.closest("[data-page-jump]");
+        if (jumpEl) {
+          var jIdx = parseInt(jumpEl.getAttribute("data-page-jump"), 10);
+          closeModal();
+          adapter.goTo(jIdx);
+          return;
+        }
+        var upBtn = e.target.closest("[data-page-move-up]");
+        if (upBtn) {
+          var uIdx = parseInt(upBtn.getAttribute("data-page-move-up"), 10);
+          movePageInOrder(uIdx, uIdx - 1);
+          return;
+        }
+        var downBtn = e.target.closest("[data-page-move-down]");
+        if (downBtn) {
+          var dIdx = parseInt(downBtn.getAttribute("data-page-move-down"), 10);
+          movePageInOrder(dIdx, dIdx + 1);
+          return;
+        }
+        var dupBtn = e.target.closest("[data-page-dup]");
+        if (dupBtn) {
+          duplicatePageAtIndex(parseInt(dupBtn.getAttribute("data-page-dup"), 10));
+          return;
+        }
+        var delBtn = e.target.closest("[data-page-del]");
+        if (delBtn) {
+          deletePageAtIndex(parseInt(delBtn.getAttribute("data-page-del"), 10));
+          return;
+        }
+        if (e.target.closest("[data-page-add-blank]")) {
+          addNewBlankPage();
+          return;
+        }
+
+        var moreBtn = e.target.closest("[data-more-act]");
+        if (moreBtn) {
+          var mAct = moreBtn.getAttribute("data-more-act");
+          if (mAct === "download-editable") {
+            closeModal();
+            downloadStandaloneHtml({ readonly: false });
+          } else if (mAct === "download-readonly") {
+            closeModal();
+            downloadStandaloneHtml({ readonly: true });
+          } else if (mAct === "restore-page-hidden") {
+            pushUndoSnapshot();
+            var curRec = ensurePageRecord(adapter.getCurrentPageUid());
+            Object.keys(curRec.nativeCharOverrides || {}).forEach(function (k) { curRec.nativeCharOverrides[k].hidden = false; });
+            Object.keys(curRec.textOverrides || {}).forEach(function (k) { curRec.textOverrides[k].hidden = false; });
+            closeModal();
+            applyAllStageOverrides();
+            scheduleAutoSave();
+            showToast("تمت استعادة العناصر المخفية في الصفحة ✓");
+          } else if (mAct === "reset-all") {
+            resetAllChanges();
+          }
+        }
+      });
+
+      document.addEventListener("click", function (e) {
+        if (!editMode) return;
+        if (e.target.closest("#ps-studio-root")) return;
+
+        var delFrameBtn = e.target.closest("[data-ps-del-frame]");
+        if (delFrameBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          var fid = delFrameBtn.getAttribute("data-ps-del-frame");
+          var fEl = delFrameBtn.closest(".ps-frame-item");
+          var pUid = fEl ? fEl.getAttribute("data-ps-page-uid") : adapter.getCurrentPageUid();
+          selectItem({ kind: "frame", pageUid: pUid, id: fid, el: fEl });
+          deleteSelectedItem();
+          return;
+        }
+
+        var frameEl = e.target.closest(".ps-frame-item");
+        if (frameEl) {
+          e.stopPropagation();
+          var frameId = frameEl.getAttribute("data-ps-frame-id");
+          var fPageUid = frameEl.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid();
+          selectItem({ kind: "frame", pageUid: fPageUid, id: frameId, el: frameEl });
+          return;
+        }
+
+        var addedCharEl = e.target.closest(".ps-char-item");
+        if (addedCharEl) {
+          e.preventDefault();
+          e.stopPropagation();
+          selectItem({
+            kind: "addedChar",
+            pageUid: addedCharEl.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid(),
+            id: addedCharEl.getAttribute("data-ps-added-char-id"),
+            el: addedCharEl
+          });
+          return;
+        }
+
+        var svgTxt = e.target.closest("[data-ps-svg-text]");
+        if (svgTxt) {
+          e.preventDefault();
+          e.stopPropagation();
+          openSvgTextModal(svgTxt);
+          return;
+        }
+
+        var editableEl = e.target.closest("[data-ps-editable]");
+        if (editableEl) {
+          if (editableEl.closest("a, button, [data-jump]")) {
+            e.preventDefault();
+            e.stopPropagation();
+          } else {
+            e.stopPropagation();
+          }
+          if (editableEl.getAttribute("contenteditable") !== "true") {
+            editableEl.setAttribute("contenteditable", "true");
+            editableEl.focus();
+          }
+          selectItem({
+            kind: "text",
+            pageUid: editableEl.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid(),
+            id: editableEl.getAttribute("data-ps-text-key"),
+            el: editableEl
+          });
+          return;
+        }
+
+        var nativeCharEl = e.target.closest("[data-ps-native-char]");
+        if (nativeCharEl) {
+          e.preventDefault();
+          e.stopPropagation();
+          selectItem({
+            kind: "nativeChar",
+            pageUid: nativeCharEl.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid(),
+            id: nativeCharEl.getAttribute("data-ps-char-key"),
+            el: nativeCharEl
+          });
+          return;
+        }
+
+        if (e.target.closest("#stage-viewport, #stageViewport, #stage-touch-surface, #spatial-stage, #stage-frame")) {
+          if (!e.target.closest("button, a, input, select, summary")) {
+            e.stopPropagation();
+            clearSelection();
+          }
+        }
+      }, true);
+
+      document.addEventListener("focusout", function (e) {
+        if (e.target && e.target.closest && e.target.closest(".ps-frame-body, [data-ps-editable]")) {
+          activeTextUndoKey = null;
+        }
+      }, true);
+
+      document.addEventListener("input", function (e) {
+        if (!editMode) return;
+        var frameBody = e.target.closest && e.target.closest(".ps-frame-body");
+        if (frameBody) {
+          var frameEl = frameBody.closest(".ps-frame-item");
+          if (!frameEl) return;
+          var pUid = frameEl.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid();
+          var fId = frameEl.getAttribute("data-ps-frame-id");
+          ensureTextUndoSnapshotOnce("frame::" + pUid + "::" + fId);
+          var rec = ensurePageRecord(pUid);
+          var fText = extractEditableText(frameBody);
+          for (var i = 0; i < rec.frames.length; i++) {
+            if (rec.frames[i].id === fId) {
+              rec.frames[i].text = fText;
+              break;
+            }
+          }
+          scheduleAutoSave();
+          return;
+        }
+
+        var editable = e.target.closest && e.target.closest("[data-ps-editable]");
+        if (editable) {
+          var tPageUid = editable.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid();
+          var tKey = editable.getAttribute("data-ps-text-key");
+          if (!tKey) return;
+          if (editable.__psOrigHtml === undefined) {
+            editable.__psOrigHtml = editable.innerHTML;
+          }
+          ensureTextUndoSnapshotOnce("text::" + tPageUid + "::" + tKey);
+          editable.setAttribute("data-ps-text-modified", "1");
+          var tRec = ensurePageRecord(tPageUid);
+          var newText = extractEditableText(editable);
+          tRec.textOverrides[tKey] = Object.assign(tRec.textOverrides[tKey] || {}, { text: newText, hidden: false });
+          if (newText.indexOf("\n") !== -1) {
+            editable.style.whiteSpace = "pre-line";
+          }
+          adapter.syncModelText(tPageUid, editable, newText);
+          scheduleAutoSave();
+        }
+      }, true);
+
+      document.addEventListener("pointerdown", function (e) {
+        if (!editMode) return;
+
+        if (e.target === ui.resizeKnob && selection) {
+          e.preventDefault();
+          e.stopPropagation();
+          var m = getSelectedModel();
+          if (!m) return;
+          pushUndoSnapshot();
+          dragSession = {
+            mode: "resize",
+            startX: e.clientX,
+            startY: e.clientY,
+            startScale: m.scale || 1,
+            startWidth: m.width || 270
+          };
+          return;
+        }
+
+        var frameDragHandle = e.target.closest("[data-ps-drag-frame]");
+        if (frameDragHandle && !e.target.closest("[data-ps-del-frame]")) {
+          var frameEl = frameDragHandle.closest(".ps-frame-item");
+          if (!frameEl) return;
+          e.preventDefault();
+          e.stopPropagation();
+          var fId = frameEl.getAttribute("data-ps-frame-id");
+          var fPageUid = frameEl.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid();
+          selectItem({ kind: "frame", pageUid: fPageUid, id: fId, el: frameEl });
+          var fm = getSelectedModel();
+          var host = frameEl.parentElement ? frameEl.parentElement.parentElement : document.body;
+          pushUndoSnapshot();
+          dragSession = {
+            mode: "moveFrame",
+            startX: e.clientX,
+            startY: e.clientY,
+            origX: fm.x || 50,
+            origY: fm.y || 50,
+            hostRect: host.getBoundingClientRect()
+          };
+          return;
+        }
+
+        var addedCharEl = e.target.closest(".ps-char-item");
+        if (addedCharEl) {
+          e.preventDefault();
+          e.stopPropagation();
+          var cId = addedCharEl.getAttribute("data-ps-added-char-id");
+          var cPageUid = addedCharEl.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid();
+          selectItem({ kind: "addedChar", pageUid: cPageUid, id: cId, el: addedCharEl });
+          var cm = getSelectedModel();
+          var cHost = addedCharEl.parentElement ? addedCharEl.parentElement.parentElement : document.body;
+          pushUndoSnapshot();
+          dragSession = {
+            mode: "moveAddedChar",
+            startX: e.clientX,
+            startY: e.clientY,
+            origX: cm.x || 50,
+            origY: cm.y || 55,
+            hostRect: cHost.getBoundingClientRect()
+          };
+          return;
+        }
+
+        var nativeCharEl = e.target.closest("[data-ps-native-char]");
+        if (nativeCharEl && !e.target.closest("[data-ps-editable], [data-ps-svg-text]")) {
+          e.preventDefault();
+          e.stopPropagation();
+          var nKey = nativeCharEl.getAttribute("data-ps-char-key");
+          var nPageUid = nativeCharEl.getAttribute("data-ps-page-uid") || adapter.getCurrentPageUid();
+          selectItem({ kind: "nativeChar", pageUid: nPageUid, id: nKey, el: nativeCharEl });
+          var nm = getSelectedModel();
+          var isSvg = nativeCharEl.getAttribute("data-ps-native-char") === "svg";
+          var svgEl = isSvg ? nativeCharEl.ownerSVGElement : null;
+          var vb = (svgEl && svgEl.viewBox && svgEl.viewBox.baseVal && svgEl.viewBox.baseVal.width)
+            ? svgEl.viewBox.baseVal
+            : { width: 500, height: 370 };
+          var refHost = isSvg ? svgEl : (nativeCharEl.offsetParent || document.body);
+          pushUndoSnapshot();
+          dragSession = {
+            mode: isSvg ? "moveNativeSvg" : "moveNativeHtml",
+            startX: e.clientX,
+            startY: e.clientY,
+            origDx: nm.dx || 0,
+            origDy: nm.dy || 0,
+            origDxPct: nm.dxPct || 0,
+            origDyPct: nm.dyPct || 0,
+            vbWidth: vb.width,
+            vbHeight: vb.height,
+            hostRect: refHost.getBoundingClientRect()
+          };
+          return;
+        }
+
+        if (
+          e.target.closest("#spatial-stage, #stage-frame, #stage-touch-surface") &&
+          !e.target.closest("#ps-studio-root, [data-ps-overlay-layer], [data-ps-editable], [data-ps-svg-text], button, a, input, select, textarea, summary")
+        ) {
+          e.stopPropagation();
+          clearSelection();
+        }
+      }, true);
+
+      document.addEventListener("pointermove", function (e) {
+        if (!dragSession || !selection) return;
+        e.preventDefault();
+        var model = getSelectedModel();
+        if (!model) return;
+
+        var dxPx = e.clientX - dragSession.startX;
+        var dyPx = e.clientY - dragSession.startY;
+
+        if (dragSession.mode === "resize") {
+          var delta = (-dxPx + dyPx) / 180;
+          if (selection.kind === "frame") {
+            model.width = clamp(Math.round(dragSession.startWidth - dxPx * 1.4), 140, 680);
+          } else {
+            model.scale = clamp(Math.round((dragSession.startScale + delta) * 100) / 100, 0.25, 3.0);
+          }
+          applyAllStageOverrides();
+          renderContextBar();
+          return;
+        }
+
+        var hr = dragSession.hostRect;
+        var w = Math.max(1, hr.width);
+        var h = Math.max(1, hr.height);
+
+        if (dragSession.mode === "moveFrame" || dragSession.mode === "moveAddedChar") {
+          model.x = clamp(dragSession.origX + (dxPx / w) * 100, 6, 94);
+          model.y = clamp(dragSession.origY + (dyPx / h) * 100, 6, 94);
+          applyAllStageOverrides();
+        } else if (dragSession.mode === "moveNativeSvg") {
+          model.dx = dragSession.origDx + dxPx * (dragSession.vbWidth / w);
+          model.dy = dragSession.origDy + dyPx * (dragSession.vbHeight / h);
+          applySvgWrapTransform(selection.el, model);
+          syncSelectionRing();
+        } else if (dragSession.mode === "moveNativeHtml") {
+          model.dxPct = clamp(dragSession.origDxPct + (dxPx / w) * 100, -85, 85);
+          model.dyPct = clamp(dragSession.origDyPct + (dyPx / h) * 100, -85, 85);
+          applyHtmlCharTransform(selection.el, model, selection.el.offsetParent || document.body);
+          syncSelectionRing();
+        }
+      }, { passive: false });
+
+      document.addEventListener("pointerup", function () {
+        if (dragSession) {
+          dragSession = null;
+          scheduleAutoSave();
+        }
+      }, true);
+
+      document.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S" || e.key === "س")) {
+          e.preventDefault();
+          e.stopPropagation();
+          saveNow(true);
+          return;
+        }
+
+        if (!editMode) return;
+
+        var inEditable = e.target && e.target.closest && e.target.closest('[contenteditable="true"], input, textarea, select');
+        if (inEditable) {
+          if (e.key === "Escape") {
+            e.target.blur();
+            e.stopPropagation();
+            return;
+          }
+          if (
+            e.key === "Enter" &&
+            !e.ctrlKey &&
+            !e.metaKey &&
+            inEditable.getAttribute &&
+            inEditable.getAttribute("contenteditable") === "true"
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            insertNewlineAtCaret(inEditable);
+            inEditable.dispatchEvent(new Event("input", { bubbles: true }));
+            return;
+          }
+          e.stopPropagation();
+          return;
+        }
+
+        if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z" || e.key === "ئ")) {
+          e.preventDefault();
+          e.stopPropagation();
+          performUndo();
+          return;
+        }
+
+        if (e.key === "Escape") {
+          if (activeModal) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeModal();
+            return;
+          }
+          if (selection) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearSelection();
+            return;
+          }
+        }
+
+        if ((e.key === "Delete" || e.key === "Backspace") && selection && selection.kind !== "text" && !activeModal) {
+          e.preventDefault();
+          e.stopPropagation();
+          deleteSelectedItem();
+        }
+      }, true);
+
+      document.addEventListener("touchstart", function (e) {
+        if (!editMode) return;
+        if (
+          e.touches &&
+          e.touches.length === 2 &&
+          selection &&
+          (selection.kind === "addedChar" || selection.kind === "nativeChar")
+        ) {
+          var m = getSelectedModel();
+          if (m) {
+            dragSession = null;
+            pushUndoSnapshot();
+            var d0 = Math.hypot(
+              e.touches[1].clientX - e.touches[0].clientX,
+              e.touches[1].clientY - e.touches[0].clientY
+            );
+            pinchSession = {
+              startDist: Math.max(12, d0),
+              startScale: m.scale || 1
+            };
+            e.stopPropagation();
+            return;
+          }
+        }
+        if (e.target && e.target.closest && e.target.closest(".ps-char-item, .ps-frame-item, [data-ps-drag-frame], [data-ps-native-char], #ps-resize-knob, #ps-studio-root")) {
+          e.stopPropagation();
+        }
+      }, { capture: true, passive: true });
+
+      document.addEventListener("touchmove", function (e) {
+        if (!editMode || !pinchSession || !e.touches || e.touches.length !== 2 || !selection) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var dist = Math.hypot(
+          e.touches[1].clientX - e.touches[0].clientX,
+          e.touches[1].clientY - e.touches[0].clientY
+        );
+        var nextScale = pinchSession.startScale * (dist / pinchSession.startDist);
+        scaleSelectedCharacter(nextScale, false);
+      }, { capture: true, passive: false });
+
+      document.addEventListener("touchend", function () {
+        if (pinchSession) {
+          pinchSession = null;
+          scheduleAutoSave();
+        }
+      }, { capture: true, passive: true });
+
+      var resizeRaf = null;
+      global.addEventListener("resize", function () {
+        if (resizeRaf) cancelAnimationFrame(resizeRaf);
+        resizeRaf = requestAnimationFrame(function () {
+          resizeRaf = null;
+          applyAllStageOverrides();
+        });
+      });
+      global.addEventListener("scroll", function () {
+        if (editMode) syncSelectionRing();
+      }, true);
+    }
+
+    /* ----------------------------------------------------------------------
+       16. INITIALIZATION & PUBLIC API
+       ---------------------------------------------------------------------- */
+    adapter = detectEngineAdapter(function onEngineRender() {
+      applyAllStageOverrides();
+    });
+
+    loadInitialState(adapter.initialOrder);
+    adapter.hydrateModelTexts(studioState.pages);
+
+    var orderChanged = JSON.stringify(studioState.pageOrder) !== JSON.stringify(adapter.initialOrder) ||
+                       Object.keys(studioState.customPages || {}).length > 0;
+    if (orderChanged) {
+      adapter.rebuildPages(studioState.pageOrder, studioState.customPages, 0);
+    }
+    applyAllStageOverrides();
+    updateEntryBadge();
+    syncDockState();
+    bindGlobalInteractions();
+
+    if (String(global.location.hash || "") === "#edit") {
+      setEditMode(true);
+    }
+
+    document.documentElement.setAttribute("data-ps-ready", "true");
+
+    /* Asynchronously recover newer/oversized state from IndexedDB if localStorage quota was exceeded */
+    idbLoad(storageKey, function (idbRec) {
+      if (
+        idbRec &&
+        typeof idbRec === "object" &&
+        (idbRec.savedAt || 0) > (studioState.savedAt || 0)
+      ) {
+        if (Array.isArray(idbRec.pageOrder) && idbRec.pageOrder.length) {
+          studioState.pageOrder = idbRec.pageOrder.slice();
+        }
+        studioState.customPages = idbRec.customPages || {};
+        studioState.pages = idbRec.pages || {};
+        studioState.savedAt = idbRec.savedAt || Date.now();
+        hasSavedEdits = true;
+        adapter.hydrateModelTexts(studioState.pages);
+        var idbOrderChanged = JSON.stringify(studioState.pageOrder) !== JSON.stringify(adapter.initialOrder) ||
+                              Object.keys(studioState.customPages || {}).length > 0;
+        if (idbOrderChanged) {
+          adapter.rebuildPages(studioState.pageOrder, studioState.customPages, adapter.getCurrentIndex());
+        }
+        applyAllStageOverrides();
+        updateEntryBadge();
+        syncDockState();
+      }
+      document.documentElement.setAttribute("data-ps-idb-ready", "true");
+    });
+
+    global.PresentationStudio = {
+      open: function () { setEditMode(true); },
+      close: function () { setEditMode(false); },
+      isEditing: function () { return editMode; },
+      addTextFrame: addTextFrame,
+      addCharacter: addCharacterToStage,
+      movePage: movePageInOrder,
+      deletePage: deletePageAtIndex,
+      duplicatePage: duplicatePageAtIndex,
+      addBlankPage: addNewBlankPage,
+      save: function () { return saveNow(true); },
+      reset: resetAllChanges,
+      exportHtmlString: buildStandaloneHtmlString,
+      downloadHtml: downloadStandaloneHtml,
+      getState: function () { return deepClone(studioState); },
+      getAdapterKind: function () { return adapter ? adapter.kind : "none"; }
+    };
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () {
+      setTimeout(createStudio, 0);
+    });
+  } else {
+    setTimeout(createStudio, 0);
+  }
+})(typeof window !== "undefined" ? window : globalThis);
+
+  </script>
+  <!-- === PRESENTATION STUDIO END === -->
 </body>
 </html>
