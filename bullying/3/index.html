@@ -2080,38 +2080,57 @@ html[data-theme="light"] .ref-vault-id { color: #047857; }
     }
     @media (max-width: 720px) {
       .motion-topbar {
-        top: max(10px, env(safe-area-inset-top, 10px)) !important;
-        left: max(10px, env(safe-area-inset-left, 10px)) !important;
-        right: max(10px, env(safe-area-inset-right, 10px)) !important;
+        top: max(8px, env(safe-area-inset-top, 8px)) !important;
+        left: max(8px, env(safe-area-inset-left, 8px)) !important;
+        right: max(8px, env(safe-area-inset-right, 8px)) !important;
+        gap: 6px !important;
       }
       .v3-hub-back {
-        font-size: 0.74rem;
+        font-size: 0.72rem;
       }
       .control-dock [data-ctrl="fullscreen"],
       .control-dock [data-ctrl="drawer"],
-      .chapter-capsule .intra-ratio {
+      .control-dock [data-ctrl="polarity"],
+      .chapter-capsule .intra-rail,
+      .chapter-capsule .intra-ratio,
+      .chapter-capsule .capsule-divider:last-of-type {
         display: none !important;
       }
       .chapter-capsule {
-        gap: 7px;
-        padding: 4px 10px;
+        gap: 6px;
+        padding: 4px 9px;
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+      .act-trigger-btn {
+        min-width: 0;
+        overflow: hidden;
+      }
+      #hud-scene-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .act-code-badge {
+        font-size: 0.62rem !important;
+        padding: 1px 5px !important;
       }
       .cinema-console-wrap {
-        bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) + 8px)) !important;
-        left: max(10px, env(safe-area-inset-left, 10px)) !important;
-        right: max(10px, env(safe-area-inset-right, 10px)) !important;
+        bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) + 6px)) !important;
+        left: max(8px, env(safe-area-inset-left, 8px)) !important;
+        right: max(8px, env(safe-area-inset-right, 8px)) !important;
       }
       .cinema-console {
-        padding: 10px 14px 8px !important;
-        gap: 7px !important;
+        padding: 9px 12px 7px !important;
+        gap: 6px !important;
         border-radius: 18px !important;
       }
       .console-main-row {
         flex-wrap: wrap !important;
         justify-content: center !important;
         align-items: center !important;
-        row-gap: 8px !important;
-        column-gap: 12px !important;
+        row-gap: 7px !important;
+        column-gap: 8px !important;
       }
       .subtitle-center-stage {
         order: -1 !important;
@@ -2120,14 +2139,18 @@ html[data-theme="light"] .ref-vault-id { color: #047857; }
         gap: 5px !important;
       }
       .kinetic-sentence {
-        font-size: clamp(0.90rem, 3.8vw, 1.04rem) !important;
-        line-height: 1.44 !important;
+        font-size: clamp(0.89rem, 3.75vw, 1.02rem) !important;
+        line-height: 1.48 !important;
+      }
+      .kw-mask {
+        padding-bottom: 5px !important;
+        margin-bottom: -3px !important;
       }
       .nav-step-btn {
-        min-width: 112px !important;
+        min-width: clamp(90px, 27vw, 114px) !important;
         width: auto !important;
         height: 38px !important;
-        padding: 0 16px !important;
+        padding: 0 13px !important;
         font-size: 0.82rem !important;
       }
       .nav-step-label {
@@ -2137,16 +2160,20 @@ html[data-theme="light"] .ref-vault-id { color: #047857; }
         background: rgba(56, 189, 248, 0.16) !important;
         border-color: var(--accent) !important;
       }
-      html[data-theme="light"] #btn-next {
+      html[data-theme="light"] #btn-next,
+      #motion-app[data-theme="light"] #btn-next {
         background: rgba(2, 132, 199, 0.14) !important;
       }
       .laser-track {
-        height: 18px !important;
+        height: 16px !important;
       }
       @media (min-height: 560px) {
         #motion-app:not([data-sim-active="true"]) .motion-actor {
-          width: clamp(64px, min(19.5vw, 24dvh), 124px) !important;
-          bottom: max(var(--ay, 28%), calc(var(--v3-console-clear, 186px) + 8px)) !important;
+          width: clamp(58px, min(18vw, 22dvh), 118px) !important;
+          bottom: max(var(--ay, 28%), calc(var(--v3-console-clear, 180px) + 6px)) !important;
+        }
+        #motion-app[data-has-telemetry="true"]:not([data-sim-active="true"]) .motion-actor {
+          width: clamp(50px, min(16vw, 19dvh), 102px) !important;
         }
       }
       /* Keep simulators 100% clear of bottom console */
@@ -3412,8 +3439,8 @@ html[data-theme="light"] .ref-vault-id { color: #047857; }
 
         // 6. Dual Day + Night Siege Wedges
         '<g class="set-layer" data-states="dual-siege">',
-        '  <polygon points="0,0 620,0 740,900 0,900" fill="rgba(244,63,94,0.16)"/>',
-        '  <polygon points="980,0 1600,0 1600,900 860,900" fill="rgba(6,182,212,0.15)"/>',
+        '  <polygon points="0,-1200 540,-1200 840,1900 0,1900" fill="rgba(244,63,94,0.16)"/>',
+        '  <polygon points="1060,-1200 1600,-1200 1600,1900 760,1900" fill="rgba(6,182,212,0.15)"/>',
         '</g>',
         '</svg>'
       ].join("");
@@ -3573,8 +3600,8 @@ html[data-theme="light"] .ref-vault-id { color: #047857; }
         '<svg class="stage-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">',
         commonDefs(),
         horizonFrame(),
-        '<polygon points="545,900 1055,900 848,420 752,420" fill="rgba(15,23,42,0.76)" stroke="var(--stage-line)" stroke-width="1.8"/>',
-        '<line x1="800" y1="900" x2="800" y2="425" stroke="#fbbf24" stroke-width="2.6" stroke-dasharray="18 14"/>',
+        '<polygon points="110,1900 1490,1900 848,420 752,420" fill="rgba(15,23,42,0.76)" stroke="var(--stage-line)" stroke-width="1.8"/>',
+        '<line x1="800" y1="1900" x2="800" y2="425" stroke="#fbbf24" stroke-width="2.6" stroke-dasharray="18 14"/>',
 
         // Stormy Lifespan Scars (cohort-50, four-scars, copeland-roles, ziad-fragile)
         '<g class="set-layer" data-states="cohort-50 four-scars copeland-roles ziad-fragile">',
@@ -3586,7 +3613,7 @@ html[data-theme="light"] .ref-vault-id { color: #047857; }
         // Emerald Inflection Horizon (turning-point, meta-proof, shield-1..5)
         '<g class="set-layer" data-states="turning-point meta-proof shield-1 shield-2 shield-3 shield-4 shield-5">',
         '  <ellipse cx="800" cy="395" rx="410" ry="175" fill="url(#mg-glow-emerald)"/>',
-        '  <polygon points="575,900 1025,900 842,420 758,420" fill="rgba(16,185,129,0.22)" stroke="#10b981" stroke-width="2.4"/>',
+        '  <polygon points="195,1900 1405,1900 842,420 758,420" fill="rgba(16,185,129,0.22)" stroke="#10b981" stroke-width="2.4"/>',
         '</g>',
 
         // Five Progressive Interlocking Hexagonal Photonic Shields with Domain Labels
@@ -7351,7 +7378,28 @@ window.MOTION_REFS = [
           }
         }
         if (window.MotionEngine && typeof window.MotionEngine._computeTopClearance === "function") {
-          app.style.setProperty("--v3-top-clear", window.MotionEngine._computeTopClearance() + "px");
+          var topClear = window.MotionEngine._computeTopClearance();
+          app.style.setProperty("--v3-top-clear", topClear + "px");
+
+          // Clamp visible callouts horizontally inside viewport and below telemetry HUD on mobile
+          if (window.innerWidth <= 720) {
+            var callouts = app.querySelectorAll(".motion-actor[data-present='true'] .actor-callout.is-visible");
+            for (var cIdx = 0; cIdx < callouts.length; cIdx++) {
+              var co = callouts[cIdx];
+              if (window.getComputedStyle(co).display === "none") continue;
+              co.style.marginLeft = "0px";
+              co.style.marginBottom = "0px";
+              var cor = co.getBoundingClientRect();
+              if (cor.width < 4) continue;
+              var dx = 0;
+              if (cor.left < 8) dx = 8 - cor.left;
+              else if (cor.right > window.innerWidth - 8) dx = (window.innerWidth - 8) - cor.right;
+              if (Math.abs(dx) > 1) co.style.marginLeft = dx.toFixed(1) + "px";
+              if (cor.top < topClear + 4) {
+                co.style.marginBottom = Math.max(-28, Math.round(cor.top - (topClear + 4))) + "px";
+              }
+            }
+          }
         }
       }
 
@@ -7436,10 +7484,19 @@ window.MOTION_REFS = [
             var res = origApplyBeat.apply(this, arguments);
             fitV3MobileStage();
             requestAnimationFrame(fitV3MobileStage);
+            setTimeout(fitV3MobileStage, 480);
             return res;
           };
           wrappedApplyBeat._v3MobWrapped = true;
           window.MotionEngine._applyBeat = wrappedApplyBeat;
+        }
+
+        function refreshV3Geometry() {
+          fitV3MobileStage();
+          var curBeat = window.MotionEngine.beats[window.MotionEngine.currentIndex || 0];
+          if (curBeat && !curBeat.interactive) {
+            window.MotionEngine.goTo(window.MotionEngine.currentIndex || 0, { force: true, silent: true });
+          }
         }
 
         var lastResizeW = window.innerWidth;
@@ -7449,12 +7506,10 @@ window.MOTION_REFS = [
           if (Math.abs(window.innerWidth - lastResizeW) > 24 || Math.abs(window.innerHeight - lastResizeH) > 48) {
             lastResizeW = window.innerWidth;
             lastResizeH = window.innerHeight;
-            var curBeat = window.MotionEngine.beats[window.MotionEngine.currentIndex || 0];
-            if (curBeat && !curBeat.interactive) {
-              window.MotionEngine.goTo(window.MotionEngine.currentIndex || 0, { force: true, silent: true });
-            }
+            refreshV3Geometry();
           }
         });
+        window.addEventListener("project:unlocked", refreshV3Geometry);
         var consoleEl = document.querySelector(".cinema-console");
         if (typeof ResizeObserver === "function" && consoleEl) {
           new ResizeObserver(fitV3MobileStage).observe(consoleEl);

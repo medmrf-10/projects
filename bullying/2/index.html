@@ -1934,33 +1934,71 @@ html[data-theme="light"] .ref-item-num { color: #047857; }
     @media (max-width: 720px) {
       #cinema-app {
         grid-template-rows: auto minmax(0, 1fr) auto auto !important;
-        padding: max(8px, env(safe-area-inset-top, 8px)) max(12px, env(safe-area-inset-right, 12px)) max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px)) max(12px, env(safe-area-inset-left, 12px)) !important;
+        padding: max(8px, env(safe-area-inset-top, 8px)) max(10px, env(safe-area-inset-right, 10px)) max(10px, calc(env(safe-area-inset-bottom, 0px) + 8px)) max(10px, env(safe-area-inset-left, 10px)) !important;
         gap: 6px !important;
       }
       .hud-tools .hud-btn[data-ctrl="fullscreen"],
+      .hud-tools .hud-btn[data-ctrl="polarity"],
+      .hud-tools .hud-btn[data-ctrl="drawer"],
+      .hud-btn-label,
       .intra-scene-strip {
         display: none !important;
       }
       #stage-frame {
-        border-radius: 22px !important;
+        border-radius: 20px !important;
         align-self: center !important;
       }
       @media (min-height: 560px) {
-        .cinema-actor {
-          width: clamp(72px, min(21.5cqw, 44cqh), 152px) !important;
+        #cinema-app:not([data-ix-active="true"]) .cinema-actor {
+          width: clamp(64px, min(19.5cqw, 39cqh), 138px) !important;
+        }
+        #cinema-app[data-has-top-hud="true"]:not([data-ix-active="true"]) .cinema-actor {
+          width: clamp(56px, min(17.5cqw, 34cqh), 120px) !important;
         }
         #cinema-app:not([data-ix-active="true"]) #stage-frame {
           height: min(100%, 420px) !important;
         }
+      }
+      /* Interactive Studio (Beats 74-76): Keep Actors Clear Above Bottom Action Dock! */
+      #cinema-app[data-ix-active="true"] #interactive-layer {
+        padding: 6px 8px !important;
+      }
+      #cinema-app[data-ix-active="true"] .ix-top-card {
+        padding: 5px 10px !important;
+        gap: 5px !important;
+      }
+      #cinema-app[data-ix-active="true"] .ix-bottom-dock {
+        gap: 4px !important;
+      }
+      #cinema-app[data-ix-active="true"] .ix-case-card {
+        padding: 5px 9px !important;
+      }
+      #cinema-app[data-ix-active="true"] .ix-case-title {
+        font-size: 0.72rem !important;
+        line-height: 1.3 !important;
+      }
+      #cinema-app[data-ix-active="true"] .ix-action-btn {
+        padding: 5px 9px !important;
+        font-size: 0.71rem !important;
+      }
+      #cinema-app[data-ix-active="true"] .cinema-actor {
+        width: clamp(46px, 14.5cqw, 78px) !important;
+        bottom: clamp(114px, 41cqh, 176px) !important;
+        transform: translate3d(-50%, 0, 0) scale(calc(var(--ascale, 1) * 0.78)) !important;
+      }
+      #cinema-app[data-ix-active="true"] .actor-whisper {
+        font-size: 0.60rem !important;
+        padding: 2px 6px !important;
+        max-width: 124px !important;
       }
       .cinema-bottombar {
         height: auto !important;
         flex-wrap: wrap !important;
         justify-content: center !important;
         align-items: center !important;
-        row-gap: 8px !important;
-        column-gap: 12px !important;
-        padding: 2px 6px 0 !important;
+        row-gap: 7px !important;
+        column-gap: 8px !important;
+        padding: 2px 4px 0 !important;
       }
       .timeline-track {
         order: -1 !important;
@@ -1970,28 +2008,33 @@ html[data-theme="light"] .ref-item-num { color: #047857; }
         height: 8px !important;
       }
       .step-arrow-btn {
-        min-width: 112px !important;
-        height: 40px !important;
-        padding: 0 16px !important;
-        font-size: 0.85rem !important;
+        min-width: clamp(90px, 27vw, 114px) !important;
+        height: 39px !important;
+        padding: 0 13px !important;
+        font-size: 0.83rem !important;
         border-radius: 999px !important;
       }
       #btn-next {
         background: rgba(56, 189, 248, 0.18) !important;
         border-color: var(--accent) !important;
       }
-      html[data-theme="light"] #btn-next {
+      html[data-theme="light"] #btn-next,
+      #cinema-app[data-theme="light"] #btn-next {
         background: rgba(2, 132, 199, 0.14) !important;
       }
       .beat-counter-pill {
-        min-width: 64px !important;
-        font-size: 0.80rem !important;
+        min-width: 56px !important;
+        font-size: 0.78rem !important;
+        text-align: center !important;
       }
       .refs-cards-grid, .beats-grid {
         grid-template-columns: 1fr !important;
       }
       .cinema-modal-backdrop {
         padding: 10px;
+      }
+      #cinema-app[data-ix-active="true"] .actor-whisper[data-w-tier="high"] {
+        bottom: calc(96% + 22px) !important;
       }
     }
     @media (max-height: 520px) and (max-width: 900px) {
@@ -2861,14 +2904,17 @@ html[data-theme="light"] .ref-item-num { color: #047857; }
       '<rect x="0" y="445" width="1200" height="1200" fill="url(#shared-floor-grad)"/>',
       '<line x1="0" y1="445" x2="1200" y2="445" stroke="' + (accentStroke || "rgba(148,163,184,0.25)") + '" stroke-width="2"/>',
       '<g stroke="var(--set-grid)" stroke-width="1.4">',
-      '  <line x1="600" y1="445" x2="600" y2="620"/>',
-      '  <line x1="460" y1="445" x2="290" y2="620"/>',
-      '  <line x1="320" y1="445" x2="-20" y2="620"/>',
-      '  <line x1="740" y1="445" x2="910" y2="620"/>',
-      '  <line x1="880" y1="445" x2="1220" y2="620"/>',
+      '  <line x1="600" y1="445" x2="600" y2="1150"/>',
+      '  <line x1="460" y1="445" x2="-163" y2="1150"/>',
+      '  <line x1="320" y1="445" x2="-1050" y2="1150"/>',
+      '  <line x1="740" y1="445" x2="1363" y2="1150"/>',
+      '  <line x1="880" y1="445" x2="2250" y2="1150"/>',
       '  <line x1="0" y1="485" x2="1200" y2="485"/>',
       '  <line x1="0" y1="538" x2="1200" y2="538"/>',
       '  <line x1="0" y1="595" x2="1200" y2="595"/>',
+      '  <line x1="0" y1="665" x2="1200" y2="665"/>',
+      '  <line x1="0" y1="750" x2="1200" y2="750"/>',
+      '  <line x1="0" y1="855" x2="1200" y2="855"/>',
       '</g>'
     ].join("");
   }
@@ -3369,8 +3415,8 @@ html[data-theme="light"] .ref-item-num { color: #047857; }
 
         // STATE 6 (dual-siege — Beat 48): Red Daytime Corridor Shadow + Cyan Night Glare
         '<g class="set-dyn" data-states="dual-siege">',
-        '  <polygon points="0,0 440,0 520,620 0,620" fill="rgba(220,38,38,0.18)"/>',
-        '  <polygon points="680,0 1200,0 1200,620 600,620" fill="rgba(6,182,212,0.16)"/>',
+        '  <polygon points="0,-650 380,-650 560,1150 0,1150" fill="rgba(220,38,38,0.18)"/>',
+        '  <polygon points="730,-650 1200,-650 1200,1150 560,1150" fill="rgba(6,182,212,0.16)"/>',
         '</g>',
         '</svg>'
       ].join("");
@@ -3517,8 +3563,8 @@ html[data-theme="light"] .ref-item-num { color: #047857; }
         '<rect width="1200" height="445" fill="url(#shared-sky-grad)"/>',
         floorGridSvg("rgba(16,185,129,0.26)"),
 
-        '<polygon points="430,620 770,620 635,285 565,285" fill="rgba(30,41,59,0.72)" stroke="rgba(148,163,184,0.28)" stroke-width="2"/>',
-        '<line x1="600" y1="620" x2="600" y2="290" stroke="#fbbf24" stroke-width="3" stroke-dasharray="16 14"/>',
+        '<polygon points="215,1150 985,1150 635,285 565,285" fill="rgba(30,41,59,0.72)" stroke="rgba(148,163,184,0.28)" stroke-width="2"/>',
+        '<line x1="600" y1="1150" x2="600" y2="290" stroke="#fbbf24" stroke-width="3" stroke-dasharray="16 14"/>',
 
         '<g class="set-fade" data-states="cohort-50 four-scars copeland-roles ziad-fragile">',
         '  <ellipse cx="600" cy="175" rx="340" ry="70" fill="rgba(244,63,94,0.14)"/>',
@@ -3527,7 +3573,7 @@ html[data-theme="light"] .ref-item-num { color: #047857; }
 
         '<g class="set-dyn" data-states="turning-point meta-proof shield-1 shield-2 shield-3 shield-4 shield-5">',
         '  <ellipse cx="600" cy="275" rx="290" ry="120" fill="url(#emerald-wave-glow)"/>',
-        '  <polygon points="455,620 745,620 630,285 570,285" fill="rgba(16,185,129,0.24)" stroke="#10b981" stroke-width="2.4"/>',
+        '  <polygon points="275,1150 925,1150 630,285 570,285" fill="rgba(16,185,129,0.24)" stroke="#10b981" stroke-width="2.4"/>',
         '</g>',
 
         // HIGH CELESTIAL ARCH OF 5 LUMINOUS PREVENTION SHIELDS (High-Contrast in Dark & Light Modes!)
@@ -6480,6 +6526,16 @@ window.CINEMA_REFS = [
   </script>
   <script>
     (function () {
+      function getV2BottomExtraRatio() {
+        var app = document.getElementById("cinema-app");
+        var sf = document.getElementById("stage-frame");
+        var hasHud = app && app.getAttribute("data-has-top-hud") === "true";
+        var sh = sf ? sf.clientHeight : 420;
+        if (hasHud && sh < 380) return 0.14;
+        if (hasHud) return 0.20;
+        return 0.26;
+      }
+
       function fitV2MobileStage() {
         var sf = document.getElementById("stage-frame");
         var host = document.getElementById("backdrop-host");
@@ -6490,13 +6546,14 @@ window.CINEMA_REFS = [
         var aspect = rect.width / rect.height;
         var baseAspect = 1200 / 620;
         var svgs = host.querySelectorAll("svg.env-svg");
+        var extraRatio = getV2BottomExtraRatio();
 
         for (var i = 0; i < svgs.length; i++) {
           var svg = svgs[i];
           var bgRect = svg.querySelector("rect[width='1200']");
           if (aspect < baseAspect * 0.96) {
             var totalH = Math.round(1200 / aspect);
-            var bottomExtra = Math.round((totalH - 620) * 0.28);
+            var bottomExtra = Math.round((totalH - 620) * extraRatio);
             var minY = 620 - totalH + bottomExtra;
             svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
             svg.setAttribute("viewBox", "0 " + minY + " 1200 " + totalH);
@@ -6515,12 +6572,27 @@ window.CINEMA_REFS = [
           }
         }
 
-        // Clamp visible whispers inside stage-frame on narrow mobile screens
+        // Clamp visible whispers inside stage-frame & below kinetic HUD / interactive top card on narrow mobile screens
         if (window.innerWidth <= 720) {
+          var hudStat = document.getElementById("kinetic-stat-box");
+          var hudPills = document.getElementById("kinetic-pills-row");
+          var cApp = document.getElementById("cinema-app");
+          var ixTopCard = sf.querySelector("#interactive-layer .ix-top-card");
+          var hudBottom = rect.top + 4;
+          if (hudStat && window.getComputedStyle(hudStat).opacity !== "0" && hudStat.offsetHeight > 2) {
+            hudBottom = Math.max(hudBottom, hudStat.getBoundingClientRect().bottom + 4);
+          }
+          if (hudPills && hudPills.children.length && window.getComputedStyle(hudPills).opacity !== "0") {
+            hudBottom = Math.max(hudBottom, hudPills.getBoundingClientRect().bottom + 4);
+          }
+          if (cApp && cApp.getAttribute("data-ix-active") === "true" && ixTopCard && ixTopCard.offsetHeight > 2) {
+            hudBottom = Math.max(hudBottom, ixTopCard.getBoundingClientRect().bottom + 6);
+          }
           var whispers = sf.querySelectorAll(".cinema-actor[data-present='true'] .actor-whisper.is-visible");
           for (var w = 0; w < whispers.length; w++) {
             var wel = whispers[w];
             wel.style.marginLeft = "0px";
+            wel.style.marginBottom = "0px";
             var wr = wel.getBoundingClientRect();
             if (wr.width < 2) continue;
             var shift = 0;
@@ -6528,6 +6600,9 @@ window.CINEMA_REFS = [
             else if (wr.right > rect.right - 6) shift = (rect.right - 6) - wr.right;
             if (Math.abs(shift) > 1) {
               wel.style.marginLeft = shift.toFixed(1) + "px";
+            }
+            if (wr.top < hudBottom) {
+              wel.style.marginBottom = Math.max(-64, Math.round(wr.top - hudBottom)) + "px";
             }
           }
         }
@@ -6551,11 +6626,15 @@ window.CINEMA_REFS = [
         if (typeof origActors === "function" && !origActors._v2MobWrapped) {
           var wrappedActors = function (activeMap, forceEntranceSnap) {
             var adjusted = activeMap;
+            var curBeat = this.beats && this.beats[this.currentIndex || 0];
+            var isIx = Boolean((curBeat && curBeat.interactive) || (document.getElementById("cinema-app") && document.getElementById("cinema-app").getAttribute("data-ix-active") === "true"));
             if (window.innerWidth <= 720 && activeMap && typeof activeMap === "object") {
               var sfEl = document.getElementById("stage-frame");
               var sr = sfEl ? sfEl.getBoundingClientRect() : null;
               var mobAspect = sr && sr.width > 20 && sr.height > 20 ? sr.width / sr.height : 0;
               var baseAsp = 1200 / 620;
+              var extraRatio = getV2BottomExtraRatio();
+              var compactHud = sr && sr.height < 330 && curBeat && (curBeat.stat || (curBeat.pills && curBeat.pills.length));
               adjusted = {};
               var keys = Object.keys(activeMap);
               for (var k = 0; k < keys.length; k++) {
@@ -6569,13 +6648,16 @@ window.CINEMA_REFS = [
                   if (typeof copy.x === "number") {
                     copy.x = Math.max(15, Math.min(85, 50 + (copy.x - 50) * 0.78));
                   }
-                  if (mobAspect > 0 && mobAspect < baseAsp * 0.96) {
+                  if (!isIx && mobAspect > 0 && mobAspect < baseAsp * 0.96) {
                     var totalH = Math.round(1200 / mobAspect);
-                    var bottomExtra = Math.round((totalH - 620) * 0.28);
+                    var bottomExtra = Math.round((totalH - 620) * extraRatio);
                     var minY = 620 - totalH + bottomExtra;
                     var defY = typeof copy.y === "number" ? copy.y : 5;
                     var svgY = 620 * (1 - defY / 100);
                     copy.y = Number((((minY + totalH - svgY) / totalH) * 100).toFixed(2));
+                    if (compactHud) {
+                      copy.scale = (typeof copy.scale === "number" ? copy.scale : 1) * 0.82;
+                    }
                   }
                   adjusted[id] = copy;
                 }
@@ -6609,6 +6691,14 @@ window.CINEMA_REFS = [
           window.CinemaEngine._applyBeat = wrappedApplyBeat;
         }
 
+        function refreshBeatGeometry() {
+          fitV2MobileStage();
+          var curBeat = window.CinemaEngine.beats[window.CinemaEngine.currentIndex || 0];
+          if (curBeat && !curBeat.interactive) {
+            window.CinemaEngine._applyBeat(window.CinemaEngine.currentIndex || 0, null, true);
+          }
+        }
+
         var lastResizeW = window.innerWidth;
         var lastResizeH = window.innerHeight;
         window.addEventListener("resize", function () {
@@ -6616,13 +6706,17 @@ window.CINEMA_REFS = [
           if (Math.abs(window.innerWidth - lastResizeW) > 24 || Math.abs(window.innerHeight - lastResizeH) > 48) {
             lastResizeW = window.innerWidth;
             lastResizeH = window.innerHeight;
-            var curBeat = window.CinemaEngine.beats[window.CinemaEngine.currentIndex || 0];
-            if (curBeat && !curBeat.interactive) {
-              window.CinemaEngine._applyBeat(window.CinemaEngine.currentIndex || 0, null, true);
-            }
+            refreshBeatGeometry();
           }
         });
+        window.addEventListener("project:unlocked", refreshBeatGeometry);
         var sf = document.getElementById("stage-frame");
+        if (sf) {
+          sf.addEventListener("click", function () {
+            requestAnimationFrame(fitV2MobileStage);
+            setTimeout(fitV2MobileStage, 80);
+          }, true);
+        }
         if (typeof ResizeObserver === "function" && sf) {
           new ResizeObserver(fitV2MobileStage).observe(sf);
         }

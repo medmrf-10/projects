@@ -208,7 +208,7 @@
     "  backdrop-filter: blur(18px) saturate(150%);",
     "  -webkit-backdrop-filter: blur(18px) saturate(150%);",
     "}",
-    "html[data-theme='light'] #project-auth-gate, html[data-theme='stone'] #project-auth-gate, html[data-theme='paper'] #project-auth-gate {",
+    "html[data-theme='light'] #project-auth-gate, html[data-theme='stone'] #project-auth-gate, html[data-theme='paper'] #project-auth-gate, #project-auth-gate[data-gate-theme='light'] {",
     "  background: radial-gradient(ellipse 80% 55% at 50% 0%, rgba(2, 132, 199, 0.11), transparent 70%), #f5f3ee;",
     "  color: #0f172a;",
     "}",
@@ -235,7 +235,7 @@
     "  gap: 0.9rem;",
     "  animation: pgCardIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;",
     "}",
-    "html[data-theme='light'] .pg-card, html[data-theme='stone'] .pg-card, html[data-theme='paper'] .pg-card {",
+    "html[data-theme='light'] .pg-card, html[data-theme='stone'] .pg-card, html[data-theme='paper'] .pg-card, #project-auth-gate[data-gate-theme='light'] .pg-card {",
     "  background: rgba(255, 255, 255, 0.97);",
     "  border-color: rgba(15, 23, 42, 0.12);",
     "  color: #0f172a;",
@@ -278,7 +278,7 @@
     "  border: 1px solid rgba(255, 255, 255, 0.12);",
     "  color: #cbd5e1;",
     "}",
-    "html[data-theme='light'] .pg-badge, html[data-theme='stone'] .pg-badge, html[data-theme='paper'] .pg-badge {",
+    "html[data-theme='light'] .pg-badge, html[data-theme='stone'] .pg-badge, html[data-theme='paper'] .pg-badge, #project-auth-gate[data-gate-theme='light'] .pg-badge {",
     "  background: rgba(15, 23, 42, 0.05);",
     "  border-color: rgba(15, 23, 42, 0.12);",
     "  color: #475569;",
@@ -295,7 +295,7 @@
     "  line-height: 1.6;",
     "  color: #94a3b8;",
     "}",
-    "html[data-theme='light'] .pg-sub, html[data-theme='stone'] .pg-sub, html[data-theme='paper'] .pg-sub {",
+    "html[data-theme='light'] .pg-sub, html[data-theme='stone'] .pg-sub, html[data-theme='paper'] .pg-sub, #project-auth-gate[data-gate-theme='light'] .pg-sub {",
     "  color: #64748b;",
     "}",
     ".pg-form {",
@@ -326,7 +326,10 @@
     "  outline: none;",
     "  transition: border-color 0.2s ease, box-shadow 0.2s ease;",
     "}",
-    "html[data-theme='light'] .pg-input, html[data-theme='stone'] .pg-input, html[data-theme='paper'] .pg-input {",
+    ".pg-input:placeholder-shown {",
+    "  direction: rtl;",
+    "}",
+    "html[data-theme='light'] .pg-input, html[data-theme='stone'] .pg-input, html[data-theme='paper'] .pg-input, #project-auth-gate[data-gate-theme='light'] .pg-input {",
     "  background: #f8fafc;",
     "  border-color: rgba(15, 23, 42, 0.18);",
     "  color: #0f172a;",
@@ -363,7 +366,7 @@
     "  font-weight: 700;",
     "  color: #fb7185;",
     "}",
-    "html[data-theme='light'] .pg-error-msg, html[data-theme='stone'] .pg-error-msg, html[data-theme='paper'] .pg-error-msg {",
+    "html[data-theme='light'] .pg-error-msg, html[data-theme='stone'] .pg-error-msg, html[data-theme='paper'] .pg-error-msg, #project-auth-gate[data-gate-theme='light'] .pg-error-msg {",
     "  color: #e11d48;",
     "}",
     ".pg-submit-btn {",
@@ -414,6 +417,29 @@
     ".pg-secondary-btn:hover {",
     "  opacity: 1;",
     "  border-color: var(--pg-accent, #38bdf8);",
+    "}",
+    "@media (max-height: 500px) {",
+    "  #project-auth-gate, #project-auth-modal {",
+    "    padding: 0.55rem 0.85rem;",
+    "  }",
+    "  .pg-card {",
+    "    padding: 0.9rem 1.1rem;",
+    "    gap: 0.42rem;",
+    "    border-radius: 18px;",
+    "  }",
+    "  .pg-icon-ring {",
+    "    width: 38px;",
+    "    height: 38px;",
+    "    border-radius: 12px;",
+    "  }",
+    "  .pg-icon-ring svg { width: 20px; height: 20px; }",
+    "  .pg-sub { display: none; }",
+    "  .pg-title { font-size: 1.02rem; }",
+    "  .pg-form { gap: 0.42rem; margin-top: 0.1rem; }",
+    "  .pg-input { height: 42px; border-radius: 11px; }",
+    "  .pg-error-msg { min-height: 0; margin: 0; font-size: 0.76rem; }",
+    "  .pg-submit-btn { min-height: 40px; padding: 0.45rem 1rem; border-radius: 11px; font-size: 0.88rem; }",
+    "  .pg-secondary-btn { min-height: 32px; padding: 0.25rem 0.75rem; font-size: 0.76rem; }",
     "}"
   ].join("\n");
 
@@ -584,12 +610,11 @@
   /* Full-page gate enforced automatically when data-project-id is set on the <script> tag */
   function enforcePageGate(projectId, portalUrl) {
     ensureGateStyles();
+    var savedGateTheme = "";
     try {
       var savedTheme = localStorage.getItem("projects_portal_theme");
       if (savedTheme === "light" || savedTheme === "dark") {
-        if (!document.documentElement.getAttribute("data-theme")) {
-          document.documentElement.setAttribute("data-theme", savedTheme);
-        }
+        savedGateTheme = savedTheme;
       }
     } catch (e) {}
 
@@ -628,6 +653,7 @@
 
       var gate = document.createElement("div");
       gate.id = "project-auth-gate";
+      if (savedGateTheme) gate.setAttribute("data-gate-theme", savedGateTheme);
       gate.setAttribute("role", "dialog");
       gate.setAttribute("aria-modal", "true");
       gate.setAttribute("aria-label", "بوابة الرقم السري — " + cfg.title);
@@ -646,6 +672,7 @@
         function () {
           document.documentElement.removeAttribute("data-project-locked");
           window.dispatchEvent(new Event("resize"));
+          window.dispatchEvent(new CustomEvent("project:unlocked", { detail: { projectId: projectId } }));
           gate.classList.add("is-unlocking");
           setTimeout(function () {
             if (gate.parentNode) gate.parentNode.removeChild(gate);

@@ -2745,6 +2745,7 @@ html[data-theme="light"] .char-meta,
     "  height: 360px;",
     "  margin-left: -235px;",
     "  transform-origin: 50% 88%;",
+    "  transform: scale(var(--tiger-scale, 1));",
     "  animation: spTigerBreathe 3.4s ease-in-out infinite;",
     "  transition: transform 450ms cubic-bezier(0.22, 1, 0.36, 1);",
     "  z-index: 1;",
@@ -10021,6 +10022,18 @@ html[data-theme="light"] .char-meta,
       overflow: hidden;
     }
 
+    /* Tablet / Foldable Portrait Coverage (721px..900px) */
+    @media (min-width: 721px) and (max-width: 900px) {
+      .sp-spotlight-stage,
+      .sp-tiger-stage,
+      .sp-scale-stage,
+      .sp-arena-stage,
+      .sp-versus-stage,
+      .sp-road-stage {
+        width: min(720px, 96vw) !important;
+      }
+    }
+
     /* Portrait & Compact Mobile Overhaul: Native Readable Geometry + Centered Ergonomic Thumb Dock */
     @media (max-width: 720px) {
       .sp-stage-wrap,
@@ -10036,7 +10049,26 @@ html[data-theme="light"] .char-meta,
       }
 
       #stage-viewport {
-        padding: 0.35rem 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+      }
+
+      /* Compact Character Busts & Speech Bubbles on Mobile so Multi-Actor Stages Stay ~0.82x-1.0x! */
+      .sp-char-actor .speech-bubble {
+        max-width: 158px !important;
+        padding: 5px 10px !important;
+        font-size: 0.76rem !important;
+        line-height: 1.34 !important;
+        border-radius: 13px !important;
+        white-space: normal !important;
+        text-align: center !important;
+      }
+      .char-meta {
+        padding: 0.22rem 0.68rem 0.28rem !important;
+        font-size: 0.74rem !important;
+        gap: 0.25rem !important;
+      }
+      .char-role-tag {
+        font-size: 0.68rem !important;
       }
 
       /* 1. Spotlight Stage -> Clean Vertical Character + 2-Column Readable Badges */
@@ -10045,11 +10077,16 @@ html[data-theme="light"] .char-meta,
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        width: min(390px, 100%) !important;
+        width: min(370px, 100%) !important;
         min-height: 0 !important;
         height: auto !important;
-        gap: 12px !important;
-        padding: 8px 6px !important;
+        gap: 9px !important;
+        padding: 6px 4px !important;
+      }
+      .sp-spotlight-stage .char-svg,
+      .sp-spotlight-stage .sp-char-actor svg {
+        width: 138px !important;
+        height: auto !important;
       }
       .sp-orbit-ring {
         position: relative !important;
@@ -10058,7 +10095,7 @@ html[data-theme="light"] .char-meta,
         flex-wrap: wrap !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 7px !important;
+        gap: 6px !important;
         width: 100% !important;
         z-index: 4;
       }
@@ -10068,8 +10105,8 @@ html[data-theme="light"] .char-meta,
         bottom: auto !important;
         left: auto !important;
         right: auto !important;
-        font-size: 0.82rem !important;
-        padding: 6px 12px !important;
+        font-size: 0.78rem !important;
+        padding: 5px 10px !important;
         white-space: normal !important;
         text-align: center !important;
         max-width: 48% !important;
@@ -10081,17 +10118,17 @@ html[data-theme="light"] .char-meta,
         flex-direction: column !important;
         align-items: center !important;
         justify-content: flex-end !important;
-        width: min(410px, 100%) !important;
+        width: min(380px, 100%) !important;
         height: auto !important;
-        min-height: 290px !important;
-        gap: 10px !important;
-        padding: 8px 6px !important;
+        min-height: 250px !important;
+        gap: 8px !important;
+        padding: 6px 4px !important;
       }
       .sp-tiger-shadow-wrap {
-        width: 270px !important;
-        height: 206px !important;
-        margin-left: -135px !important;
-        bottom: 42px !important;
+        width: 240px !important;
+        height: 184px !important;
+        margin-left: -120px !important;
+        bottom: 36px !important;
       }
       .sp-tiger-claws {
         position: relative !important;
@@ -10099,7 +10136,7 @@ html[data-theme="light"] .char-meta,
         display: flex !important;
         flex-wrap: wrap !important;
         justify-content: center !important;
-        gap: 7px !important;
+        gap: 6px !important;
         width: 100% !important;
         order: -1;
       }
@@ -10109,8 +10146,8 @@ html[data-theme="light"] .char-meta,
         bottom: auto !important;
         left: auto !important;
         right: auto !important;
-        font-size: 0.80rem !important;
-        padding: 6px 12px !important;
+        font-size: 0.76rem !important;
+        padding: 5px 10px !important;
       }
       .sp-tiger-rami-fg {
         align-self: center !important;
@@ -10125,51 +10162,57 @@ html[data-theme="light"] .char-meta,
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 12px !important;
-        width: min(390px, 100%) !important;
+        gap: 8px !important;
+        width: min(370px, 100%) !important;
         min-height: 0 !important;
-        padding: 6px 8px !important;
+        padding: 6px 6px !important;
+      }
+      .sp-bigstat-stage .sp-char-actor svg,
+      .sp-shield-stage .sp-char-actor svg,
+      .sp-phone-stage .sp-char-actor svg {
+        width: 112px !important;
+        height: auto !important;
       }
       .sp-bigstat-monument {
-        padding: 14px 22px !important;
-        border-radius: 24px !important;
+        padding: 10px 18px !important;
+        border-radius: 20px !important;
         max-width: 100% !important;
       }
       .sp-bigstat-number {
-        font-size: clamp(2.3rem, 9.5vw, 3.2rem) !important;
+        font-size: clamp(2rem, 8.8vw, 2.8rem) !important;
       }
       .sp-bigstat-label {
-        font-size: 0.88rem !important;
-        padding: 5px 14px !important;
+        font-size: 0.82rem !important;
+        padding: 4px 12px !important;
         text-align: center !important;
       }
       .sp-shield-emblem-wrap {
-        width: 176px !important;
-        height: 204px !important;
+        width: 148px !important;
+        height: 172px !important;
       }
       .sp-shield-icon {
-        font-size: 2.35rem !important;
+        font-size: 2rem !important;
       }
       .sp-shield-title {
-        font-size: 0.92rem !important;
+        font-size: 0.84rem !important;
       }
       .sp-phone-device {
-        width: 184px !important;
-        height: 246px !important;
-        padding: 10px !important;
-        border-radius: 26px !important;
+        width: 164px !important;
+        height: 214px !important;
+        padding: 9px !important;
+        border-radius: 22px !important;
       }
       .sp-phone-screen {
-        padding: 10px 9px !important;
-        border-radius: 18px !important;
+        padding: 8px 8px !important;
+        border-radius: 16px !important;
       }
       .sp-phone-clock {
-        font-size: 1.72rem !important;
+        font-size: 1.5rem !important;
         margin-top: 2px !important;
       }
       .sp-phone-notif-card {
-        padding: 8px 8px !important;
-        font-size: 0.78rem !important;
+        padding: 6px 7px !important;
+        font-size: 0.74rem !important;
       }
       .sp-phone-orbits {
         position: relative !important;
@@ -10178,7 +10221,7 @@ html[data-theme="light"] .char-meta,
         flex-wrap: wrap !important;
         justify-content: center !important;
         gap: 5px !important;
-        margin-top: 6px !important;
+        margin-top: 4px !important;
         width: 100% !important;
       }
       .sp-cyber-orbit-pill {
@@ -10187,84 +10230,222 @@ html[data-theme="light"] .char-meta,
         bottom: auto !important;
         left: auto !important;
         right: auto !important;
-        font-size: 0.73rem !important;
-        padding: 4px 9px !important;
+        font-size: 0.71rem !important;
+        padding: 3px 8px !important;
       }
 
-      /* 4. Balance Scale, Peer Arena, Versus & Lifespan Road -> Calibrated Mobile Canvas */
-      .sp-scale-stage {
-        width: 560px !important;
-        height: 360px !important;
+      /* 4. Row Stages (2, 3, 4, 5 Actors), Balance Scale, Peer Arena, Versus & Lifespan Road */
+      .sp-row-stage {
+        width: min(390px, 100%) !important;
+        padding: 4px 6px 8px !important;
       }
-      .sp-scale-beam-assembly {
-        width: 360px !important;
-        margin-left: -180px !important;
-      }
-      .sp-scale-pan-mount {
-        width: 168px !important;
-        margin-left: -84px !important;
-      }
-      .sp-scale-pan-dish {
-        width: 152px !important;
-      }
-      .sp-arena-stage {
-        width: 540px !important;
-        height: 470px !important;
-      }
-      .sp-versus-stage {
-        width: 560px !important;
+      .sp-row-stage[data-count='2'] .sp-row-actors {
         gap: 12px !important;
-        padding: 8px 10px !important;
       }
-      .sp-road-stage {
-        width: 600px !important;
-        aspect-ratio: 920 / 450 !important;
+      .sp-row-stage[data-count='2'] .sp-char-actor svg {
+        width: 120px !important;
+        height: auto !important;
       }
-      .sp-row-stage[data-count='4'] .sp-row-actors,
+      .sp-row-stage[data-count='3'] .sp-row-actors {
+        gap: 6px !important;
+      }
+      .sp-row-stage[data-count='3'] .sp-char-actor svg {
+        width: 86px !important;
+        height: auto !important;
+      }
+      .sp-row-stage[data-count='3'] .sp-char-actor .speech-bubble {
+        max-width: 102px !important;
+        font-size: 0.65rem !important;
+        padding: 3px 6px !important;
+      }
+      /* 4 Actors -> Crisp 2x2 Portrait Grid (Eliminates 1-Column 0.267x Vertical Totem Pole!) */
+      .sp-row-stage[data-count='4'] .sp-row-actors {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        justify-items: center !important;
+        align-items: end !important;
+        gap: 8px 10px !important;
+        width: min(364px, 100%) !important;
+        max-width: 100% !important;
+      }
+      .sp-row-stage[data-count='4'] .sp-char-actor svg {
+        width: 92px !important;
+        height: auto !important;
+      }
+      .sp-row-stage[data-count='4'] .sp-char-actor .speech-bubble {
+        max-width: 146px !important;
+        font-size: 0.68rem !important;
+        padding: 4px 7px !important;
+      }
+      /* 5 Actors -> Balanced 3+2 Flex Wrap */
       .sp-row-stage[data-count='5'] .sp-row-actors {
+        display: flex !important;
         flex-wrap: wrap !important;
         justify-content: center !important;
-        gap: 10px 14px !important;
-        max-width: 440px !important;
+        align-items: flex-end !important;
+        gap: 6px 8px !important;
+        width: min(372px, 100%) !important;
+        max-width: 100% !important;
+      }
+      .sp-row-stage[data-count='5'] .sp-char-actor {
+        max-width: 31% !important;
+      }
+      .sp-row-stage[data-count='5'] .sp-char-actor svg {
+        width: 82px !important;
+        height: auto !important;
       }
 
-      /* 5. Interactive Part 3 Games (Beats 76, 77, 78, 79, 80) -> True Mobile Cards */
-      .p3-game-shell {
+      /* Balance Scale -> Zero Badge/Nameplate Collision + Native Mobile Proportion */
+      .sp-scale-stage {
+        width: 420px !important;
+        height: 392px !important;
+      }
+      .sp-scale-status-pill {
+        top: 4px !important;
+        font-size: 0.78rem !important;
+        padding: 4px 14px !important;
+      }
+      .sp-scale-beam-assembly {
+        width: 286px !important;
+        margin-left: -143px !important;
+        top: 79% !important;
+      }
+      .sp-scale-fulcrum-svg {
+        top: 68% !important;
+        width: 136px !important;
+        height: 126px !important;
+        margin-left: -68px !important;
+      }
+      .sp-scale-pan-mount {
+        width: 176px !important;
+        margin-left: -88px !important;
+      }
+      .sp-scale-pan-dish {
+        width: 138px !important;
+        height: 14px !important;
+      }
+      .sp-scale-pan-actor {
+        margin-bottom: 6px !important;
+      }
+      .sp-scale-pan-actor .sp-char-scaler {
+        transform-origin: 50% 100% !important;
+      }
+      .sp-scale-pan-actor svg {
+        width: 82px !important;
+        height: auto !important;
+      }
+      .sp-scale-pan-actor .speech-bubble {
+        max-width: 132px !important;
+        font-size: 0.66rem !important;
+        padding: 3px 6px !important;
+      }
+      .sp-scale-weights-rack {
+        max-width: 176px !important;
+        gap: 3px !important;
+        margin-top: 2px !important;
+        margin-bottom: 4px !important;
+      }
+      .sp-scale-weights-rack .prop-drop,
+      .sp-scale-weights-rack > * {
+        font-size: 0.58rem !important;
+        padding: 2px 5px !important;
+      }
+
+      .sp-arena-stage {
+        width: 420px !important;
+        height: 380px !important;
+      }
+      .sp-arena-core svg,
+      .sp-arena-node svg {
+        width: 86px !important;
+        height: auto !important;
+      }
+      .sp-versus-stage {
         width: min(390px, 100%) !important;
-        padding: 10px 10px !important;
         gap: 8px !important;
+        padding: 6px 6px !important;
+      }
+      .sp-versus-wing {
+        padding: 10px 8px 12px !important;
         border-radius: 20px !important;
+      }
+      .sp-versus-wing svg {
+        width: 98px !important;
+        height: auto !important;
+      }
+      .sp-versus-tag {
+        font-size: 0.76rem !important;
+        padding: 4px 10px !important;
+        margin-top: 6px !important;
+        text-align: center !important;
+      }
+      .sp-versus-divider {
+        min-height: 150px !important;
+      }
+      .sp-versus-medallion {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1.05rem !important;
+      }
+      .sp-road-stage {
+        width: 450px !important;
+        aspect-ratio: 920 / 450 !important;
+      }
+      .sp-road-cameo svg {
+        width: 78px !important;
+        height: auto !important;
+      }
+
+      /* 5. Interactive Part 3 Games & Sunrise (Beats 76, 77, 78, 79, 80) -> Crisp Native Mobile Cards */
+      .p3-game-shell {
+        width: min(380px, 100%) !important;
+        padding: 8px 9px !important;
+        gap: 6px !important;
+        border-radius: 18px !important;
+      }
+      .p3-game-shell .sp-char-actor svg {
+        width: 76px !important;
+        height: auto !important;
+      }
+      .p3-game-shell .speech-bubble {
+        max-width: 136px !important;
+        font-size: 0.66rem !important;
+        padding: 3px 7px !important;
+        margin-bottom: 3px !important;
+      }
+      .p3-game-shell .char-meta {
+        font-size: 0.68rem !important;
+        padding: 2px 7px !important;
       }
       #p3-game-theater .p3-cast-stage {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 8px 8px !important;
+        gap: 6px 8px !important;
         justify-items: center !important;
         align-items: end !important;
         width: 100% !important;
       }
       #p3-game-theater .p3-cast-unit {
-        transform: scale(0.84) !important;
-        transform-origin: center bottom !important;
+        transform: none !important;
       }
       #p3-game-mirror .p3-num-pills {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 5px !important;
+        gap: 4px !important;
         width: 100% !important;
       }
       #p3-game-mirror .p3-num-btn {
-        font-size: 0.74rem !important;
-        padding: 5px 8px !important;
+        font-size: 0.71rem !important;
+        padding: 4px 7px !important;
         text-align: center !important;
       }
       #p3-game-mirror .p3-mirror-arena {
         display: grid !important;
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 8px !important;
+        gap: 6px !important;
         justify-items: center !important;
         align-items: end !important;
-        padding: 10px 8px !important;
+        padding: 6px 6px !important;
         width: 100% !important;
       }
       #p3-game-mirror .p3-center-totem {
@@ -10273,89 +10454,104 @@ html[data-theme="light"] .char-meta,
         width: 100% !important;
       }
       #p3-game-scale .p3-case-stage {
-        flex-direction: column !important;
+        flex-direction: row !important;
+        align-items: center !important;
         gap: 8px !important;
         width: 100% !important;
-        padding: 4px 2px !important;
+        padding: 2px !important;
+      }
+      #p3-game-scale .p3-case-stage .sp-char-actor {
+        flex-shrink: 0 !important;
       }
       #p3-game-scale .p3-case-bubble-card {
-        width: 100% !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
         max-width: 100% !important;
-        padding: 11px 14px !important;
-        align-items: center !important;
-        text-align: center !important;
+        padding: 8px 10px !important;
+        align-items: flex-start !important;
+        text-align: right !important;
       }
       #p3-game-scale .p3-case-line {
-        font-size: 0.94rem !important;
-        line-height: 1.48 !important;
+        font-size: 0.82rem !important;
+        line-height: 1.42 !important;
       }
       .p3-btn-bar {
-        gap: 6px !important;
+        gap: 5px !important;
       }
       .p3-act-btn {
-        font-size: 0.78rem !important;
-        padding: 7px 11px !important;
+        font-size: 0.74rem !important;
+        padding: 6px 10px !important;
       }
       .p3-crit-badge {
-        font-size: 0.75rem !important;
-        padding: 4px 10px !important;
+        font-size: 0.70rem !important;
+        padding: 3px 8px !important;
+      }
+      .p3-sunrise-wrap {
+        width: min(374px, 100%) !important;
+        padding-top: 4px !important;
+      }
+      .p3-sunrise-sky {
+        width: 100% !important;
+        height: 68px !important;
+        margin-bottom: -8px !important;
       }
       .p3-finale-card {
-        width: min(380px, 100%) !important;
-        padding: 16px 14px !important;
-        gap: 12px !important;
+        width: min(374px, 100%) !important;
+        padding: 12px 12px !important;
+        gap: 10px !important;
       }
       .p3-finale-duo {
-        gap: 12px !important;
+        gap: 10px !important;
       }
       .p3-finale-btn {
         width: 100% !important;
-        font-size: 0.88rem !important;
-        padding: 10px 16px !important;
+        font-size: 0.84rem !important;
+        padding: 9px 14px !important;
       }
 
       /* 6. Topbar, Subtitle Dock & Centered Two-Row Ergonomic Bottom Thumb Console */
       .mini-controls {
-        gap: 0.28rem;
+        gap: 0.25rem;
         flex-shrink: 0;
       }
       .mini-controls [data-ctrl="fullscreen"],
-      .mini-controls [data-ctrl="drawer"] {
-        display: none;
+      .mini-controls [data-ctrl="drawer"],
+      .mini-controls [data-ctrl="polarity"] {
+        display: none !important;
       }
       .mini-controls button {
-        min-width: 34px;
-        height: 34px;
-        padding: 0 0.45rem;
-        font-size: 0.82rem;
+        min-width: 33px;
+        height: 33px;
+        padding: 0 0.42rem;
+        font-size: 0.8rem;
       }
       .v1-hub-back {
-        height: 34px;
-        padding: 0 0.65rem;
-        font-size: 0.75rem;
+        height: 33px;
+        padding: 0 0.6rem;
+        font-size: 0.74rem;
       }
       .chapter-pill {
-        height: 34px;
-        padding: 0 0.72rem;
-        font-size: 0.77rem;
+        height: 33px;
+        padding: 0 0.68rem;
+        font-size: 0.76rem;
       }
       .caption-dock {
-        min-height: 70px;
-        padding: 0.15rem 0.75rem 0.3rem;
+        min-height: 64px;
+        padding: 0.12rem 0.65rem 0.25rem;
       }
       .caption-box {
-        padding: 0.55rem 0.95rem;
-        border-radius: 16px;
-        gap: 0.28rem;
+        padding: 0.5rem 0.85rem;
+        border-radius: 15px;
+        gap: 0.25rem;
         width: 100%;
       }
       .caption-text {
-        font-size: clamp(0.95rem, 4vw, 1.14rem);
-        line-height: 1.46;
+        font-size: clamp(0.92rem, 3.85vw, 1.1rem);
+        line-height: 1.44;
       }
       .source-chip {
-        font-size: 0.71rem;
-        padding: 0.1rem 0.58rem;
+        font-size: 0.7rem;
+        padding: 0.1rem 0.55rem;
       }
       .minimal-bottombar {
         height: auto !important;
@@ -10363,9 +10559,9 @@ html[data-theme="light"] .char-meta,
         flex-wrap: wrap !important;
         justify-content: center !important;
         align-items: center !important;
-        row-gap: 8px !important;
-        column-gap: 12px !important;
-        padding: 4px max(1rem, env(safe-area-inset-right, 1rem)) max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px)) max(1rem, env(safe-area-inset-left, 1rem)) !important;
+        row-gap: 7px !important;
+        column-gap: 8px !important;
+        padding: 4px max(0.65rem, env(safe-area-inset-right, 0.65rem)) max(10px, calc(env(safe-area-inset-bottom, 0px) + 8px)) max(0.65rem, env(safe-area-inset-left, 0.65rem)) !important;
       }
       .beat-progress-track {
         order: -1 !important;
@@ -10375,19 +10571,19 @@ html[data-theme="light"] .char-meta,
         height: 8px !important;
       }
       .nav-arrow-btn {
-        min-width: 108px !important;
+        min-width: clamp(88px, 27vw, 112px) !important;
         width: auto !important;
-        height: 40px !important;
-        padding: 0 16px !important;
-        gap: 6px !important;
-        font-size: 0.9rem !important;
+        height: 39px !important;
+        padding: 0 12px !important;
+        gap: 5px !important;
+        font-size: 0.88rem !important;
         font-weight: 800 !important;
         border-radius: 999px !important;
         flex-shrink: 0;
       }
       .nav-arrow-btn[data-ctrl="prev"]::after {
         content: "السابق";
-        font-size: 0.82rem;
+        font-size: 0.8rem;
       }
       .nav-arrow-btn[data-ctrl="next"] {
         background: rgba(56, 189, 248, 0.18) !important;
@@ -10398,11 +10594,12 @@ html[data-theme="light"] .char-meta,
       }
       .nav-arrow-btn[data-ctrl="next"]::before {
         content: "التالي";
-        font-size: 0.82rem;
+        font-size: 0.8rem;
       }
       .beat-counter {
-        font-size: 0.78rem;
-        min-width: 58px;
+        font-size: 0.76rem;
+        min-width: 52px;
+        text-align: center;
       }
       #jump-drawer, #refs-modal {
         padding: 0.65rem;
@@ -10472,7 +10669,7 @@ html[data-theme="light"] .char-meta,
   </style>
   <script>
     (function () {
-      function fitV1Stage() {
+      function fitV1Stage(allowAnimPause) {
         var vp = document.getElementById("stage-viewport");
         if (!vp) return;
         var sc = vp.querySelector(".stage-scene");
@@ -10480,33 +10677,45 @@ html[data-theme="light"] .char-meta,
         var child = sc.firstElementChild;
         if (!child) return;
 
-        // Temporarily neutralize parent entry animations so getBoundingClientRect reflects settled geometry
+        var pauseAnim = allowAnimPause === true;
         var prevScAnim = sc.style.animation;
         var prevScTrans = sc.style.transform;
-        sc.style.animation = "none";
-        sc.style.transform = "none";
+        if (pauseAnim) {
+          sc.style.animation = "none";
+          sc.style.transform = "none";
+        }
 
         child.style.transform = "none";
         child.style.flexShrink = "0";
 
         var vpRect = vp.getBoundingClientRect();
         if (vpRect.width < 20 || vpRect.height < 20) {
-          sc.style.animation = prevScAnim;
-          sc.style.transform = prevScTrans;
+          if (pauseAnim) {
+            sc.style.animation = prevScAnim;
+            sc.style.transform = prevScTrans;
+          }
           return;
         }
 
-        var padX = window.innerWidth <= 720 ? 14 : 24;
-        var padY = window.innerHeight <= 520 ? 8 : 14;
+        var padX = window.innerWidth <= 720 ? 10 : 22;
+        var padY = window.innerHeight <= 520 ? 12 : 14;
         var availW = Math.max(120, vpRect.width - padX * 2);
         var availH = Math.max(80, vpRect.height - padY * 2);
 
-        // Temporarily pause descendant entry scale keyframes during measurement for exact settled bounds
-        var animNodes = child.querySelectorAll(".sp-enter-pop, .sp-enter-slide-right, .sp-enter-slide-left, .sp-enter-shake, .sp-enter-glow, .sp-enter-shrink, .sp-enter-grow, .enter-pop, .enter-slide-right, .enter-slide-left, .enter-glow, .prop-drop");
+        // Only neutralize descendant CSS animations during t=0ms synchronous mount (never mid-flight, preventing animation restarts!)
+        var allDescendants = child.querySelectorAll("*");
+        var animNodes = [];
         var savedAnims = [];
-        for (var a = 0; a < animNodes.length; a++) {
-          savedAnims.push(animNodes[a].style.animation);
-          animNodes[a].style.animation = "none";
+        if (pauseAnim) {
+          for (var a = 0; a < allDescendants.length; a++) {
+            var node = allDescendants[a];
+            var cs = window.getComputedStyle(node);
+            if (cs.animationName && cs.animationName !== "none") {
+              animNodes.push(node);
+              savedAnims.push(node.style.animation);
+              node.style.animation = "none";
+            }
+          }
         }
 
         var cRect = child.getBoundingClientRect();
@@ -10515,12 +10724,11 @@ html[data-theme="light"] .char-meta,
         var minT = cRect.top;
         var maxB = cRect.bottom;
 
-        var descendants = child.querySelectorAll("*");
-        for (var i = 0; i < descendants.length; i++) {
-          var el = descendants[i];
+        for (var i = 0; i < allDescendants.length; i++) {
+          var el = allDescendants[i];
           var st = window.getComputedStyle(el);
-          if (st.display === "none" || st.visibility === "hidden" || parseFloat(st.opacity) === 0) continue;
-          // Ignore decorative background rings/beams with pointer-events:none that intentionally bleed softly, EXCEPT SVGs/text/badges/pans
+          if (st.display === "none" || st.visibility === "hidden") continue;
+          if (!pauseAnim && parseFloat(st.opacity) === 0) continue;
           if (el.classList && (el.classList.contains("sp-spotlight-beam-svg") || el.classList.contains("sp-bigstat-ring-svg"))) continue;
           var r = el.getBoundingClientRect();
           if (r.width < 2 || r.height < 2) continue;
@@ -10530,11 +10738,13 @@ html[data-theme="light"] .char-meta,
           if (r.bottom > maxB) maxB = r.bottom;
         }
 
-        for (var b = 0; b < animNodes.length; b++) {
-          animNodes[b].style.animation = savedAnims[b];
+        if (pauseAnim) {
+          for (var b = 0; b < animNodes.length; b++) {
+            animNodes[b].style.animation = savedAnims[b];
+          }
+          sc.style.animation = prevScAnim;
+          sc.style.transform = prevScTrans;
         }
-        sc.style.animation = prevScAnim;
-        sc.style.transform = prevScTrans;
 
         var visualW = Math.max(1, maxR - minL);
         var visualH = Math.max(1, maxB - minT);
@@ -10547,7 +10757,6 @@ html[data-theme="light"] .char-meta,
         var visCenterX = (minL + maxR) * 0.5;
         var visCenterY = (minT + maxB) * 0.5;
 
-        // After scale(s) around childOrigin, visual center lands at childOrigin + (visCenter - childOrigin) * s
         var scaledVisCenterX = childOriginX + (visCenterX - childOriginX) * scale;
         var scaledVisCenterY = childOriginY + (visCenterY - childOriginY) * scale;
         var tx = vpCenterX - scaledVisCenterX;
@@ -10561,30 +10770,47 @@ html[data-theme="light"] .char-meta,
 
       function installV1FitHooks() {
         if (!window.StoryEngine) return;
+        var vp = document.getElementById("stage-viewport");
+        var lastW = 0;
+        var lastH = 0;
+        function syncAndFitMount() {
+          fitV1Stage(true);
+          if (vp) {
+            lastW = vp.clientWidth;
+            lastH = vp.clientHeight;
+          }
+        }
+        function onViewportResize() {
+          if (!vp) return;
+          var w = vp.clientWidth;
+          var h = vp.clientHeight;
+          if (Math.abs(w - lastW) < 2 && Math.abs(h - lastH) < 2) return;
+          lastW = w;
+          lastH = h;
+          fitV1Stage(true);
+        }
         var origRender = window.StoryEngine._renderBeat;
         if (typeof origRender === "function" && !origRender._v1Wrapped) {
           var wrapped = function () {
             var res = origRender.apply(this, arguments);
-            fitV1Stage();
-            requestAnimationFrame(fitV1Stage);
+            syncAndFitMount();
             return res;
           };
           wrapped._v1Wrapped = true;
           window.StoryEngine._renderBeat = wrapped;
         }
-        var vp = document.getElementById("stage-viewport");
         if (vp) {
+          // Capture phase ensures interactive game buttons that call e.stopPropagation() still trigger immediate mount re-fit
           vp.addEventListener("click", function () {
-            fitV1Stage();
-            requestAnimationFrame(fitV1Stage);
-          });
+            requestAnimationFrame(syncAndFitMount);
+          }, true);
         }
-        window.addEventListener("resize", fitV1Stage);
+        window.addEventListener("resize", onViewportResize);
+        window.addEventListener("project:unlocked", syncAndFitMount);
         if (typeof ResizeObserver === "function" && vp) {
-          new ResizeObserver(fitV1Stage).observe(vp);
+          new ResizeObserver(onViewportResize).observe(vp);
         }
-        fitV1Stage();
-        requestAnimationFrame(fitV1Stage);
+        syncAndFitMount();
       }
 
       if (document.readyState === "loading") {

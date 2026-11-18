@@ -2853,6 +2853,15 @@ mark.q-mark {
   }
 }
 
+.portal-back-link {
+  height: 34px;
+  padding: 0 11px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   :root {
     --topbar-height: 53px;
@@ -2869,18 +2878,60 @@ mark.q-mark {
   .topbar {
     height: auto;
     min-height: 53px;
+    max-width: 100vw;
     flex-wrap: wrap;
-    padding: 8px 12px;
-    gap: 8px;
+    padding: max(8px, env(safe-area-inset-top, 8px)) max(10px, env(safe-area-inset-right, 10px)) 8px max(10px, env(safe-area-inset-left, 10px));
+    gap: 6px;
+    background-color: var(--bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .topbar-brand {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .portal-back-link {
+    height: 32px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
   }
 
   .brand-titles {
     gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .brand-name,
+  .brand-title {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-actions {
+    gap: 4px;
+  }
+
+  .topbar-actions .btn {
+    height: 32px;
+    padding: 0 9px;
+  }
+
+  .topbar-actions .btn-icon {
+    width: 32px;
+    padding: 0;
   }
 
   .nav-tabs {
     order: 3;
     width: 100%;
+    max-width: 100%;
     padding-top: 6px;
     border-top: 1px solid var(--border-subtle);
   }
@@ -2987,10 +3038,23 @@ mark.q-mark {
 
   .popover-panel {
     position: fixed;
-    top: 60px;
-    left: 12px;
-    right: 12px;
+    top: 96px;
+    left: 10px;
+    right: 10px;
     width: auto;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100dvh - 108px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 620px) {
+    .sync-badge,
+    #qualityFilterLabel,
+    #focusModeBtn,
+    .brand-mark {
+      display: none !important;
+    }
   }
 
   .modal-backdrop {
