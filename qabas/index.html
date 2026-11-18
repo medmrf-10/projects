@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="frozen" data-font="plex" data-width="medium">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>موسوعة واستوديو شرح قبس النور المبين — القراءة والنسخ والنسخ المخصصة</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="appShell" class="app-shell">
+    <!-- شريط التقدم العلوي للقراءة -->
+    <div class="reading-progress-bar" aria-hidden="true">
+      <div id="readingProgressFill" class="reading-progress-fill" style="width: 0%"></div>
+    </div>
+
+    <!-- الشريط العلوي الرئيسي -->
+    <header class="topbar">
+      <div class="topbar-brand">
+        <button id="mobileMenuBtn" class="btn btn-icon mobile-only" title="قائمة الكتب والمجالس" aria-label="قائمة الكتب والمجالس">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="brand-mark" aria-hidden="true">ق</div>
+        <div class="brand-titles">
+          <span class="brand-name">قبس النور المبين</span>
+          <span id="syncBadge" class="sync-badge" title="حالة حفظ التعديلات والنسخ المخصصة">جارٍ الفحص...</span>
+        </div>
+      </div>
+
+      <!-- تبويبات التنقل الأساسية -->
+      <nav class="nav-tabs" role="tablist" aria-label="أقسام المنصة">
+        <button class="nav-tab is-active" data-tab="topics" role="tab">
+          <span>الكتب الموضوعية</span>
+          <span id="topicsCountBadge" class="tab-count">12</span>
+        </button>
+        <button class="nav-tab" data-tab="lessons" role="tab">
+          <span>المجالس المستقلة</span>
+          <span id="lessonsCountBadge" class="tab-count">67</span>
+        </button>
+        <button class="nav-tab" data-tab="studio" role="tab">
+          <span>النسخ المخصصة</span>
+          <span id="customCountBadge" class="tab-count">0</span>
+        </button>
+        <button class="nav-tab" data-tab="bookmarks" role="tab">
+          <span>المفضلة والحواشي</span>
+          <span id="bookmarksCountBadge" class="tab-count">0</span>
+        </button>
+      </nav>
+
+      <!-- أزرار التحكم العلوية -->
+      <div class="topbar-actions">
+        <button id="openSearchBtn" class="btn btn-pill btn-ghost search-trigger-btn" title="بحث شامل في الموسوعة (اختصار / أو Cmd+K)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="hide-sm">بحث شامل</span>
+          <kbd class="kbd-hint hide-md" dir="ltr">/</kbd>
+        </button>
+
+        <button id="splitModeBtn" class="btn btn-pill btn-ghost" title="فتح المصدر والنسخة المخصصة جنباً إلى جنب لالتقاط الفقرات (اختصار S)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+          <span class="hide-md">العرض المزدوج</span>
+        </button>
+
+        <button id="focusModeBtn" class="btn btn-icon btn-ghost" title="وضع القراءة المركزة بدون قوائم جانبية (اختصار F)" aria-label="وضع القراءة المركزة">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        </button>
+
+        <div class="popover-anchor" style="position: relative;">
+          <button id="appearanceBtn" class="btn btn-pill btn-ghost" title="المظهر والخطوط ونمط النسخ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>
+            <span class="hide-sm">المظهر والخط</span>
+          </button>
+
+          <!-- لوحة إعدادات القراءة والثيمات ونمط النسخ -->
+          <div id="appearancePopover" class="popover-panel" hidden>
+            <div class="popover-section">
+              <div class="popover-label">الثيم اللوني</div>
+              <div class="theme-pills-grid" id="themeSelectorGrid">
+                <button class="btn btn-pill theme-opt is-active" data-set-theme="frozen">الليلي الحاد</button>
+                <button class="btn btn-pill theme-opt" data-set-theme="lights-out">داكن حالك</button>
+                <button class="btn btn-pill theme-opt" data-set-theme="dim">أزرق ليلي</button>
+                <button class="btn btn-pill theme-opt" data-set-theme="light">نهاري أبيض</button>
+                <button class="btn btn-pill theme-opt" data-set-theme="paper">ورق تراثي</button>
+              </div>
+            </div>
+
+            <div class="popover-section">
+              <div class="popover-label">الخط العربي</div>
+              <div class="segmented-row" id="fontSelectorRow">
+                <button class="btn btn-pill is-active" data-set-font="plex">الـ IBM Plex الحديث</button>
+                <button class="btn btn-pill" data-set-font="amiri">النسخ التراثي (أميري)</button>
+              </div>
+            </div>
+
+            <div class="popover-section">
+              <div class="popover-label">حجم خط القراءة: <strong id="fontSizeVal">19</strong> بكسل</div>
+              <div class="stepper-row">
+                <button class="btn btn-pill btn-ghost" data-step-font="-1">تصغير −</button>
+                <input id="fontSizeRange" type="range" min="15" max="28" step="1" value="19" />
+                <button class="btn btn-pill btn-ghost" data-step-font="1">تكبير +</button>
+              </div>
+            </div>
+
+            <div class="popover-section">
+              <div class="popover-label">تباعد الأسطر: <strong id="lineHeightVal">1.92</strong></div>
+              <div class="stepper-row">
+                <input id="lineHeightRange" type="range" min="1.55" max="2.35" step="0.05" value="1.92" />
+              </div>
+            </div>
+
+            <div class="popover-section">
+              <div class="popover-label">عرض عمود القراءة</div>
+              <div class="segmented-row" id="widthSelectorRow">
+                <button class="btn btn-pill" data-set-width="narrow">مركز</button>
+                <button class="btn btn-pill is-active" data-set-width="medium">متوسط</button>
+                <button class="btn btn-pill" data-set-width="wide">عريض</button>
+                <button class="btn btn-pill" data-set-width="full">كامل</button>
+              </div>
+            </div>
+
+            <div class="popover-section">
+              <div class="popover-label">النمط الافتراضي لزر «نسخ الفقرة»</div>
+              <div class="segmented-row" id="copyModeRow">
+                <button class="btn btn-pill is-active" data-set-copy="plain">نص صافٍ</button>
+                <button class="btn btn-pill" data-set-copy="citation">مع العزو</button>
+                <button class="btn btn-pill" data-set-copy="markdown">الـ Markdown</button>
+              </div>
+            </div>
+
+            <div class="popover-section popover-footer-row">
+              <button id="openBackupModalBtn" class="btn btn-pill btn-ghost" style="width: 100%;">نسخ احتياطي واستيراد مساحة العمل (.json)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- الشبكة الرئيسية ثلاثية الأعمدة / المزدوجة -->
+    <div class="workspace-grid">
+      <!-- القائمة الجانبية اليمنى: قائمة الكتب أو المجالس أو النسخ المخصصة -->
+      <aside id="sidebarNav" class="sidebar-nav" aria-label="قائمة المحتويات">
+        <div class="sidebar-header">
+          <div class="sidebar-title-row">
+            <strong id="sidebarHeading">الكتب الموضوعية (12)</strong>
+            <button id="closeSidebarMobileBtn" class="btn btn-icon mobile-only" aria-label="إغلاق القائمة">×</button>
+          </div>
+          <input id="sidebarFilterInput" type="search" class="sidebar-search-input" placeholder="تصفية سريعة للعناوين..." autocomplete="off" />
+        </div>
+        <div id="docListContainer" class="doc-list"></div>
+      </aside>
+
+      <!-- المسرح الرئيسي (القارئ + استوديو النسخ المخصصة + المفضلة) -->
+      <main id="mainStage" class="main-stage">
+        <section id="readerView" class="stage-pane reader-pane"></section>
+        <section id="studioView" class="stage-pane studio-pane" hidden></section>
+        <section id="bookmarksView" class="stage-pane bookmarks-pane" hidden></section>
+      </main>
+
+      <!-- الفهرس التفصيلي الحي للكتاب أو المجلس المعروض (يساراً) -->
+      <aside id="sidebarToc" class="sidebar-toc" aria-label="فهرس أبواب ومباحث الدرس">
+        <div class="toc-header">
+          <strong>فهرس الأبواب والمباحث</strong>
+          <span id="tocStatsBadge" class="stat-chip"></span>
+        </div>
+        <div id="tocList" class="toc-list"></div>
+      </aside>
+    </div>
+
+    <!-- الشريط العائم للفقرات المحددة (التحديد المتعدد) -->
+    <div id="selectionBar" class="selection-bar" hidden>
+      <div class="selection-summary">
+        <strong id="selectionCountLabel">0 فقرات محددة</strong>
+        <span id="selectionWordsLabel" class="stat-chip">0 كلمة</span>
+      </div>
+      <div class="selection-actions">
+        <button id="selCopyPlainBtn" class="btn btn-pill btn-primary">نسخ المحدد</button>
+        <button id="selCopyCitedBtn" class="btn btn-pill btn-ghost">نسخ مع العناوين</button>
+        <button id="selNewCustomBtn" class="btn btn-pill btn-emerald">+ إنشاء نسخة مخصصة</button>
+        <button id="selAppendCustomBtn" class="btn btn-pill btn-ghost">إلحاق بالنسخة الحالية</button>
+        <button id="selDownloadMdBtn" class="btn btn-pill btn-ghost">تنزيل .md</button>
+        <button id="selClearBtn" class="btn btn-pill btn-danger-ghost" title="إلغاء التحديد">إلغاء ×</button>
+      </div>
+    </div>
+
+    <!-- نافذة البحث الشامل الذكي -->
+    <div id="searchModal" class="modal-backdrop" hidden>
+      <div class="modal-card modal-lg" role="dialog" aria-modal="true" aria-labelledby="searchModalTitle">
+        <div class="modal-header">
+          <strong id="searchModalTitle">البحث الفوري الذكي في الموسوعة والنسخ المخصصة</strong>
+          <button class="btn btn-icon" data-close-modal="searchModal" aria-label="إغلاق">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="search-controls-bar">
+            <input id="globalSearchInput" type="search" class="global-search-input" placeholder="ابحث بأي كلمة أو جملة بدون الحاجة للتشكيل أو ضبط الهمزات (مثال: قياس ابليس، غيبة القراء، لطائف القلب)..." autocomplete="off" />
+            <div class="search-scope-pills" id="searchScopeGroup">
+              <button class="btn btn-pill is-active" data-search-scope="all">الكل</button>
+              <button class="btn btn-pill" data-search-scope="topics">الكتب الموضوعية (12)</button>
+              <button class="btn btn-pill" data-search-scope="lessons">المجالس (67)</button>
+              <button class="btn btn-pill" data-search-scope="custom">نسخي المخصصة</button>
+            </div>
+          </div>
+          <div id="searchMetaLine" class="search-meta-line">اكتب كلمتين أو أكثر للبحث الفوري عبر 4,697 فقرة مع إمكانية النسخ أو الإرسال المباشر لنسختك المخصصة.</div>
+          <div id="searchResultsList" class="search-results-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- نافذة استنساخ درس وإنشاء نسخة مخصصة قابلة للتعديل -->
+    <div id="forkModal" class="modal-backdrop" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="forkModalTitle">
+        <div class="modal-header">
+          <strong id="forkModalTitle">إنشاء نسخة مخصصة قابلة للتعديل</strong>
+          <button class="btn btn-icon" data-close-modal="forkModal" aria-label="إغلاق">×</button>
+        </div>
+        <div class="modal-body" id="forkModalBody"></div>
+        <div class="modal-footer">
+          <button class="btn btn-pill btn-ghost" data-close-modal="forkModal">إلغاء</button>
+          <button id="confirmForkBtn" class="btn btn-pill btn-primary">إنشاء النسخة وفتح المحرر</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- نافذة نقاط الاستعادة والنسخ التاريخية للدرس المخصص -->
+    <div id="snapshotsModal" class="modal-backdrop" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="snapshotsModalTitle">
+        <div class="modal-header">
+          <strong id="snapshotsModalTitle">نقاط الاستعادة وسجل النسخ المحفوظة</strong>
+          <button class="btn btn-icon" data-close-modal="snapshotsModal" aria-label="إغلاق">×</button>
+        </div>
+        <div class="modal-body" id="snapshotsModalBody"></div>
+      </div>
+    </div>
+
+    <!-- نافذة النسخ الاحتياطي والاستيراد -->
+    <div id="backupModal" class="modal-backdrop" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="backupModalTitle">
+        <div class="modal-header">
+          <strong id="backupModalTitle">النسخ الاحتياطي واستيراد مساحة العمل</strong>
+          <button class="btn btn-icon" data-close-modal="backupModal" aria-label="إغلاق">×</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 12px; color: var(--muted);">تُحفظ جميع تعديلاتك وحواشيك ونسخك المخصصة تلقائياً في قاعدة بيانات المتصفح وفي مجلد الملفات المخصصة عند تشغيل الخادم المحلي، ويمكنك أيضاً تصدير حزمة العمل كاملة أو استيرادها في أي وقت.</p>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+            <button id="exportWorkspaceBtn" class="btn btn-pill btn-primary">تنزيل حزمة العمل كاملة (.json)</button>
+            <label class="btn btn-pill btn-ghost" style="cursor: pointer;">
+              <span>استيراد ملف حزمة (.json)</span>
+              <input id="importWorkspaceInput" type="file" accept=".json,application/json" hidden />
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- شاشة الإلقاء والقراءة المتدرجة (Teleprompter / Presentation Mode) -->
+    <div id="teleprompterOverlay" class="teleprompter-overlay" hidden>
+      <div class="tp-topbar">
+        <div class="tp-title-group">
+          <strong id="tpTitle">وضع الإلقاء والقراءة المتدرجة</strong>
+          <span id="tpProgressBadge" class="stat-chip">1 / 1</span>
+          <span id="tpTimerBadge" class="stat-chip" dir="ltr">00:00</span>
+        </div>
+        <div class="tp-controls">
+          <button id="tpPlayScrollBtn" class="btn btn-pill btn-ghost">تمرير تلقائي ▶</button>
+          <button id="tpFontMinusBtn" class="btn btn-pill btn-ghost">خط −</button>
+          <button id="tpFontPlusBtn" class="btn btn-pill btn-ghost">خط +</button>
+          <button id="tpPrevBtn" class="btn btn-pill btn-ghost">السابق ↑</button>
+          <button id="tpNextBtn" class="btn btn-pill btn-primary">التالي ↓</button>
+          <button id="tpCloseBtn" class="btn btn-pill btn-danger-ghost">خروج (Esc)</button>
+        </div>
+      </div>
+      <div id="tpStage" class="tp-stage"></div>
+    </div>
+
+    <!-- مكدس الإشعارات الفورية -->
+    <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+  </div>
+
+  <!-- حزم المادة العلمية المترجمة مسبقاً للعمل الفوري بدون خادم أو مع الخادم -->
+  <script src="data/topics_data.js"></script>
+  <script src="data/lessons_data.js"></script>
+
+  <!-- وحدات التطبيق النمطية -->
+  <script src="js/arabic_utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/reader.js"></script>
+  <script src="js/studio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
