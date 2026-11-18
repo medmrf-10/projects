@@ -6,7 +6,9 @@
   <title>ظلّ النمر في الممرّ — قصة التنمّر من منظور علم النفس</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet" /></noscript>
+  <script src="../../assets/project-gate.js" data-project-id="bullying" data-portal-url="../../"></script>
   <style>
 /* ==========================================================================
    01-stage.css — Minimalist Full-Stage Visual Storyboard Design System (V2)
@@ -10018,41 +10020,301 @@ html[data-theme="light"] .char-meta,
       max-height: none;
       overflow: hidden;
     }
-    @media (max-width: 860px) {
-      .sp-spotlight-stage {
-        width: 760px !important;
-        min-height: 400px !important;
+
+    /* Portrait & Compact Mobile Overhaul: Native Readable Geometry + Centered Ergonomic Thumb Dock */
+    @media (max-width: 720px) {
+      .sp-stage-wrap,
+      .sp-char-actor,
+      .char-pod,
+      .sp-scale-pan-actor .sp-char-actor,
+      .sp-scale-pan-actor .char-pod,
+      .sp-arena-core .char-pod,
+      .sp-versus-wing .sp-char-actor,
+      .sp-row-stage[data-count='4'] .sp-char-actor,
+      .sp-row-stage[data-count='5'] .sp-char-actor {
+        zoom: 1 !important;
       }
+
+      #stage-viewport {
+        padding: 0.35rem 0.65rem !important;
+      }
+
+      /* 1. Spotlight Stage -> Clean Vertical Character + 2-Column Readable Badges */
+      .sp-spotlight-stage {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: min(390px, 100%) !important;
+        min-height: 0 !important;
+        height: auto !important;
+        gap: 12px !important;
+        padding: 8px 6px !important;
+      }
+      .sp-orbit-ring {
+        position: relative !important;
+        inset: auto !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 7px !important;
+        width: 100% !important;
+        z-index: 4;
+      }
+      .sp-float-badge {
+        position: relative !important;
+        top: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        font-size: 0.82rem !important;
+        padding: 6px 12px !important;
+        white-space: normal !important;
+        text-align: center !important;
+        max-width: 48% !important;
+      }
+
+      /* 2. Tiger Wall Stage -> Proportional Shadow + Unclipped Claw Grid */
+      .sp-tiger-stage {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        width: min(410px, 100%) !important;
+        height: auto !important;
+        min-height: 290px !important;
+        gap: 10px !important;
+        padding: 8px 6px !important;
+      }
+      .sp-tiger-shadow-wrap {
+        width: 270px !important;
+        height: 206px !important;
+        margin-left: -135px !important;
+        bottom: 42px !important;
+      }
+      .sp-tiger-claws {
+        position: relative !important;
+        inset: auto !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 7px !important;
+        width: 100% !important;
+        order: -1;
+      }
+      .sp-claw-pill {
+        position: relative !important;
+        top: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        font-size: 0.80rem !important;
+        padding: 6px 12px !important;
+      }
+      .sp-tiger-rami-fg {
+        align-self: center !important;
+        margin-bottom: 0 !important;
+      }
+
+      /* 3. BigStat, Shield & Night Phone -> Portrait Vertical Stack (Zero Negative-Margin Clipping!) */
+      .sp-bigstat-stage,
+      .sp-shield-stage,
+      .sp-phone-stage {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 12px !important;
+        width: min(390px, 100%) !important;
+        min-height: 0 !important;
+        padding: 6px 8px !important;
+      }
+      .sp-bigstat-monument {
+        padding: 14px 22px !important;
+        border-radius: 24px !important;
+        max-width: 100% !important;
+      }
+      .sp-bigstat-number {
+        font-size: clamp(2.3rem, 9.5vw, 3.2rem) !important;
+      }
+      .sp-bigstat-label {
+        font-size: 0.88rem !important;
+        padding: 5px 14px !important;
+        text-align: center !important;
+      }
+      .sp-shield-emblem-wrap {
+        width: 176px !important;
+        height: 204px !important;
+      }
+      .sp-shield-icon {
+        font-size: 2.35rem !important;
+      }
+      .sp-shield-title {
+        font-size: 0.92rem !important;
+      }
+      .sp-phone-device {
+        width: 184px !important;
+        height: 246px !important;
+        padding: 10px !important;
+        border-radius: 26px !important;
+      }
+      .sp-phone-screen {
+        padding: 10px 9px !important;
+        border-radius: 18px !important;
+      }
+      .sp-phone-clock {
+        font-size: 1.72rem !important;
+        margin-top: 2px !important;
+      }
+      .sp-phone-notif-card {
+        padding: 8px 8px !important;
+        font-size: 0.78rem !important;
+      }
+      .sp-phone-orbits {
+        position: relative !important;
+        inset: auto !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 5px !important;
+        margin-top: 6px !important;
+        width: 100% !important;
+      }
+      .sp-cyber-orbit-pill {
+        position: relative !important;
+        top: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        font-size: 0.73rem !important;
+        padding: 4px 9px !important;
+      }
+
+      /* 4. Balance Scale, Peer Arena, Versus & Lifespan Road -> Calibrated Mobile Canvas */
       .sp-scale-stage {
-        width: 840px !important;
-        height: 420px !important;
+        width: 560px !important;
+        height: 360px !important;
       }
       .sp-scale-beam-assembly {
-        width: 620px !important;
-        margin-left: -310px !important;
+        width: 360px !important;
+        margin-left: -180px !important;
       }
-      .sp-tiger-stage {
-        width: 820px !important;
-        height: 420px !important;
+      .sp-scale-pan-mount {
+        width: 168px !important;
+        margin-left: -84px !important;
+      }
+      .sp-scale-pan-dish {
+        width: 152px !important;
       }
       .sp-arena-stage {
-        width: 860px !important;
-        height: 440px !important;
+        width: 540px !important;
+        height: 470px !important;
       }
       .sp-versus-stage {
-        width: 820px !important;
+        width: 560px !important;
+        gap: 12px !important;
+        padding: 8px 10px !important;
       }
       .sp-road-stage {
-        width: 860px !important;
+        width: 600px !important;
+        aspect-ratio: 920 / 450 !important;
       }
-      .sp-phone-stage {
-        padding-inline: 96px !important;
+      .sp-row-stage[data-count='4'] .sp-row-actors,
+      .sp-row-stage[data-count='5'] .sp-row-actors {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 10px 14px !important;
+        max-width: 440px !important;
       }
-    }
-    @media (max-width: 680px) {
-      #stage-viewport {
-        padding: 0.25rem 0.5rem;
+
+      /* 5. Interactive Part 3 Games (Beats 76, 77, 78, 79, 80) -> True Mobile Cards */
+      .p3-game-shell {
+        width: min(390px, 100%) !important;
+        padding: 10px 10px !important;
+        gap: 8px !important;
+        border-radius: 20px !important;
       }
+      #p3-game-theater .p3-cast-stage {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px 8px !important;
+        justify-items: center !important;
+        align-items: end !important;
+        width: 100% !important;
+      }
+      #p3-game-theater .p3-cast-unit {
+        transform: scale(0.84) !important;
+        transform-origin: center bottom !important;
+      }
+      #p3-game-mirror .p3-num-pills {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 5px !important;
+        width: 100% !important;
+      }
+      #p3-game-mirror .p3-num-btn {
+        font-size: 0.74rem !important;
+        padding: 5px 8px !important;
+        text-align: center !important;
+      }
+      #p3-game-mirror .p3-mirror-arena {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        justify-items: center !important;
+        align-items: end !important;
+        padding: 10px 8px !important;
+        width: 100% !important;
+      }
+      #p3-game-mirror .p3-center-totem {
+        grid-column: 1 / -1 !important;
+        order: -1 !important;
+        width: 100% !important;
+      }
+      #p3-game-scale .p3-case-stage {
+        flex-direction: column !important;
+        gap: 8px !important;
+        width: 100% !important;
+        padding: 4px 2px !important;
+      }
+      #p3-game-scale .p3-case-bubble-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 11px 14px !important;
+        align-items: center !important;
+        text-align: center !important;
+      }
+      #p3-game-scale .p3-case-line {
+        font-size: 0.94rem !important;
+        line-height: 1.48 !important;
+      }
+      .p3-btn-bar {
+        gap: 6px !important;
+      }
+      .p3-act-btn {
+        font-size: 0.78rem !important;
+        padding: 7px 11px !important;
+      }
+      .p3-crit-badge {
+        font-size: 0.75rem !important;
+        padding: 4px 10px !important;
+      }
+      .p3-finale-card {
+        width: min(380px, 100%) !important;
+        padding: 16px 14px !important;
+        gap: 12px !important;
+      }
+      .p3-finale-duo {
+        gap: 12px !important;
+      }
+      .p3-finale-btn {
+        width: 100% !important;
+        font-size: 0.88rem !important;
+        padding: 10px 16px !important;
+      }
+
+      /* 6. Topbar, Subtitle Dock & Centered Two-Row Ergonomic Bottom Thumb Console */
       .mini-controls {
         gap: 0.28rem;
         flex-shrink: 0;
@@ -10078,35 +10340,69 @@ html[data-theme="light"] .char-meta,
         font-size: 0.77rem;
       }
       .caption-dock {
-        min-height: 76px;
-        padding: 0.2rem 0.65rem 0.4rem;
+        min-height: 70px;
+        padding: 0.15rem 0.75rem 0.3rem;
       }
       .caption-box {
-        padding: 0.58rem 0.95rem;
+        padding: 0.55rem 0.95rem;
         border-radius: 16px;
-        gap: 0.3rem;
+        gap: 0.28rem;
         width: 100%;
       }
       .caption-text {
-        font-size: clamp(0.96rem, 4.1vw, 1.18rem);
-        line-height: 1.48;
+        font-size: clamp(0.95rem, 4vw, 1.14rem);
+        line-height: 1.46;
       }
       .source-chip {
         font-size: 0.71rem;
         padding: 0.1rem 0.58rem;
       }
       .minimal-bottombar {
-        gap: 0.55rem;
+        height: auto !important;
+        flex: 0 0 auto !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        row-gap: 8px !important;
+        column-gap: 12px !important;
+        padding: 4px max(1rem, env(safe-area-inset-right, 1rem)) max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px)) max(1rem, env(safe-area-inset-left, 1rem)) !important;
+      }
+      .beat-progress-track {
+        order: -1 !important;
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 8px !important;
       }
       .nav-arrow-btn {
-        width: 42px;
-        height: 36px;
-        font-size: 1rem;
+        min-width: 108px !important;
+        width: auto !important;
+        height: 40px !important;
+        padding: 0 16px !important;
+        gap: 6px !important;
+        font-size: 0.9rem !important;
+        font-weight: 800 !important;
+        border-radius: 999px !important;
         flex-shrink: 0;
       }
+      .nav-arrow-btn[data-ctrl="prev"]::after {
+        content: "السابق";
+        font-size: 0.82rem;
+      }
+      .nav-arrow-btn[data-ctrl="next"] {
+        background: rgba(56, 189, 248, 0.18) !important;
+        border-color: var(--mood-accent, #38bdf8) !important;
+      }
+      [data-theme="light"] .nav-arrow-btn[data-ctrl="next"] {
+        background: rgba(2, 132, 199, 0.14) !important;
+      }
+      .nav-arrow-btn[data-ctrl="next"]::before {
+        content: "التالي";
+        font-size: 0.82rem;
+      }
       .beat-counter {
-        font-size: 0.76rem;
-        min-width: 50px;
+        font-size: 0.78rem;
+        min-width: 58px;
       }
       #jump-drawer, #refs-modal {
         padding: 0.65rem;
@@ -10133,36 +10429,44 @@ html[data-theme="light"] .char-meta,
         grid-template-columns: 1fr !important;
       }
     }
+
     @media (max-height: 520px) {
       .minimal-topbar {
         height: calc(38px + env(safe-area-inset-top, 0px));
         flex: 0 0 calc(38px + env(safe-area-inset-top, 0px));
       }
       #stage-viewport {
-        padding: 0.15rem 0.6rem;
+        padding: 0.15rem 0.6rem !important;
       }
       .caption-dock {
-        min-height: 48px;
-        padding: 0.12rem 0.75rem 0.22rem;
+        min-height: 44px;
+        padding: 0.1rem 0.75rem 0.18rem;
       }
       .caption-box {
         flex-direction: row;
         flex-wrap: wrap;
-        padding: 0.35rem 0.9rem;
+        padding: 0.3rem 0.85rem;
         border-radius: 14px;
         gap: 0.5rem;
       }
       .caption-text {
-        font-size: 0.9rem;
-        line-height: 1.36;
+        font-size: 0.88rem;
+        line-height: 1.34;
       }
       .minimal-bottombar {
-        height: calc(36px + env(safe-area-inset-bottom, 0px));
-        flex: 0 0 calc(36px + env(safe-area-inset-bottom, 0px));
+        flex-wrap: nowrap !important;
+        padding-top: 2px !important;
+        padding-bottom: max(6px, env(safe-area-inset-bottom, 6px)) !important;
+        height: auto !important;
+      }
+      .beat-progress-track {
+        order: 0 !important;
+        flex: 1 1 auto !important;
       }
       .nav-arrow-btn {
-        height: 28px;
-        width: 36px;
+        min-width: 78px !important;
+        height: 30px !important;
+        padding: 0 10px !important;
       }
     }
   </style>
@@ -10176,28 +10480,82 @@ html[data-theme="light"] .char-meta,
         var child = sc.firstElementChild;
         if (!child) return;
 
+        // Temporarily neutralize parent entry animations so getBoundingClientRect reflects settled geometry
+        var prevScAnim = sc.style.animation;
+        var prevScTrans = sc.style.transform;
+        sc.style.animation = "none";
+        sc.style.transform = "none";
+
         child.style.transform = "none";
-        child.style.width = "";
-        child.style.maxWidth = "";
         child.style.flexShrink = "0";
 
-        var availW = Math.max(140, vp.clientWidth - 16);
-        var availH = Math.max(90, vp.clientHeight - 10);
-
-        var ow0 = child.offsetWidth || 0;
-        var sw = child.scrollWidth || 0;
-        if (sw > ow0 + 4) {
-          child.style.maxWidth = "none";
-          child.style.width = "max-content";
+        var vpRect = vp.getBoundingClientRect();
+        if (vpRect.width < 20 || vpRect.height < 20) {
+          sc.style.animation = prevScAnim;
+          sc.style.transform = prevScTrans;
+          return;
         }
 
-        var natW = Math.max(child.offsetWidth || 0, child.scrollWidth || 0);
-        var natH = Math.max(child.offsetHeight || 0, child.scrollHeight || 0);
+        var padX = window.innerWidth <= 720 ? 14 : 24;
+        var padY = window.innerHeight <= 520 ? 8 : 14;
+        var availW = Math.max(120, vpRect.width - padX * 2);
+        var availH = Math.max(80, vpRect.height - padY * 2);
 
-        if (natW > availW || natH > availH) {
-          var scale = Math.min(1, availW / natW, availH / natH);
+        // Temporarily pause descendant entry scale keyframes during measurement for exact settled bounds
+        var animNodes = child.querySelectorAll(".sp-enter-pop, .sp-enter-slide-right, .sp-enter-slide-left, .sp-enter-shake, .sp-enter-glow, .sp-enter-shrink, .sp-enter-grow, .enter-pop, .enter-slide-right, .enter-slide-left, .enter-glow, .prop-drop");
+        var savedAnims = [];
+        for (var a = 0; a < animNodes.length; a++) {
+          savedAnims.push(animNodes[a].style.animation);
+          animNodes[a].style.animation = "none";
+        }
+
+        var cRect = child.getBoundingClientRect();
+        var minL = cRect.left;
+        var maxR = cRect.right;
+        var minT = cRect.top;
+        var maxB = cRect.bottom;
+
+        var descendants = child.querySelectorAll("*");
+        for (var i = 0; i < descendants.length; i++) {
+          var el = descendants[i];
+          var st = window.getComputedStyle(el);
+          if (st.display === "none" || st.visibility === "hidden" || parseFloat(st.opacity) === 0) continue;
+          // Ignore decorative background rings/beams with pointer-events:none that intentionally bleed softly, EXCEPT SVGs/text/badges/pans
+          if (el.classList && (el.classList.contains("sp-spotlight-beam-svg") || el.classList.contains("sp-bigstat-ring-svg"))) continue;
+          var r = el.getBoundingClientRect();
+          if (r.width < 2 || r.height < 2) continue;
+          if (r.left < minL) minL = r.left;
+          if (r.right > maxR) maxR = r.right;
+          if (r.top < minT) minT = r.top;
+          if (r.bottom > maxB) maxB = r.bottom;
+        }
+
+        for (var b = 0; b < animNodes.length; b++) {
+          animNodes[b].style.animation = savedAnims[b];
+        }
+        sc.style.animation = prevScAnim;
+        sc.style.transform = prevScTrans;
+
+        var visualW = Math.max(1, maxR - minL);
+        var visualH = Math.max(1, maxB - minT);
+        var scale = Math.min(1, availW / visualW, availH / visualH);
+
+        var vpCenterX = vpRect.left + vpRect.width * 0.5;
+        var vpCenterY = vpRect.top + vpRect.height * 0.5;
+        var childOriginX = cRect.left + cRect.width * 0.5;
+        var childOriginY = cRect.top + cRect.height * 0.5;
+        var visCenterX = (minL + maxR) * 0.5;
+        var visCenterY = (minT + maxB) * 0.5;
+
+        // After scale(s) around childOrigin, visual center lands at childOrigin + (visCenter - childOrigin) * s
+        var scaledVisCenterX = childOriginX + (visCenterX - childOriginX) * scale;
+        var scaledVisCenterY = childOriginY + (visCenterY - childOriginY) * scale;
+        var tx = vpCenterX - scaledVisCenterX;
+        var ty = vpCenterY - scaledVisCenterY;
+
+        if (scale < 0.998 || Math.abs(tx) > 1.5 || Math.abs(ty) > 1.5) {
           child.style.transformOrigin = "center center";
-          child.style.transform = "scale(" + scale.toFixed(4) + ")";
+          child.style.transform = "translate3d(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px,0) scale(" + scale.toFixed(4) + ")";
         }
       }
 
@@ -10217,6 +10575,7 @@ html[data-theme="light"] .char-meta,
         var vp = document.getElementById("stage-viewport");
         if (vp) {
           vp.addEventListener("click", function () {
+            fitV1Stage();
             requestAnimationFrame(fitV1Stage);
           });
         }

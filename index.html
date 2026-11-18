@@ -615,6 +615,13 @@
       </div>
 
       <div class="topbar-actions">
+        <button type="button" id="lockAllBtn" class="theme-btn" hidden title="إعادة قفل المشاريع المفتوحة بالرقم السري" aria-label="إعادة قفل المشاريع">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4" y="11" width="16" height="10" rx="2.5"></rect>
+            <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+          </svg>
+          <span class="theme-btn-label">قفل المشاريع</span>
+        </button>
         <button type="button" id="themeToggleBtn" class="theme-btn" aria-label="تبديل المظهر النهاري والليلي" title="تبديل المظهر">
           <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="4"></circle>
@@ -652,7 +659,7 @@
 
     <section class="projects-grid" id="projectsGrid" aria-label="قائمة المشاريع">
       <!-- بطاقة المشروع 1: التنمّر من منظور علم النفس -->
-      <a href="./bullying/" class="project-card" data-category="psychology" style="--card-accent: var(--accent-sky); --card-cta-hover: rgba(56, 189, 248, 0.14); --visual-bg: #0b1324; --visual-bg-light: #e6eef6;">
+      <a href="./bullying/" class="project-card" data-category="psychology" data-project-id="bullying" style="--card-accent: var(--accent-sky); --card-cta-hover: rgba(56, 189, 248, 0.14); --visual-bg: #0b1324; --visual-bg-light: #e6eef6;">
         <div class="card-visual" aria-hidden="true">
           <svg viewBox="0 0 640 344" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
             <defs>
@@ -728,7 +735,7 @@
       </a>
 
       <!-- بطاقة المشروع 2: موسوعة واستوديو شرح قبس النور المبين -->
-      <a href="./qabas/" class="project-card" data-category="heritage" style="--card-accent: var(--accent-amber); --card-cta-hover: rgba(245, 158, 11, 0.14); --visual-bg: #12101b; --visual-bg-light: #efeae0;">
+      <a href="./qabas/" class="project-card" data-category="heritage" data-project-id="qabas" style="--card-accent: var(--accent-amber); --card-cta-hover: rgba(245, 158, 11, 0.14); --visual-bg: #12101b; --visual-bg-light: #efeae0;">
         <div class="card-visual" aria-hidden="true">
           <svg viewBox="0 0 640 344" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
             <defs>
@@ -796,10 +803,12 @@
     </footer>
   </main>
 
+  <script src="./assets/project-gate.js"></script>
   <script>
     (function () {
       var root = document.documentElement;
       var themeBtn = document.getElementById("themeToggleBtn");
+      var lockAllBtn = document.getElementById("lockAllBtn");
       var sunIcon = document.getElementById("themeIconSun");
       var moonIcon = document.getElementById("themeIconMoon");
       var themeLabel = document.getElementById("themeBtnLabel");
@@ -835,6 +844,62 @@
       var filterBtns = Array.prototype.slice.call(document.querySelectorAll("[data-filter]"));
       var cards = Array.prototype.slice.call(document.querySelectorAll(".project-card[data-category]"));
       var countLabel = document.getElementById("projectsCountLabel");
+
+      function syncLockUI() {
+        if (!window.ProjectGate) return;
+        cards.forEach(function (card) {
+          var pid = card.getAttribute("data-project-id");
+          if (!pid) return;
+          var unlocked = window.ProjectGate.isUnlocked(pid);
+          var chip = card.querySelector("[data-lock-chip]");
+          if (!chip) {
+            var metaList = card.querySelector(".card-meta-list");
+            if (metaList) {
+              chip = document.createElement("span");
+              chip.className = "meta-chip";
+              chip.setAttribute("data-lock-chip", "1");
+              metaList.insertBefore(chip, metaList.firstChild);
+            }
+          }
+          if (chip) {
+            chip.textContent = unlocked ? "🔓 مفتوح في هذه الجلسة" : "🔒 محمي برقم سري";
+            chip.style.borderColor = unlocked ? "rgba(16, 185, 129, 0.45)" : "";
+            chip.style.color = unlocked ? "var(--accent-emerald)" : "";
+          }
+        });
+        if (lockAllBtn) {
+          lockAllBtn.hidden = !window.ProjectGate.anyUnlocked();
+        }
+      }
+
+      cards.forEach(function (card) {
+        var pid = card.getAttribute("data-project-id");
+        if (!pid) return;
+        card.addEventListener("click", function (e) {
+          if (!window.ProjectGate || window.ProjectGate.isUnlocked(pid)) return;
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault();
+          var targetHref = card.getAttribute("href");
+          window.ProjectGate.promptModal(pid, function () {
+            syncLockUI();
+            window.location.href = targetHref;
+          });
+        });
+      });
+
+      if (lockAllBtn) {
+        lockAllBtn.addEventListener("click", function () {
+          if (window.ProjectGate) {
+            window.ProjectGate.lockAll();
+            syncLockUI();
+          }
+        });
+      }
+
+      window.addEventListener("pageshow", syncLockUI);
+      window.addEventListener("focus", syncLockUI);
+      document.addEventListener("visibilitychange", syncLockUI);
+      syncLockUI();
 
       filterBtns.forEach(function (btn) {
         btn.addEventListener("click", function () {

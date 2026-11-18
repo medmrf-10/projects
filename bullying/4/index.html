@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=Amiri:ital,wght@0,400;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=Amiri:ital,wght@0,400;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" /></noscript>
+  <script src="../../assets/project-gate.js" data-project-id="bullying" data-portal-url="../../"></script>
   <style>
 /* ==========================================================================
    ATHAR (أثَر) — EDITION IV: 3D VOLUMETRIC SOCIAL-PHYSICS ATLAS & MONOGRAPH
@@ -1411,13 +1412,13 @@ button, input {
 
   #atlas-root {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 46px minmax(180px, 1fr) auto;
+    grid-template-rows: calc(46px + env(safe-area-inset-top, 0px)) minmax(180px, 1fr) auto;
   }
 
   /* Spine Morphs into Crisp Top Monograph Bar */
   .atlas-spine {
     flex-direction: row;
-    padding: 0 12px;
+    padding: env(safe-area-inset-top, 0px) max(12px, env(safe-area-inset-right, 12px)) 0 max(12px, env(safe-area-inset-left, 12px));
     border-inline-end: none;
     border-bottom: 1px solid var(--rule);
   }
@@ -1455,8 +1456,13 @@ button, input {
   }
 
   .stage-corner-hud {
-    top: 10px;
+    top: 8px;
     left: 10px;
+  }
+
+  .stage-coord-tag {
+    font-size: 0.58rem;
+    padding: 3px 7px;
   }
 
   /* Editorial Column Docks Cleanly Below 3D Stage */
@@ -1464,12 +1470,12 @@ button, input {
     grid-row: 3;
     border-inline-end: none;
     border-top: 1px solid var(--rule-strong);
-    padding: 10px 15px 10px;
-    max-height: 62dvh;
+    padding: 10px max(15px, env(safe-area-inset-right, 15px)) max(12px, calc(env(safe-area-inset-bottom, 0px) + 10px)) max(15px, env(safe-area-inset-left, 15px));
+    max-height: 64dvh;
   }
 
   .editorial-watermark {
-    font-size: 4.6rem;
+    font-size: 4.4rem;
     top: 8px;
   }
 
@@ -1490,7 +1496,7 @@ button, input {
   }
 
   .story-sentence {
-    font-size: clamp(0.96rem, 3.85vw, 1.18rem);
+    font-size: clamp(0.96rem, 3.85vw, 1.16rem);
     line-height: 1.48;
   }
 
@@ -1513,19 +1519,34 @@ button, input {
   }
 
   .lab-btn {
-    min-height: 27px;
+    min-height: 28px;
     padding: 4px 7px;
-    font-size: 0.70rem;
+    font-size: 0.71rem;
   }
 
   .presenter-footer {
-    gap: 7px;
+    gap: 8px;
     padding-top: 8px;
   }
 
-  .step-btn, .autoplay-chip-btn {
-    height: 34px;
-    padding: 0 11px;
+  .presenter-nav-row {
+    justify-content: center;
+    gap: 10px;
+    padding-inline: 4px;
+  }
+
+  .step-btn {
+    min-width: 108px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+  }
+
+  .autoplay-chip-btn {
+    height: 40px;
+    padding: 0 13px;
+    border-radius: 999px;
     font-size: 0.76rem;
   }
 
@@ -1540,6 +1561,10 @@ button, input {
 
   .spatial-pin-label {
     font-size: 0.70rem;
+  }
+
+  .refs-list-grid, .matrix-beats-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -3760,7 +3785,9 @@ window.ATLAS_BEATS = [
     var cz = y * sp + rz * cp + this.cur.dist;
 
     if (cz < 40) cz = 40;
-    var fov = Math.min(this.width, this.height) * 0.86;
+    var fov = this.width < 640
+      ? Math.min(this.width * 0.55, this.height * 0.76)
+      : Math.min(this.width, this.height) * 0.86;
     var scale = fov / cz;
     return {
       sx: this.width * 0.5 + rx * scale,
