@@ -5,24 +5,24 @@
   root.NeuroLab = root.NeuroLab || {};
 
   var STORAGE_KEY = "neurolab_deep_v3";
-  var SUITE_VERSION = "3.2";
+  var SUITE_VERSION = "3.3";
 
   var EXPERIMENTS = [
     {
       id: "d1_tbrs",
       order: 1,
       code: "D1 · TBRS",
-      title: "تلاشي الربط الطرفي تحت الحمل المعرفي الثابت (3.6s)",
+      title: "تلاشي الربط الطرفي تحت الحمل المعرفي الثابت (4.0s)",
       shortTitle: "تلاشي الربط (TBRS)",
-      durationMin: 1.6,
+      durationMin: 1.8,
       targetQuestion:
-        "كم يتلاشى من 3 روابط مكان–رمز خلال نافذة ثابتة (3,600 ms) عند منع الإنعاش الانتباهي بـ 6 أحكام بصرية متسارعة مقابل حكمين؟",
+        "كم يتلاشى من 3 روابط مكان–رمز خلال نافذة ثابتة (4,000 ms) عند منع الإنعاش الانتباهي بـ 4 أحكام بصرية متسارعة مقابل حكمين؟",
       instructions: [
-        "ثبّت نظرك على (+) واحفظ مواقع الرموز الثلاثة في الومضة الخاطفة (400 ms).",
-        "طوال ثواني الاحتفاظ (3.6 ثانية) حدّد فورا موضع الشريط داخل المربع المركزي: فوق (J / →) أم تحت (F / ←).",
-        "عند ظهور علامة (؟) في إحدى الدوائر الثلاث اختر الرمز الذي كان فيها من البدائل الأربعة."
+        "ثبّت نظرك على (+) واحفظ مواقع الرموز الثلاثة في العرض المتزامن (900 ms).",
+        "طوال نافذة الاحتفاظ الثابتة (4.0 ثوانٍ) حدّد فورا موضع الشريط داخل المربع المركزي: فوق (↑ / W) أم تحت (↓ / S).",
+        "عند ظهور علامة (؟) في إحدى الدوائر الثلاث اختر الرمز الذي كان فيها من البدائل الأربعة (مهلة 4.0 ثوانٍ)."
       ],
-      example: "ومضة 3 رموز في 3 دوائر ← قناع ← تحديد موضع الشريط المركزي (فوق / تحت) لمدة 3.6 ثانية ← اختيار رمز الدائرة المطلوبة من 4 بدائل"
+      example: "عرض 3 رموز (900ms) ← قناع + تهيؤ ← تحديد موضع الشريط (فوق ↑ / تحت ↓) لمدة 4.0 ثوانٍ ← اختيار رمز الدائرة من 4 بدائل"
     },
     {
       id: "d2_refback_m3",
@@ -30,15 +30,15 @@
       code: "D2 · M3-RB",
       title: "الربط الرمزي سريع الطفرة وبوابة Reference-Back",
       shortTitle: "الطفرة السريعة وبوابة التحديث",
-      durationMin: 1.9,
+      durationMin: 2.2,
       targetQuestion:
-        "هل ينجو ربط 3 إطارات مكانية–لونية برموز غير قابلة للتسمية تحت طفرات دون الثانية (650 ms) وبوابة تحديث/مقارنة مع تفكيك M3؟",
+        "هل ينجو ربط 3 إطارات مكانية–لونية برموز غير قابلة للتسمية تحت طفرات دون الثانية (800 ms) وبوابة تحديث/مقارنة مع تفكيك M3؟",
       instructions: [
-        "احفظ الرموز الثلاثة داخل إطاراتها الملونة (900 ms)، ثم حدّث في ذهنك (دون ضغط أزرار) الإطارين اللذين يتغير رمزهما تلقائيا.",
-        "الهالة الحمراء [تحديث]: هل يطابق الرمز المعروض آخر رمز محفوظ في هذا الإطار (طابق J / مختلف F)؟ ثم احفظ الرمز المعروض مكانه.",
-        "الهالة الزرقاء [مقارنة فقط]: هل يطابق آخر رمز محفوظ في هذا الإطار (طابق J / مختلف F)؟ دون تغيير الرمز المحفوظ، وفي النهاية اختر آخر رمز محفوظ للإطار المطلوب (؟) من 6 بدائل."
+        "احفظ الرموز الثلاثة داخل إطاراتها الملونة (900 ms)، ثم حدّث في ذهنك (دون ضغط أزرار) الإطارين اللذين يتغير رمزهما تلقائيا (500 ms).",
+        "الهالة الحمراء [تحديث]: هل يطابق الرمز المعروض آخر رمز محفوظ في هذا الإطار (طابق J / → أو مختلف F / ←)؟ ثم احفظ الرمز المعروض مكانه.",
+        "الهالة الزرقاء [مقارنة فقط]: هل يطابق آخر رمز محفوظ في هذا الإطار؟ دون تغيير الرمز المحفوظ، وفي النهاية اختر الرمز النهائي للإطار المطلوب (؟) من 6 بدائل (5.0 ثوانٍ)."
       ],
-      example: "3 رموز ابتدائية ← تحديثان تلقائيان بلا أزرار ← أحمر (قارن وحدّث) / أزرق (قارن دون تحديث) ← اختيار الرمز النهائي من 6 بدائل"
+      example: "3 رموز ابتدائية (900ms) ← تحديثان تلقائيان (500ms) ← أحمر (قارن وحدّث) / أزرق (قارن دون تحديث) ← اختيار الرمز النهائي من 6 بدائل"
     },
     {
       id: "d3_bays_analog",
@@ -46,13 +46,13 @@
       code: "D3 · BAYS",
       title: "خليط Bays المقنّع للزوايا المتصلة (200ms · N=4)",
       shortTitle: "خليط Bays المقنّع",
-      durationMin: 3.6,
+      durationMin: 3.8,
       targetQuestion:
         "ما حصة استرجاع الهدف (α) مقابل التبديل المكاني (β) وقفزة الفقد بالتأخير (Δγ) بين 0.9s و3.8s عند ومضة 200ms مقنّعة لـ 4 عناصر؟",
       instructions: [
         "ردّد بصوت خافت متواصل «با — بي — بو» وثبّت نظرك على (+) لالتقاط زاوية ميل الخطوط الأربعة في الومضة الخاطفة (200 ms).",
         "استمر بالترديد أثناء القناع الشبكي وفترة الانتظار القصيرة (0.9 ثانية) أو الطويلة (3.8 ثانية).",
-        "أدر القرص أو شريط السحب السفلي أو الأسهم ليطابق زاوية خط الدائرة المميزة بـ (؟) ثم اضغط تأكيد (Enter)."
+        "أدر القرص أو شريط السحب السفلي أو الأسهم ليطابق زاوية خط الدائرة المميزة بـ (؟) بدقة (مهلة 8.0 ثوانٍ) ثم اضغط تأكيد (Enter)."
       ],
       example: "ترديد «با — بي — بو» + ومضة 4 خطوط مائلة ← قناع ← انتظار (0.9s أو 3.8s) ← تدوير الخط ليطابق زاوية الموقع المطلوب (؟)"
     },
@@ -62,13 +62,13 @@
       code: "D4 · SOA75",
       title: "عتبة التوطيد الباليستي وتفيّض التدفق المتلاحق (SOA_75)",
       shortTitle: "عتبة التوطيد وتفيّض التدفق",
-      durationMin: 2.7,
+      durationMin: 2.9,
       targetQuestion:
         "ما الفاصل الزمني الأدنى بالمللي ثانية (SOA_75) اللازم لتوطيد 3 روابط متلاحقة قبل انهيار التدفق تحت مقاطعة قرار بصري سريع؟",
       instructions: [
         "تظهر في المركز 3 إطارات مختلفة الشكل واللون واحدا تلو الآخر، وبداخل كل إطار رمز عليك ربطه به.",
-        "عقب الإطار الثالث مباشرة حدّد فورا اتجاه السهم المزدوج: يمين (J / →) أم يسار (F / ←).",
-        "يُعرض أحد الإطارات الثلاثة بعلامة (؟): اختر من البدائل الأربعة الرمز الذي ظهر بداخله."
+        "عقب الإطار الثالث مباشرة حدّد فورا اتجاه السهم المزدوج خلال 1.5 ثانية: يمين (J / →) أم يسار (F / ←).",
+        "يُعرض أحد الإطارات الثلاثة بعلامة (؟): اختر من البدائل الأربعة الرمز الذي ظهر بداخله (مهلة 4.0 ثوانٍ)."
       ],
       example: "3 إطارات متعاقبة برموزها ← تحديد اتجاه السهم المزدوج فورا ← اختيار رمز الإطار المطلوب (؟) من 4 بدائل"
     },
@@ -946,7 +946,7 @@
     };
   }
 
-  /* ================= 6. D1: TBRS FIXED 3,600ms RETENTION WINDOW ================= */
+  /* ================= 6. D1: TBRS FIXED 4,000ms RETENTION WINDOW ================= */
 
   function buildSingleD1Trial(trialIndex, cond, formId, probeSlot, prevGlyphs) {
     var basePhi = randInt(0, 359);
@@ -977,11 +977,11 @@
       if (s !== pSlot) swapGlyphs.push(arrayGlyphs[s]);
     }
 
-    var stepCount = cond === "high" ? 6 : 2;
-    var slotMs = cond === "high" ? 600 : 1800;
+    var stepCount = cond === "high" ? 4 : 2;
+    var slotMs = cond === "high" ? 1000 : 2000;
     var judgements = [];
     var bag = cond === "high"
-      ? shuffle(["top", "top", "top", "bottom", "bottom", "bottom"])
+      ? shuffle(["top", "top", "bottom", "bottom"])
       : shuffle(["top", "bottom"]);
 
     for (var j = 0; j < stepCount; j += 1) {
@@ -1006,10 +1006,11 @@
       cond: cond,
       formId: normalizeFormId(formId),
       fixationMs: 200,
-      encodeMs: 400,
+      encodeMs: 900,
       maskMs: 150,
-      retentionWindowMs: 3600,
-      recallDeadlineMs: 2500,
+      postMaskPrepMs: 350,
+      retentionWindowMs: 4000,
+      recallDeadlineMs: 4000,
       itiMs: 250,
       ringAnglesDeg: ringAnglesDeg,
       arrayGlyphs: arrayGlyphs,
@@ -1074,12 +1075,12 @@
         var st = pSteps[p];
         b.procTot += 1;
         if (st && Number.isFinite(st.rtMs) && st.rtMs >= 110) {
-          sumProcRt += Math.min(st.slotMs || 1800, st.rtMs);
+          sumProcRt += Math.min(st.slotMs || 2000, st.rtMs);
           b.procRts.push(st.rtMs);
           if (st.correct) b.procHits += 1;
         }
       }
-      b.clList.push(clamp(sumProcRt / 3600, 0, 1));
+      b.clList.push(clamp(sumProcRt / 4000, 0, 1));
 
       if (r.chosenKind === "target") {
         b.validRecall += 1;
@@ -1176,7 +1177,7 @@
   function buildSingleD2Trial(t, formId, lagTarget, gcPair) {
     // Glyph budget from closed pool of 8 glyphs [0..7]:
     //   g[0..2] = initial 3 active bindings
-    //   g[3..4] = 2 rapid sub-second mutations (SOA = 650ms: 300ms flash + 350ms ISI) -> creates >= 2 distinct stale glyphs!
+    //   g[3..4] = 2 rapid sub-second mutations (SOA = 800ms: 500ms flash + 300ms ISI) -> creates >= 2 distinct stale glyphs!
     //   g[5..6] = reserved for Reference-Back mismatch steps (Red update or Blue compare foil)
     //   g[7]    = strictly UNSEEN pure novel foil for 6AFC M3!
     var gPool = shuffle([0, 1, 2, 3, 4, 5, 6, 7]);
@@ -1202,9 +1203,9 @@
         mutIndex: m,
         roleIdx: msSlot,
         glyphIdx: newG,
-        exposureMs: 300,
-        isiMs: 350,
-        soaMs: 650
+        exposureMs: 500,
+        isiMs: 300,
+        soaMs: 800
       });
     }
 
@@ -1253,7 +1254,7 @@
         transition: gateTransition,
         gateTransition: gateTransition,
         roleTransition: roleTransition,
-        deadlineMs: 2000,
+        deadlineMs: 3000,
         isiMs: 350
       });
 
@@ -1308,7 +1309,7 @@
       encodeMs: 900,
       maskMs: 150,
       postMaskBlankMs: 200,
-      probeDeadlineMs: 2800,
+      probeDeadlineMs: 5000,
       itiMs: 250,
       gcPair: gc,
       initialGlyphs: [gPool[0], gPool[1], gPool[2]],
@@ -1657,7 +1658,7 @@
       exposureMs: 200,
       maskMs: 150,
       delayMs: delayMs,
-      responseDeadlineMs: 4500,
+      responseDeadlineMs: 8000,
       itiMs: 200,
       suppressionPaceMs: 550,
       ringLocationsDeg: ringLocationsDeg,
@@ -1806,8 +1807,8 @@
       postLastGapMs: 250, // 100ms mask + 150ms blank = 250ms exact before 2-AFC interrupt
       interruptDir: dir,
       interruptExpectRight: dir === "right",
-      interruptDeadlineMs: 1100,
-      recallDeadlineMs: 2500,
+      interruptDeadlineMs: 1500,
+      recallDeadlineMs: 4000,
       itiMs: 200,
       streamBindings: streamBindings,
       probeSerialPos: pSp,
@@ -2908,11 +2909,11 @@
     var verdicts = [];
     var componentScores = [];
 
-    // 1. D1 Verdict: TBRS Fixed 3,600ms Window
+    // 1. D1 Verdict: TBRS Fixed 4,000ms Window
     if (d1) {
       componentScores.push(d1.calibratedScorePct);
       verdicts.push(
-        "1. تلاشي الربط الطرفي تحت الحمل الثابت (D1 · TBRS 3.6s): صمود الهدف هبط من " +
+        "1. تلاشي الربط الطرفي تحت الحمل الثابت (D1 · TBRS 4.0s): صمود الهدف هبط من " +
         d1.pTargetLowPct + "% عند الحمل المنخفض (CL=" + d1.clLow + ") إلى " +
         d1.pTargetHighPct + "% عند الحمل العالي (CL=" + d1.clHigh + "، ميل Δ_TBRS=" + d1.deltaTbrs +
         ")؛ تفكيك خطأ الحمل العالي: تبديل مصحح P_swap=" + d1.pSwapHighCorrPct + "% مقابل تخمين/تلاشٍ P_guess=" +

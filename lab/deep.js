@@ -111,13 +111,25 @@
   function isRightChoiceKey(ev) {
     var code = String(ev.code || "");
     var k = String(ev.key || "").toLowerCase();
-    return code === "KeyJ" || k === "j" || k === "ت" || ev.key === "ArrowRight" || ev.key === "ArrowUp";
+    return code === "KeyJ" || k === "j" || k === "ت" || ev.key === "ArrowRight";
   }
 
   function isLeftChoiceKey(ev) {
     var code = String(ev.code || "");
     var k = String(ev.key || "").toLowerCase();
-    return code === "KeyF" || k === "f" || k === "ب" || ev.key === "ArrowLeft" || ev.key === "ArrowDown";
+    return code === "KeyF" || k === "f" || k === "ب" || ev.key === "ArrowLeft";
+  }
+
+  function isUpChoiceKey(ev) {
+    var code = String(ev.code || "");
+    var k = String(ev.key || "").toLowerCase();
+    return code === "KeyW" || k === "w" || k === "ص" || ev.key === "ArrowUp";
+  }
+
+  function isDownChoiceKey(ev) {
+    var code = String(ev.code || "");
+    var k = String(ev.key || "").toLowerCase();
+    return code === "KeyS" || k === "s" || k === "س" || ev.key === "ArrowDown";
   }
 
   function scheduleUiDelay(durationMs, callback) {
@@ -859,7 +871,7 @@
     });
   }
 
-  /* ================= 4. PROBE 1: D1 TBRS FIXED 3,600ms WINDOW ================= */
+  /* ================= 4. PROBE 1: D1 TBRS FIXED 4,000ms WINDOW ================= */
 
   function runD1() {
     var Core = getCore();
@@ -926,13 +938,13 @@
       var tr = trials[idx];
       var pal = getCanvasPalette();
       setHeader(
-        "D1 · TBRS (" + (tr.cond === "high" ? "حمل عالٍ: 6/3.6s" : "حمل منخفض: 2/3.6s") + ")",
+        "D1 · TBRS (" + (tr.cond === "high" ? "حمل عالٍ: 4/4.0s" : "حمل منخفض: 2/4.0s") + ")",
         (idx + 1) + " / " + trials.length
       );
 
       var W = 400, H = 268, ringR = 86, slotR = 31;
 
-      // Offscreen pre-rendering of Fixation, 400ms Simultaneous 3-Glyph Array, and 150ms Pattern Mask
+      // Offscreen pre-rendering of Fixation, 900ms Simultaneous 3-Glyph Array, and 150ms Pattern Mask
       var bufFix = createBufferCanvas(W, H);
       bufFix.ctx.fillStyle = pal.surface;
       bufFix.ctx.fillRect(0, 0, W, H);
@@ -973,7 +985,7 @@
 
       a.stage.innerHTML =
         '<div class="task-box deep-canvas-box">' +
-        '<div id="d1SubLabel" class="stim-label">التقط مواقع الرموز الثلاثة معا</div>' +
+        '<div id="d1SubLabel" class="stim-label">احفظ مواقع الرموز الثلاثة معا (900 ms)</div>' +
         '<div id="d1CanvasMount" class="deep-canvas-wrap"></div>' +
         '<div id="d1ControlsMount"></div>' +
         '</div>';
@@ -983,7 +995,57 @@
       var subLabel = document.getElementById("d1SubLabel");
       var controlsMount = document.getElementById("d1ControlsMount");
 
-      // Phase 1: Fixation (200ms) -> Phase 2: Simultaneous Array (400ms) -> Phase 3: Mask (150ms) -> Phase 4: Strictly Fixed 3,600ms TBRS Window
+      function mountD1VerticalButtons() {
+        if (!document.getElementById("d1BtnTop")) {
+          controlsMount.innerHTML =
+            '<div class="nback-actions">' +
+            '<button id="d1BtnTop" type="button" class="opt-btn">فوق (↑ / W)</button>' +
+            '<button id="d1BtnBot" type="button" class="opt-btn">تحت (↓ / S)</button>' +
+            '</div>';
+        }
+      }
+
+      function drawTbrsCanvasFrame(wallElapsed, showStim, barPos, stepIdxDisplay, totalStepsDisplay) {
+        var ctx = stageObj.ctx;
+        ctx.fillStyle = pal.surface;
+        ctx.fillRect(0, 0, W, H);
+        drawCountdownStripOnCanvas(ctx, W, 1 - wallElapsed / tr.retentionWindowMs, pal.accent);
+
+        // Central discrimination box (68x68)
+        var bx = W / 2 - 34, by = H / 2 - 34, bw = 68, bh = 68;
+        ctx.strokeStyle = showStim ? pal.accent : pal.borderStrong;
+        ctx.lineWidth = showStim ? 2.4 : 2;
+        ctx.strokeRect(bx, by, bw, bh);
+
+        // Midline divider
+        ctx.strokeStyle = pal.border;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(bx + 6, H / 2);
+        ctx.lineTo(bx + bw - 6, H / 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (showStim) {
+          var barY = barPos === "top" ? (H / 2 - 21) : (H / 2 + 13);
+          ctx.fillStyle = pal.ink;
+          ctx.fillRect(W / 2 - 20, barY, 40, 8);
+        } else {
+          drawFixationCross(ctx, W / 2, H / 2, 5, pal.muted);
+        }
+
+        // Subtle step counter so consecutive identical bar positions clearly onset as distinct events
+        if (typeof stepIdxDisplay === "number" && stepIdxDisplay >= 0) {
+          ctx.fillStyle = pal.muted;
+          ctx.font = "600 11px 'JetBrains Mono', monospace";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "top";
+          ctx.fillText((stepIdxDisplay + 1) + "/" + totalStepsDisplay, W / 2, by + bh + 8);
+        }
+      }
+
+      // Phase 1: Fixation (200ms) -> Phase 2: Simultaneous Array (900ms) -> Phase 3: Mask (150ms) -> Phase 4: Post-mask Prep (350ms) -> Phase 5: Strictly Fixed 4,000ms TBRS Window
       runFramePhase(tr.fixationMs, {
         onStart: function () { blitBuffer(stageObj, bufFix); },
         onComplete: function () {
@@ -994,7 +1056,17 @@
               runFramePhase(tr.maskMs, {
                 onStart: function () { blitBuffer(stageObj, bufMask); },
                 onComplete: function () {
-                  runFixedTbrsWindow();
+                  subLabel.textContent = "استعد للمربع المركزي: فوق (↑ / W) أم تحت (↓ / S)";
+                  mountD1VerticalButtons();
+                  drawTbrsCanvasFrame(0, false, "top", -1, tr.judgements.length);
+                  runFramePhase(tr.postMaskPrepMs || 350, {
+                    onStart: function () {
+                      drawTbrsCanvasFrame(0, false, "top", -1, tr.judgements.length);
+                    },
+                    onComplete: function () {
+                      runFixedTbrsWindow();
+                    }
+                  });
                 }
               });
             }
@@ -1003,12 +1075,8 @@
       });
 
       function runFixedTbrsWindow() {
-        subLabel.textContent = "نافذة احتفاظ ثابتة (3.6s) — حدّد موضع الشريط المركزي فورا";
-        controlsMount.innerHTML =
-          '<div class="nback-actions">' +
-          '<button id="d1BtnTop" type="button" class="opt-btn">فوق (J / →)</button>' +
-          '<button id="d1BtnBot" type="button" class="opt-btn">تحت (F / ←)</button>' +
-          '</div>';
+        subLabel.textContent = "نافذة احتفاظ ثابتة (4.0s) — حدّد موضع الشريط المركزي فورا";
+        mountD1VerticalButtons();
 
         var procResults = tr.judgements.map(function (j) {
           return { stepIndex: j.stepIndex, rtMs: null, correct: false, slotMs: j.slotMs };
@@ -1018,48 +1086,10 @@
         var stepOnsetNow = 0;
         var stepAnswered = false;
 
-        function drawTbrsCanvasFrame(wallElapsed, showStim, barPos, stepIdxDisplay, totalStepsDisplay) {
-          var ctx = stageObj.ctx;
-          ctx.fillStyle = pal.surface;
-          ctx.fillRect(0, 0, W, H);
-          drawCountdownStripOnCanvas(ctx, W, 1 - wallElapsed / tr.retentionWindowMs, pal.accent);
-
-          // Central discrimination box (68x68)
-          var bx = W / 2 - 34, by = H / 2 - 34, bw = 68, bh = 68;
-          ctx.strokeStyle = showStim ? pal.accent : pal.borderStrong;
-          ctx.lineWidth = showStim ? 2.4 : 2;
-          ctx.strokeRect(bx, by, bw, bh);
-
-          // Midline divider
-          ctx.strokeStyle = pal.border;
-          ctx.lineWidth = 1;
-          ctx.setLineDash([4, 4]);
-          ctx.beginPath();
-          ctx.moveTo(bx + 6, H / 2);
-          ctx.lineTo(bx + bw - 6, H / 2);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          if (showStim) {
-            var barY = barPos === "top" ? (H / 2 - 21) : (H / 2 + 13);
-            ctx.fillStyle = pal.ink;
-            ctx.fillRect(W / 2 - 20, barY, 40, 8);
-          } else {
-            drawFixationCross(ctx, W / 2, H / 2, 5, pal.muted);
-          }
-
-          // Subtle step counter so consecutive identical bar positions clearly onset as distinct events
-          ctx.fillStyle = pal.muted;
-          ctx.font = "600 11px 'JetBrains Mono', monospace";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "top";
-          ctx.fillText((stepIdxDisplay + 1) + "/" + totalStepsDisplay, W / 2, by + bh + 8);
-        }
-
         function submitStepChoice(choseTop) {
           if (activeStepIdx < 0 || activeStepIdx >= tr.judgements.length) return;
           var rt = Math.round(nowMs() - stepOnsetNow);
-          // Guard against <110ms motor spillover across 600ms slot boundaries: credit unanswered prior slot without locking out current slot
+          // Guard against <110ms motor spillover across 1000ms/2000ms slot boundaries: credit unanswered prior slot without locking out current slot
           if (rt < 110) {
             if (activeStepIdx > 0 && procResults[activeStepIdx - 1] && procResults[activeStepIdx - 1].rtMs === null) {
               var prevSpec = tr.judgements[activeStepIdx - 1];
@@ -1081,18 +1111,18 @@
             correct: Boolean(choseTop) === Boolean(jSpec.expectTop),
             slotMs: jSpec.slotMs
           };
-          // Clear stimulus to allow free attentional refreshing ONLY for remaining ms of this sub-slot; NEVER ends 3,600ms window early!
+          // Clear stimulus to allow free attentional refreshing ONLY for remaining ms of this sub-slot; NEVER ends 4,000ms window early!
         }
 
         document.getElementById("d1BtnTop").addEventListener("click", function () { submitStepChoice(true); });
         document.getElementById("d1BtnBot").addEventListener("click", function () { submitStepChoice(false); });
         bindKeys(function (ev) {
-          if (isRightChoiceKey(ev)) { ev.preventDefault(); submitStepChoice(true); }
-          else if (isLeftChoiceKey(ev)) { ev.preventDefault(); submitStepChoice(false); }
+          if (isUpChoiceKey(ev)) { ev.preventDefault(); submitStepChoice(true); }
+          else if (isDownChoiceKey(ev)) { ev.preventDefault(); submitStepChoice(false); }
         });
 
         var slotMs = tr.judgements[0].slotMs;
-        var offGapMs = slotMs <= 700 ? 85 : 110;
+        var offGapMs = slotMs <= 1100 ? 120 : 150;
         var nSteps = tr.judgements.length;
 
         runFramePhase(tr.retentionWindowMs, {
@@ -1291,7 +1321,7 @@
         }
       }
 
-      // Pre-render initial fixation, simultaneous 900ms encoding, 150ms mask, and rapid 650ms mutation buffers
+      // Pre-render initial fixation, simultaneous 900ms encoding, 150ms mask, and rapid 800ms (500ms exposure) mutation buffers
       var bufFix = createBufferCanvas(W, H);
       drawThreeRolesScene(bufFix.ctx, [null, null, null], {});
       drawFixationCross(bufFix.ctx, W / 2, H / 2, 7, pal.ink);
@@ -1326,7 +1356,7 @@
       var controlsMount = document.getElementById("d2ControlsMount");
       var gateResults = [];
 
-      // 1. Fixation (200ms) -> 2. Encode (900ms) -> 3. Mask (150ms) -> 4. Post-mask blank (200ms) -> 5. Rapid sub-second mutations (SOA=650ms)
+      // 1. Fixation (200ms) -> 2. Encode (900ms) -> 3. Mask (150ms) -> 4. Post-mask blank (200ms) -> 5. Rapid sub-second mutations (SOA=800ms)
       runFramePhase(tr.fixationMs, {
         onStart: function () { blitBuffer(stageObj, bufFix); },
         onComplete: function () {
@@ -1355,7 +1385,7 @@
           return runRefBackStep(0);
         }
         var mut = tr.rapidMutations[mIdx];
-        subLabel.textContent = "تحديث تلقائي بلا ضغط (" + (mIdx + 1) + "/2) — احفظ الرمز الجديد مكان القديم";
+        subLabel.textContent = "تحديث تلقائي بلا ضغط (" + (mIdx + 1) + "/2 · 500ms) — احفظ الرمز الجديد مكان القديم";
         runFramePhase(mut.exposureMs, {
           isCriticalExposure: true,
           onStart: function () { blitBuffer(stageObj, mutBuffers[mIdx]); },
@@ -2083,7 +2113,7 @@
       }
 
       function runRetroactive2AfcInterrupt() {
-        subLabel.textContent = "حدّد فورا اتجاه السهم المزدوج: يمين أم يسار؟";
+        subLabel.textContent = "حدّد فورا اتجاه السهم المزدوج (1.5s): يمين أم يسار؟";
         controlsMount.innerHTML =
           '<div class="nback-actions">' +
           '<button id="d4RightBtn" type="button" class="opt-btn">يمين » (J / →)</button>' +
@@ -2768,8 +2798,8 @@
       "</div>" +
       "</section>" +
       '<div class="hero-summary-grid">' +
-      '<article class="summary-card"><h3 class="summary-label">1. صمود الربط تحت الحمل (D1 · TBRS)</h3><div class="summary-value ltr-iso">' + esc(kpi1Val) + '</div><div class="summary-sub">نافذة ثابتة 3,600ms (6 أحكام/600ms مقابل حكمين)</div></article>' +
-      '<article class="summary-card"><h3 class="summary-label">2. التحديث السريع وتفكيك M3 (D2)</h3><div class="summary-value ltr-iso">' + esc(kpi2Val) + '</div><div class="summary-sub">طفرات 650ms + بوابة Reference-Back وستة بدائل</div></article>' +
+      '<article class="summary-card"><h3 class="summary-label">1. صمود الربط تحت الحمل (D1 · TBRS)</h3><div class="summary-value ltr-iso">' + esc(kpi1Val) + '</div><div class="summary-sub">نافذة ثابتة 4,000ms (4 أحكام/1000ms مقابل حكمين/2000ms)</div></article>' +
+      '<article class="summary-card"><h3 class="summary-label">2. التحديث السريع وتفكيك M3 (D2)</h3><div class="summary-value ltr-iso">' + esc(kpi2Val) + '</div><div class="summary-sub">طفرات 800ms (عرض 500ms) + بوابة Reference-Back وستة بدائل</div></article>' +
       '<article class="summary-card"><h3 class="summary-label">3. سعة خليط Bays المقنّع (D3)</h3><div class="summary-value ltr-iso">' + esc(kpi3Val) + '</div><div class="summary-sub">ومضة 200ms لـ 4 عناصر عبر تأخير 0.9s مقابل 3.8s</div></article>' +
       '<article class="summary-card"><h3 class="summary-label">4. التوطيد واليقظة الممتدة (D4 · D5)</h3><div class="summary-value ltr-iso">' + esc(kpi4Val) + '</div><div class="summary-sub">عتبة التدفق SOA_75 وسرعة PVT-5 التبادلية</div></article>' +
       "</div>" +
