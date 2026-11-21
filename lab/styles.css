@@ -2325,6 +2325,82 @@ textarea:focus,
 }
 
 /* ==========================================================================
+   14b. Psychophysical Pacing Bars, Uncued Tokens & Psychometric Audit Cards
+   ========================================================================== */
+
+.stim-token {
+  font-size: clamp(2.15rem, 6.2vw, 2.85rem);
+  font-weight: 700;
+  font-family: var(--font-display-ar);
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.tbrs-timer-track {
+  width: 100%;
+  max-width: 420px;
+  height: 6px;
+  margin-inline: auto;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.tbrs-timer-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: background-color 140ms ease;
+}
+
+.tbrs-timer-fill.is-urgent {
+  background: var(--amber);
+}
+
+.warmup-feedback {
+  padding: 12px 15px;
+  border-radius: var(--radius-md);
+  background: var(--positive-soft);
+  border: 1px solid var(--positive-border);
+  border-inline-start: 4px solid var(--positive);
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.warmup-feedback.is-warning {
+  background: var(--amber-soft);
+  border-color: var(--amber-border);
+  border-inline-start-color: var(--amber);
+}
+
+.audit-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.audit-list li {
+  padding: 12px 15px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--accent);
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.audit-list li strong {
+  color: var(--text);
+}
+
+/* ==========================================================================
    15. Reduced Motion Accessibility (<= 180ms Global Cap)
    ========================================================================== */
 

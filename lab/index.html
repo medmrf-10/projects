@@ -262,6 +262,17 @@
         <div id="probeClinicalInterpretation" class="diagnosis-callout"></div>
       </section>
 
+      <!-- 2b. التدقيق الإحصائي للموثوقية والعزل المنهجي (Jacobson-Truax RCI & Covariates) -->
+      <section class="card" aria-labelledby="scientificAuditHeading">
+        <header class="section-header" style="margin-bottom: 12px;">
+          <div>
+            <h2 id="scientificAuditHeading" class="section-title">التدقيق الإحصائي للموثوقية والعزل المنهجي (RCI &amp; Covariates)</h2>
+            <p class="section-sub">فصل التحسن العصبي الحقيقي عن ضجيج القياس العشوائي وعن عوامل اليقظة والنوم والمجرى الهوائي</p>
+          </div>
+        </header>
+        <ol id="scientificAuditList" class="audit-list"></ol>
+      </section>
+
       <!-- 3. قائمة السجلات الزمنية التفصيلية -->
       <section class="card" aria-labelledby="historyHeading">
         <header class="section-header" style="margin-bottom: 14px;">
@@ -399,28 +410,28 @@
 
         <ol id="methodologyList" class="probe-steps">
           <li>
-            <strong>عزل التخزين المؤقت عن معالج التفكير (P1 · DLPFC):</strong>
-            يقيس نسبة بقاء 4 كلمات مجردة غير قابلة للتصوير بعد تنفيذ عملية حسابية أو مقارنة منطقية فورية لعزل المسح الناتج عن المعالجة الجارية.
+            <strong>عزل التخزين المؤقت عن معالج التفكير (P1 · DLPFC — TBRS &amp; Conway et al., 2005):</strong>
+            يقارن داخل الجلسة الواحدة بين سعة 4 مفردات مجردة منخفضة التصويرية بدون معالجة وبين بقائها بعد حساب أو استنتاج موقوت، مع فصل المسح الحقيقي عن أخطاء إبدال الترتيب.
           </li>
           <li>
-            <strong>صمود الرف الجانبي وتحديث المتغيرات (P2 · Frontostriatal / Left IFG):</strong>
-            يتتبع متغيرين ثم 3 متغيرات متغيرة القيم مع تصنيف آلي يفصل أخطاء التصاق القيمة القديمة (التداخل الاستباقي) عن تبخر الرقم في اللحظة الأخيرة.
+            <strong>صمود الرف الجانبي وتحديث المتغيرات (P2 · Frontostriatal — Oberauer, 2002 &amp; Garavan, 1998):</strong>
+            يفصل دقة بؤرة الانتباه اللحظية (Lag 0) عن الرف الجانبي (Lag ≥ 1) ويقيس كلفة تبديل البؤرة بالمللي ثانية مع فصل متعامد للتداخل الاستباقي والتبخر.
           </li>
           <li>
-            <strong>بوابة الإدخال وعقوبة التناوب اللحظي (P3 · Left IFS / Pre-SMA):</strong>
-            يقارن السلسلة المتكتلة بالسلسلة المتناوبة بين الكلمات والأرقام لاستخراج عقوبة تبديل نمط الترميز اللحظي بدقة كمية.
+            <strong>بوابة الإدخال وعقوبة التناوب اللحظي (P3 · Left IFS / Pre-SMA — Chatham et al., 2014):</strong>
+            يوازن اتجاه البدء بين الكلمات والأرقام بلا تلميح فئوي مسبق لتحييد أثر الحداثة واستخراج عقوبة التناوب الطرحية الصافية.
           </li>
           <li>
-            <strong>ربط المؤشرات اللفظية بالعقد المنطقية (P4 · RLPFC Binding):</strong>
-            يعرض قضايا المقارنة جملة فجملة مع إخفاء السابق لقياس ثبات اقتران الاسم اللفظي بالعقدة الفائزة عند انقلاب قطبية المقارنة.
+            <strong>ربط المؤشرات اللفظية بالعقد المنطقية (P4 · RLPFC — Waltz et al., 1999 &amp; Clark, 1969):</strong>
+            يختبر سلاسل مقارنة خالية من المقدمات الفائضة وسط 6 بدائل دلالية متجانسة لمنع الحل بالحذف، مع تحقق بنيوي موضوعي من العقدة عند تبخر الاسم.
           </li>
           <li>
-            <strong>عدّاد التسلسل الدوري ورصد النوم الموضعي (P5 · rAI + RLPFC):</strong>
-            يختبر عدّاد الدورات الرباعي الداخلي تحت الرتابة ويرصد هفوات النوم الموضعي العصبوني فوق 900 مللي ثانية وحوادث ضياع العدّاد.
+            <strong>عدّاد التسلسل الدوري ورصد النوم الموضعي (P5 · rAI + RLPFC — Desrochers et al., 2015 &amp; Ex-Gaussian Tau):</strong>
+            يستخدم 36 ومضة غير إيقاعية متوازنة النصفين ويحسب الذيل الأسي للشرود والنوم الموضعي (Tau) ويعيد مزامنة الدورة ذاتيا لمنع خطأ الطور التراكمي.
           </li>
           <li>
             <strong>مرساة التحكم الضابطة للمحركات السليمة (C6 · Control Anchor — 98%):</strong>
-            يفحص مكدس الاستدعاء الهرمي ذا الطبقات الثلاث وومضة التناسب البصري المسطح (0.8 ثانية) كمرجع ضابط يعزل الإرهاق العارض عن الخلل البنيوي.
+            يجمع 6 جولات تشمل مكدس 3 طبقات وقاعدة شرطية تحت المقاطعة و3 ومضات تناسب بصري صامت بقناع تقنيع متعدد الاتجاهات كضابط منهجي للتفكيك المزدوج.
           </li>
         </ol>
       </section>
@@ -624,6 +635,7 @@
         trendFilterPills: document.getElementById("trendFilterPills"),
         probeTrendContainer: document.getElementById("probeTrendContainer"),
         probeClinicalInterpretation: document.getElementById("probeClinicalInterpretation"),
+        scientificAuditList: document.getElementById("scientificAuditList"),
         historyList: document.getElementById("historyList"),
         breathingQualityInput: document.getElementById("breathingQualityInput"),
         breathingQualityValue: document.getElementById("breathingQualityValue"),
@@ -1017,7 +1029,10 @@
 
         const compositeScore = stats ? stats.compositeDeficitScore : BASELINE_IMPAIRED_PCT;
         const compositeBase = stats ? stats.compositeDeficitBaseline : BASELINE_IMPAIRED_PCT;
+        const compositeRci = stats && typeof stats.compositeRci === "number" ? stats.compositeRci : 0;
+        const compositeCi95 = stats && typeof stats.compositeCi95Pts === "number" ? stats.compositeCi95Pts : 10.7;
         const controlScore = stats ? stats.controlScore : CONTROL_ANCHOR_PCT;
+        const controlValid = stats && typeof stats.controlValid === "boolean" ? stats.controlValid : true;
         const spikyGap = stats ? stats.spikyGap : (CONTROL_ANCHOR_PCT - BASELINE_IMPAIRED_PCT);
         const baselineGap = stats ? stats.baselineSpikyGap : (CONTROL_ANCHOR_PCT - BASELINE_IMPAIRED_PCT);
         const gapReduction = stats ? stats.gapReduction : 0;
@@ -1027,15 +1042,16 @@
         const hasLive = stats ? stats.hasLiveRecords : records.length > 0;
 
         const impairedVal = formatPct(compositeScore, 1);
+        const rciTxt = (compositeRci > 0 ? "+" : "") + toAsciiDigits(compositeRci);
         const impairedSub = hasLive
-          ? "خط الأساس: " + formatPct(compositeBase, 0) + " · السقف المرجعي: " + formatPct(TARGET_IMPAIRED_PCT, 0) + " · الفارق: " + formatDelta(deltaFromBase)
-          : "مرجع الأساس الحالي: " + formatPct(compositeBase, 0) + " · السقف المرجعي السليم: " + formatPct(TARGET_IMPAIRED_PCT, 0);
+          ? "الأساس: " + formatPct(compositeBase, 0) + " · الفارق: " + formatDelta(deltaFromBase) + " · RCI: " + rciTxt + " (عتبة 95%: ±" + toAsciiDigits(compositeCi95) + "%)"
+          : "خط الأساس: " + formatPct(compositeBase, 0) + " · عتبة الدلالة 95%: +" + toAsciiDigits(compositeCi95) + "% · السقف: " + formatPct(TARGET_IMPAIRED_PCT, 0);
 
         const controlInfo = latestMap.control;
         const controlVal = formatPct(controlScore, 1);
         const controlSub = controlInfo && controlInfo.latest
-          ? "قياس حي للمرساة الضابطة · المرجع المعياري: 98%"
-          : "سلامة القواعد ومكدس الاستنتاج والومضة المسطحة: 98%";
+          ? (controlValid ? "عزل منهجي سليم (≥82%) · المرجع: 98%" : "تنبيه إرهاق عام (<82%) · المرجع: 98%")
+          : "سلامة القواعد والمكدس والومضة المسطحة: 98% (حد الثبات ≥82%)";
 
         const gapVal = formatPct(spikyGap, 1);
         const gapSub = hasLive
@@ -1046,11 +1062,11 @@
           ? toAsciiDigits(totalTests + " (" + formatDelta(deltaFromBase) + ")")
           : toAsciiDigits(String(totalTests));
         const deltaSub = hasLive
-          ? "بطاريات مكتملة: " + toAsciiDigits(completedBatteries) + " · صافي التحسن المركب: " + formatDelta(deltaFromBase)
-          : "نفّذ أول فحص لبدء تسجيل صافي التحسن (+Δ)";
+          ? "بطاريات مكتملة: " + toAsciiDigits(completedBatteries) + " · الحالة الإحصائية: " + toAsciiDigits(stats && stats.compositeRciStatusAr ? stats.compositeRciStatusAr : "معاير")
+          : "نفّذ أول فحص لتفعيل مؤشر التغير الموثوق (Jacobson-Truax RCI)";
 
         function wrapIsoNums(str) {
-          return escapeHtml(str).replace(/([+-]?\d+(?:\.\d+)?%)/g, '<span class="ltr-iso">$1</span>');
+          return escapeHtml(str).replace(/([±+-]?\d+(?:\.\d+)?%?)/g, '<span class="ltr-iso">$1</span>');
         }
 
         dom.heroSummaryGrid.innerHTML =
@@ -1070,7 +1086,7 @@
             '<div class="summary-sub">' + wrapIsoNums(gapSub) + '</div>' +
           '</article>' +
           '<article class="summary-card">' +
-            '<h2 class="summary-label">4. إجمالي الفحوص وصافي التحسن</h2>' +
+            '<h2 class="summary-label">4. إجمالي الفحوص وموثوقية التحسن</h2>' +
             '<div class="summary-value"><span class="ltr-iso">' + escapeHtml(runsVal) + '</span></div>' +
             '<div class="summary-sub">' + wrapIsoNums(deltaSub) + '</div>' +
           '</article>';
@@ -1109,8 +1125,15 @@
           const deltaState =
             delta === null ? "is-neutral" : delta > 0 ? "is-up" : delta < 0 ? "is-down" : "is-neutral";
           const cardClass = probe.isControl ? "probe-card is-control" : "probe-card";
-          const latestText = latestScore !== null ? formatPct(latestScore, 1) : "لم يُفحص";
-          const deltaText = delta !== null ? formatDelta(delta) : "Δ —";
+          const semVal = latestEntry && typeof latestEntry.sem === "number" ? latestEntry.sem : (probe.raw && probe.raw.sem ? probe.raw.sem : null);
+          const latestText = latestScore !== null
+            ? formatPct(latestScore, 1) + (semVal !== null ? " ±" + toAsciiDigits(semVal) + "%" : "")
+            : "لم يُفحص";
+          const rciVal = latestEntry && typeof latestEntry.rci === "number" ? latestEntry.rci : null;
+          const sigMark = latestEntry && latestEntry.isReliableChange ? " *" : "";
+          const deltaText = delta !== null
+            ? formatDelta(delta) + (rciVal !== null ? " (RCI " + (rciVal > 0 ? "+" : "") + toAsciiDigits(rciVal) + ")" + sigMark : "")
+            : "Δ —";
           const barWidth = Math.max(0, Math.min(100, latestScore !== null ? latestScore : probe.baseline));
           const baselinePos = Math.max(0, Math.min(100, probe.baseline));
           const runCount = latestEntry && typeof latestEntry.count === "number" ? latestEntry.count : 0;
@@ -1131,7 +1154,7 @@
               '</div>' +
               '<div class="probe-metrics-row">' +
                 '<span class="metric-pill">الأحدث: <strong class="ltr-iso">' + escapeHtml(latestText) + '</strong></span>' +
-                '<span class="metric-pill">خط الأساس 21 نوفمبر: <strong class="ltr-iso">' + escapeHtml(formatPct(probe.baseline, 0)) + '</strong></span>' +
+                '<span class="metric-pill">أساس 21 نوفمبر: <strong class="ltr-iso">' + escapeHtml(formatPct(probe.baseline, 0)) + '</strong></span>' +
                 '<span class="metric-pill">الهدف السليم: <strong class="ltr-iso">' + escapeHtml(formatPct(probe.target, 0)) + '</strong></span>' +
                 '<span class="delta-pill ' + deltaState + ' ltr-iso">' + escapeHtml(deltaText) + '</span>' +
               '</div>' +
@@ -1216,7 +1239,7 @@
 
         if (dom.probeClinicalInterpretation) {
           const roleNote = selected.isControl
-            ? "مرساة تحكم ضابطة (خط الأساس: " + formatPct(selected.baseline, 0) + " · المعيار السليم: " + formatPct(selected.target, 0) + ")."
+            ? "مرساة تحكم ضابطة (خط الأساس: " + formatPct(selected.baseline, 0) + " · حد الثبات المنهجي: 82% · المعيار السليم: " + formatPct(selected.target, 0) + ")."
             : "منطقة مستهدفة بالردم الجراحي — خط الأساس (21 نوفمبر): " + formatPct(selected.baseline, 0) + " · السقف المرجعي السليم: " + formatPct(selected.target, 0) + ".";
           dom.probeClinicalInterpretation.innerHTML =
             "<strong>التفسير السريري (" + escapeHtml(selected.region) + "):</strong> " +
@@ -1224,49 +1247,109 @@
         }
       }
 
+      function renderScientificAudit() {
+        if (!dom.scientificAuditList) return;
+        const A = getAnalyticsApi();
+        if (typeof A.getScientificAudit !== "function") {
+          dom.scientificAuditList.innerHTML =
+            '<li><strong>1. الجاهزية الإحصائية:</strong> محرك التدقيق الموثوق (RCI) جاهز لتقييم الجلسات فور تسجيلها.</li>';
+          return;
+        }
+
+        const audit = A.getScientificAudit(getStimuliPhases());
+        const items = [
+          { title: "1. التفكيك المزدوج ومؤشر التغير الموثوق (Jacobson-Truax RCI)", body: audit.controlVerdict },
+          { title: "2. ثبات البصمة اليوماوية (الصباح مقابل المساء/الليل)", body: audit.diurnalVerdict },
+          { title: "3. التغاير الفسيولوجي مع النوم والمجرى الهوائي", body: audit.covariateVerdict }
+        ];
+
+        if (Array.isArray(audit.phaseSummaries) && audit.phaseSummaries.length > 0) {
+          const phText = audit.phaseSummaries.map(function (ps) {
+            const sign = ps.delta > 0 ? "+" : "";
+            return ps.phaseLabel + " (" + ps.count + " بطارية): متوسط " + ps.meanComposite + "% [" + sign + ps.delta + "%، RCI " + (ps.rci > 0 ? "+" : "") + ps.rci + "]";
+          }).join(" — ");
+          items.push({
+            title: "4. الحصيلة المرجحة بدقة حجم العينة لكل مرحلة علاجية",
+            body: phText
+          });
+        }
+
+        dom.scientificAuditList.innerHTML = items.map(function (it) {
+          return (
+            "<li>" +
+              "<strong>" + escapeHtml(it.title) + ":</strong> " +
+              "<span>" + escapeHtml(it.body) + "</span>" +
+            "</li>"
+          );
+        }).join("");
+      }
+
       function formatSubMetricsPills(record) {
         const metricsObj = record.submetrics || record.metrics || record.subMetrics || record.details;
         const pills = [];
 
-        if (typeof record.rtMeanMs === "number" && Number.isFinite(record.rtMeanMs)) {
+        if (typeof record.rtMeanMs === "number" && Number.isFinite(record.rtMeanMs) && record.rtMeanMs > 0) {
           pills.push({ label: "متوسط زمن الاستجابة", val: record.rtMeanMs + " ms" });
         }
 
         const METRIC_LABELS = {
+          pureSpanPct: { label: "السعة الصافية (ضابط)", suffix: "%" },
+          processingWipeoutPct: { label: "صافي المسح بالمعالجة", suffix: "%" },
           mathSurvivalPct: { label: "البقاء بعد الحساب", suffix: "%" },
           logicSurvivalPct: { label: "البقاء بعد المنطق", suffix: "%" },
           slot1Pct: { label: "صمود الرأس الأول", suffix: "%" },
           middleSlotsPct: { label: "صمود الوسط (2–3)", suffix: "%" },
           slot4Pct: { label: "صمود الخانة الرابعة", suffix: "%" },
+          transpositionCount: { label: "أخطاء إبدال الترتيب", suffix: "" },
+          wipeoutCount: { label: "انمساح العنصر", suffix: "" },
           taskAccPct: { label: "دقة المسألة الوسيطة", suffix: "%" },
           taskMeanRtMs: { label: "زمن المسألة الوسيطة", suffix: " ms" },
+          inFocusAccPct: { label: "دقة البؤرة النشطة", suffix: "%" },
+          peripheralAccPct: { label: "صمود الرف الجانبي", suffix: "%" },
           twoVarPct: { label: "دقة متغيرين", suffix: "%" },
           threeVarPct: { label: "دقة 3 متغيرات", suffix: "%" },
           staleErrors: { label: "التصاق القيمة القديمة", suffix: "" },
           decayErrors: { label: "تبخر الرقم الأخير", suffix: "" },
           swapErrors: { label: "خلط بين متغيرين", suffix: "" },
+          focusSwitchCostMs: { label: "كلفة تبديل البؤرة", suffix: " ms" },
           stepMeanRtMs: { label: "زمن خطوة التحديث", suffix: " ms" },
-          blockedPct: { label: "دقة المتكتل", suffix: "%" },
+          blockedPct: { label: "دقة المتكتل المتوازن", suffix: "%" },
           alt4Pct: { label: "تناوب 4 عناصر", suffix: "%" },
           alt6Pct: { label: "تناوب 6 عناصر", suffix: "%" },
           alternatingPct: { label: "محصلة التناوب", suffix: "%" },
           switchingPenalty: { label: "عقوبة التناوب", suffix: "%" },
+          numStreamAltPct: { label: "مسار الأرقام (تناوب)", suffix: "%" },
+          wordStreamAltPct: { label: "مسار الكلمات (تناوب)", suffix: "%" },
           linearAccPct: { label: "دقة الاتجاه الموحد", suffix: "%" },
           flippedAccPct: { label: "دقة انقلاب القطبية", suffix: "%" },
-          pointerDecayCount: { label: "تبخر الاسم اللفظي", suffix: "" },
+          structuralResolutionPct: { label: "سلامة العقدة البنيوية", suffix: "%" },
+          verifiedPointerDecayCount: { label: "تبخر اسم محقق بنيويا", suffix: "" },
+          pointerDecayCount: { label: "إجمالي تبخر الاسم", suffix: "" },
+          polarityErrorCount: { label: "أخطاء عكس القطبية", suffix: "" },
+          foilIntrusionCount: { label: "اقتحام بديل دلالي", suffix: "" },
           linearRtMs: { label: "زمن الاتجاه الموحد", suffix: " ms" },
           flippedRtMs: { label: "زمن انقلاب القطبية", suffix: " ms" },
           polarityFlipRtCostMs: { label: "كلفة قلب القطبية", suffix: " ms" },
           cycleCloseAccPct: { label: "دقة إغلاق الدورة 4", suffix: "%" },
           overallStepAccPct: { label: "دقة الخطوات الكلية", suffix: "%" },
+          autopilotOverruns: { label: "تجاوز الطيار الآلي", suffix: "" },
+          prematureClosures: { label: "إغلاق دورة مبكر", suffix: "" },
           localSleepLapses: { label: "هفوات النوم الموضعي", suffix: "" },
           dmnResets: { label: "ضياع العدّاد (DMN)", suffix: "" },
+          falseStarts: { label: "استجابات استباقية", suffix: "" },
           meanRtMs: { label: "متوسط الاستجابة", suffix: " ms" },
+          medianRtMs: { label: "وسيط الاستجابة", suffix: " ms" },
+          rtTauMs: { label: "ذيل الشرود الأسي Tau", suffix: " ms" },
           rtIcvPct: { label: "معامل التذبذب ICV", suffix: "%" },
-          stackAccPct: { label: "مكدس 3 طبقات", suffix: "%" },
+          vigilanceDecrementMs: { label: "تدهور اليقظة عبر الوقت", suffix: " ms" },
+          stackAccPct: { label: "المكدس والشرط", suffix: "%" },
+          ruleInterruptAccPct: { label: "القاعدة بعد المقاطعة", suffix: "%" },
           visual2dAccPct: { label: "ومضة 2D (0.8s)", suffix: "%" },
           stackRtMs: { label: "زمن حل المكدس", suffix: " ms" },
-          visual2dRtMs: { label: "زمن مطابقة 2D", suffix: " ms" }
+          visual2dRtMs: { label: "زمن مطابقة 2D", suffix: " ms" },
+          lisasMs: { label: "كفاءة السرعة والدقة LISAS", suffix: " ms" },
+          splitHalfPct: { label: "الاتساق النصفي", suffix: "%" },
+          tabInterruptions: { label: "انقطاع النافذة", suffix: "" }
         };
 
         if (metricsObj && typeof metricsObj === "object") {
@@ -1287,7 +1370,7 @@
 
         return (
           '<ol class="history-sublist">' +
-          pills.slice(0, 6).map(function (item, i) {
+          pills.slice(0, 8).map(function (item, i) {
             return (
               '<li class="metric-pill">' +
                 '<span>' + escapeHtml((i + 1) + ". " + item.label) + ':</span> ' +
@@ -1332,15 +1415,21 @@
             ? rec.deltaFromBaseline
             : (score !== null ? score - baseline : null);
           const deltaState = delta === null ? "is-neutral" : delta > 0 ? "is-up" : delta < 0 ? "is-down" : "is-neutral";
+          const rciTxt = typeof rec.rci === "number"
+            ? " · RCI " + (rec.rci > 0 ? "+" : "") + toAsciiDigits(rec.rci)
+            : "";
           const phaseKey = String(rec.phase || (rec.context && rec.context.phase) || "baseline");
           const phaseLabel = phaseMap[phaseKey] || toAsciiDigits(phaseKey);
           const tsText = formatTimestamp(rec.timestamp, rec.isoDate);
           const orderNum = sorted.length - idx;
           const alertness = rec.alertness ?? (rec.context && rec.context.alertness);
           const sleep = rec.sleepQuality ?? (rec.context && rec.context.sleepQuality);
+          const airway = rec.nasalPatency ?? (rec.context && rec.context.nasalPatency);
           const contextLine =
             (alertness !== undefined ? " · اليقظة: " + toAsciiDigits(alertness + "/10") : "") +
             (sleep !== undefined ? " · النوم: " + toAsciiDigits(sleep + "/10") : "") +
+            (airway !== undefined ? " · المجرى: " + toAsciiDigits(airway + "/10") : "") +
+            (rec.rciStatusAr ? " · " + toAsciiDigits(rec.rciStatusAr) : "") +
             (rec.notes ? " · ملاحظة: " + toAsciiDigits(rec.notes) : "");
 
           return (
@@ -1354,7 +1443,7 @@
                   '</div>' +
                   '<div class="probe-metrics-row">' +
                     '<strong class="ltr-iso">' + escapeHtml(formatPct(score, 1)) + '</strong>' +
-                    (delta !== null ? '<span class="delta-pill ' + deltaState + ' ltr-iso">' + escapeHtml(formatDelta(delta)) + '</span>' : '') +
+                    (delta !== null ? '<span class="delta-pill ' + deltaState + ' ltr-iso">' + escapeHtml(formatDelta(delta) + rciTxt) + '</span>' : '') +
                   '</div>' +
                 '</div>' +
                 '<div class="summary-sub">التاريخ: <span class="ltr-iso">' + escapeHtml(tsText) + '</span>' + escapeHtml(contextLine) + '</div>' +
@@ -1388,6 +1477,7 @@
         const records = getAllHistoryRecords();
         renderCompositeTrend();
         renderProbeLongitudinalSection(probes);
+        renderScientificAudit();
         renderHistoryList(probes, records);
       }
 
@@ -1413,6 +1503,7 @@
                 phase: ctx.phase,
                 sleepQuality: ctx.sleepQuality,
                 alertness: ctx.alertness,
+                nasalPatency: ctx.nasalPatency,
                 notes: ctx.notes
               }, payload));
             } catch (_) {}

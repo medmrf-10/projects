@@ -20,6 +20,7 @@
   var activeTimers = [];
   var activeRafs = [];
   var activeKeyHandler = null;
+  var activeVisHandler = null;
   var runToken = 0;
 
   var sessionState = {
@@ -29,7 +30,9 @@
     batteryIndex: 0,
     batteryScores: {},
     currentProbeId: null,
-    contextSnapshot: null
+    contextSnapshot: null,
+    tabInterruptions: 0,
+    estimatedFrameMs: 16.7
   };
 
   function getStimuli() {
@@ -58,14 +61,133 @@
     }
   }
 
+  function nowMs() {
+    return typeof performance !== "undefined" && typeof performance.now === "function"
+      ? performance.now()
+      : Date.now();
+  }
+
   function scheduleTimer(fn, ms) {
     var token = runToken;
     var id = setTimeout(function () {
       if (token !== runToken) return;
       fn();
-    }, ms);
+    }, Math.max(0, Number(ms) || 0));
     activeTimers.push(id);
     return id;
+  }
+
+  // Frame-synchronized onset helper: invokes onPainted(paintTs) on exact VSync paint
+  // Includes a 34ms fallback guard so background/headless tabs never stall
+  function onNextFramePaint(onPainted) {
+    var token = runToken;
+    var fired = false;
+    function done(ts) {
+      if (fired || token !== runToken) return;
+      fired = true;
+      onPainted(ts);
+    }
+    if (
+      typeof requestAnimationFrame === "function" &&
+      (typeof document === "undefined" || document.visibilityState !== "hidden")
+    ) {
+      var rafId = requestAnimationFrame(function () {
+        done(nowMs());
+      });
+      activeRafs.push(rafId);
+      scheduleTimer(function () {
+        done(nowMs());
+      }, 34);
+    } else {
+      done(nowMs());
+    }
+  }
+
+  // Frame-accurate stimulus duration scheduler synchronized to VSync when visible
+  function scheduleFrameAccurate(fn, durationMs) {
+    var token = runToken;
+    var target = nowMs() + Math.max(0, durationMs);
+    var completed = false;
+
+    function finish() {
+      if (completed || token !== runToken) return;
+      completed = true;
+      fn();
+    }
+
+    if (
+      durationMs >= 40 &&
+      typeof requestAnimationFrame === "function" &&
+      (typeof document === "undefined" || document.visibilityState !== "hidden")
+    ) {
+      var leadMs = Math.max(0, durationMs - Math.max(18, sessionState.estimatedFrameMs * 1.4));
+      scheduleTimer(function () {
+        function step() {
+          if (completed || token !== runToken) return;
+          if (nowMs() >= target - sessionState.estimatedFrameMs * 0.45) {
+            finish();
+          } else {
+            var rId = requestAnimationFrame(step);
+            activeRafs.push(rId);
+          }
+        }
+        var r0 = requestAnimationFrame(step);
+        activeRafs.push(r0);
+      }, leadMs);
+      // Safety ceiling in case tab becomes hidden mid-stimulus
+      scheduleTimer(finish, durationMs + 36);
+    } else {
+      scheduleTimer(finish, durationMs);
+    }
+  }
+
+  // Eliminates 60-130ms pointerup/click release latency for human touch/mouse
+  // while remaining 100% compatible with keyboard Enter/Space and programmatic .click()
+  function bindFastPress(el, handler) {
+    if (!el) return;
+    var downLock = false;
+    var lockTimer = null;
+
+    el.addEventListener("pointerdown", function (ev) {
+      if (el.disabled) return;
+      if (typeof ev.button === "number" && ev.button !== 0) return;
+      downLock = true;
+      clearTimeout(lockTimer);
+      lockTimer = setTimeout(function () {
+        downLock = false;
+      }, 450);
+      handler(ev, nowMs());
+    });
+
+    el.addEventListener("click", function (ev) {
+      if (el.disabled) return;
+      if (downLock) {
+        downLock = false;
+        return;
+      }
+      handler(ev, nowMs());
+    });
+  }
+
+  function calibrateDisplayRefresh() {
+    if (typeof requestAnimationFrame !== "function") return;
+    var stamps = [];
+    function probeFrame(ts) {
+      stamps.push(ts || nowMs());
+      if (stamps.length < 5) {
+        requestAnimationFrame(probeFrame);
+      } else {
+        var diffs = [];
+        for (var i = 1; i < stamps.length; i += 1) {
+          var d = stamps[i] - stamps[i - 1];
+          if (d >= 4 && d <= 35) diffs.push(d);
+        }
+        if (diffs.length > 0) {
+          sessionState.estimatedFrameMs = median(diffs);
+        }
+      }
+    }
+    requestAnimationFrame(probeFrame);
   }
 
   function bindKeyHandler(handler) {
@@ -73,6 +195,7 @@
     if (typeof window === "undefined") return;
     activeKeyHandler = function (ev) {
       if (!domRefs.overlay || domRefs.overlay.hidden) return;
+      if (ev.repeat) return; // Reject held-key OS autorepeat artifacts
       handler(ev);
     };
     window.addEventListener("keydown", activeKeyHandler);
@@ -82,6 +205,24 @@
     if (activeKeyHandler && typeof window !== "undefined") {
       window.removeEventListener("keydown", activeKeyHandler);
       activeKeyHandler = null;
+    }
+  }
+
+  function bindVisibilityGuard() {
+    unbindVisibilityGuard();
+    if (typeof document === "undefined") return;
+    activeVisHandler = function () {
+      if (document.visibilityState === "hidden" && domRefs.overlay && !domRefs.overlay.hidden) {
+        sessionState.tabInterruptions += 1;
+      }
+    };
+    document.addEventListener("visibilitychange", activeVisHandler);
+  }
+
+  function unbindVisibilityGuard() {
+    if (activeVisHandler && typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", activeVisHandler);
+      activeVisHandler = null;
     }
   }
 
@@ -102,6 +243,9 @@
 
   function openOverlay() {
     resolveDom();
+    sessionState.tabInterruptions = 0;
+    bindVisibilityGuard();
+    calibrateDisplayRefresh();
     if (domRefs.overlay) {
       domRefs.overlay.hidden = false;
     }
@@ -109,6 +253,7 @@
 
   function closeOverlay() {
     cleanupActive();
+    unbindVisibilityGuard();
     resolveDom();
     if (domRefs.overlay) {
       domRefs.overlay.hidden = true;
@@ -159,17 +304,35 @@
     return Math.round(s / nums.length);
   }
 
-  function stdDev(nums) {
-    if (!nums || nums.length < 2) return 0;
-    var m = 0;
-    for (var i = 0; i < nums.length; i += 1) m += nums[i];
-    m = m / nums.length;
-    var sq = 0;
-    for (var k = 0; k < nums.length; k += 1) {
-      var d = nums[k] - m;
-      sq += d * d;
+  function median(nums) {
+    if (!nums || nums.length === 0) return 0;
+    var sorted = nums.slice().sort(function (a, b) { return a - b; });
+    var m = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 1
+      ? Math.round(sorted[m])
+      : Math.round((sorted[m - 1] + sorted[m]) / 2);
+  }
+
+  function computeSplitHalf(trialScoresPct) {
+    var A = getAnalytics();
+    if (typeof A.computeSplitHalfReliability === "function") {
+      return A.computeSplitHalfReliability(trialScoresPct);
     }
-    return Math.sqrt(sq / nums.length);
+    if (!trialScoresPct || trialScoresPct.length < 2) return 100;
+    var o = [], e = [];
+    for (var i = 0; i < trialScoresPct.length; i += 1) {
+      if (i % 2 === 0) o.push(trialScoresPct[i]);
+      else e.push(trialScoresPct[i]);
+    }
+    return Math.max(0, Math.min(100, Math.round(100 - Math.abs(mean(o) - mean(e)) * 0.85)));
+  }
+
+  function computeLisasSafe(correctRts, allRts, errRate) {
+    var A = getAnalytics();
+    if (typeof A.computeLISAS === "function") {
+      return A.computeLISAS(correctRts, allRts, errRate);
+    }
+    return mean(allRts);
   }
 
   function renderDots(total, activeIdx) {
@@ -180,6 +343,31 @@
     }
     html += "</div>";
     return html;
+  }
+
+  function startCountdownBar(barEl, durationMs) {
+    if (!barEl || !durationMs || durationMs <= 0) return;
+    var token = runToken;
+    var startTs = nowMs();
+    barEl.style.width = "100%";
+
+    function tick() {
+      if (token !== runToken) return;
+      var elapsed = nowMs() - startTs;
+      var remPct = Math.max(0, Math.min(100, (1 - elapsed / durationMs) * 100));
+      barEl.style.width = remPct.toFixed(1) + "%";
+      if (remPct <= 25) {
+        barEl.classList.add("is-urgent");
+      }
+      if (elapsed < durationMs && typeof requestAnimationFrame === "function") {
+        var rId = requestAnimationFrame(tick);
+        activeRafs.push(rId);
+      }
+    }
+    if (typeof requestAnimationFrame === "function") {
+      var r0 = requestAnimationFrame(tick);
+      activeRafs.push(r0);
+    }
   }
 
   function captureContext(opts) {
@@ -243,9 +431,10 @@
     return trialText;
   }
 
-  function launchProbeIntro(probeId) {
+  function launchProbeIntro(probeId, warmupDoneNote) {
     cleanupActive();
     sessionState.currentProbeId = probeId;
+    sessionState.tabInterruptions = 0;
     var meta = findProbeMeta(probeId);
     setHeader(
       meta.code + " — " + meta.title,
@@ -258,6 +447,10 @@
       stepsHtml += "<li>" + esc(steps[i]) + "</li>";
     }
 
+    var warmupBanner = warmupDoneNote
+      ? '<div class="warmup-feedback">' + esc(warmupDoneNote) + "</div>"
+      : "";
+
     domRefs.stage.innerHTML =
       '<div class="probe-intro">' +
       '<div class="probe-region-badge">' +
@@ -269,27 +462,138 @@
       '<p class="probe-deficit" style="margin:0;">العطل المستهدف: <strong>' +
       esc(meta.deficitName || meta.deficit || "") +
       "</strong></p>" +
+      warmupBanner +
       '<ol class="probe-steps">' +
       stepsHtml +
       "</ol>" +
       (meta.example ? '<div class="probe-example-box">' + esc(meta.example) + "</div>" : "") +
       '<div class="result-actions">' +
-      '<button id="btnStartProbeNow" type="button" class="btn-primary">ابدأ القياس الآن (Enter)</button>' +
+      '<button id="btnWarmupProbe" type="button" class="btn-ghost">جولة تدريبية غير محسوبة (تعلّم الأداة)</button>' +
+      '<button id="btnStartProbeNow" type="button" class="btn-primary">ابدأ القياس الفعلي الآن (Enter)</button>' +
       "</div>" +
       "</div>";
 
     var startBtn = document.getElementById("btnStartProbeNow");
+    var warmupBtn = document.getElementById("btnWarmupProbe");
+
     var triggerStart = function () {
       cleanupActive();
+      sessionState.tabInterruptions = 0;
       dispatchProbeRunner(probeId);
     };
+    var triggerWarmup = function () {
+      cleanupActive();
+      runInteractiveWarmup(probeId);
+    };
+
     if (startBtn) startBtn.addEventListener("click", triggerStart);
+    if (warmupBtn) warmupBtn.addEventListener("click", triggerWarmup);
+
     bindKeyHandler(function (ev) {
       if (ev.key === "Enter" || ev.key === " ") {
         ev.preventDefault();
         triggerStart();
       }
     });
+  }
+
+  /* =========================================================================
+     UNSCORED INTERACTIVE PRACTICE WARMUP (Eliminates Task-Novelty Confound)
+     ========================================================================= */
+  function runInteractiveWarmup(probeId) {
+    var S = getStimuli();
+    var meta = findProbeMeta(probeId);
+    var sample = typeof S.generateWarmupTrial === "function" ? S.generateWarmupTrial(probeId) : null;
+    setHeader(meta.title + " — جولة تدريبية", "Practice (Unscored)");
+
+    if (probeId === "isolation" && sample) {
+      var wIdx = 0;
+      function showW() {
+        if (wIdx >= sample.words.length) {
+          var optsH = sample.taskOptions.map(function (o) {
+            return '<button type="button" class="opt-btn" data-v="' + esc(o) + '"><span class="ltr-iso">' + esc(o) + "</span></button>";
+          }).join("");
+          domRefs.stage.innerHTML =
+            '<div class="task-box">' +
+            '<div class="stim-label">تدريب غير محسوب — المسألة الفاصلة</div>' +
+            '<p class="task-question">' + esc(sample.taskPrompt) + "</p>" +
+            '<div class="options-grid">' + optsH + "</div></div>";
+          var bs = domRefs.stage.querySelectorAll(".opt-btn");
+          for (var b = 0; b < bs.length; b += 1) {
+            bs[b].addEventListener("click", function (ev) {
+              var ok = ev.currentTarget.getAttribute("data-v") === sample.taskAnswer;
+              launchProbeIntro(
+                probeId,
+                "اكتملت الجولة التدريبية بنجاح: الكلمات بالترتيب كانت (" +
+                  sample.words.join(" ← ") +
+                  ") وجواب المسألة (" +
+                  sample.taskAnswer +
+                  " — " +
+                  (ok ? "إجابة صحيحة" : "تنبه لدقة الحساب في القياس الفعلي") +
+                  "). لن تحسب هذه التجربة ضمن درجاتك."
+              );
+            });
+          }
+          return;
+        }
+        domRefs.stage.innerHTML =
+          '<div class="stimulus-card"><div class="stim-label">تدريب: احفظ بترتيب الظهور (' +
+          (wIdx + 1) +
+          "/3)</div><div class=\"stim-word\">" +
+          esc(sample.words[wIdx]) +
+          "</div></div>";
+        wIdx += 1;
+        scheduleFrameAccurate(showW, 880);
+      }
+      showW();
+      return;
+    }
+
+    if (probeId === "gating" && sample) {
+      var gIdx = 0;
+      function showG() {
+        if (gIdx >= sample.sequence.length) {
+          launchProbeIntro(
+            probeId,
+            "اكتملت المعاينة التدريبية: السلسلة كانت (غرض ← 7 ← عذر ← 3)، فيكون المخرج الأول للأرقام تصاعديا (3 ثم 7) والمخرج الثاني للكلمات عكسيا (عذر ثم غرض). اضغط ابدأ القياس الفعلي."
+          );
+          return;
+        }
+        var it = sample.sequence[gIdx];
+        domRefs.stage.innerHTML =
+          '<div class="stimulus-card"><div class="stim-label">تدريب بوابة التناوب — العنصر ' +
+          (gIdx + 1) +
+          '/4</div><div class="stim-token">' +
+          esc(it.value) +
+          "</div></div>";
+        gIdx += 1;
+        scheduleFrameAccurate(showG, 920);
+      }
+      showG();
+      return;
+    }
+
+    if (probeId === "vigilance") {
+      domRefs.stage.innerHTML =
+        '<div class="stimulus-card">' +
+        '<div class="stim-label">معاينة العدّاد الرباعي</div>' +
+        '<div class="pulse-ring is-flashing">●</div>' +
+        '<p class="stim-step-text">عند الومضات 1 و2 و3 تضغط (خطوة / مسافة)، وعند الومضة 4 تضغط (إغلاق الدورة 4 / Enter) ثم تبدأ الدورة التالية من 1.</p>' +
+        '<button id="btnEndWarmVig" type="button" class="btn-primary">واضح — عد لبدء القياس الفعلي</button>' +
+        "</div>";
+      document.getElementById("btnEndWarmVig").addEventListener("click", function () {
+        launchProbeIntro(probeId, "تمت معاينة إيقاع الاستجابة؛ تذكّر عدم الضغط قبل رؤية الومضة الضوئية.");
+      });
+      return;
+    }
+
+    // Concise interactive walkthrough for updating / binding / control
+    var summaryNotes = {
+      updating: "تذكّر في القياس الفعلي: حدّث قيمة المتغير المذكور في كل خطوة وأبقِ بقية المتغيرات حاضرة؛ سيُسأل عنها بترتيب عشوائي.",
+      binding: "تذكّر في القياس الفعلي: كل مقدمة ضرورية ولا توجد جملة مكررة زائدة؛ اربط كل اسم بموقعه واختره من بين 6 بدائل.",
+      control: "تذكّر في القياس الفعلي: ستمر بـ 3 جولات مكدس وقاعدة شرطية تليها 3 ومضات بصرية سريعة (0.8 ثانية) يتبعها قناع بصري."
+    };
+    launchProbeIntro(probeId, summaryNotes[probeId] || "جاهز لبدء القياس الفعلي.");
   }
 
   function dispatchProbeRunner(probeId) {
@@ -302,11 +606,11 @@
   }
 
   /* =========================================================================
-     PROBE 1: ISOLATION (Storage under Processing Load)
+     PROBE 1: ISOLATION (TBRS Pure vs Loaded Complex Span & Wipeout)
      ========================================================================= */
   function runIsolationProbe() {
     var S = getStimuli();
-    var trials = S.generateIsolationTrials(4);
+    var trials = S.generateIsolationTrials(5);
     var meta = findProbeMeta("isolation");
     var results = [];
     var idx = 0;
@@ -317,26 +621,36 @@
         return finishIsolation(results);
       }
       var tr = trials[idx];
+      var modeBadge =
+        tr.taskType === "pure"
+          ? "جولة مرجعية صافية (بدون معالجة)"
+          : tr.taskType === "math"
+          ? "جولة مزدوجة (حفظ + حساب موقوت)"
+          : "جولة مزدوجة (حفظ + منطق مقلوب)";
       setHeader(meta.title, formatProgressPrefix("Trial " + (idx + 1) + "/" + trials.length));
 
-      // Fixation 550ms
       domRefs.stage.innerHTML =
         '<div class="stimulus-card">' +
-        '<div class="stim-label">استعد لحفظ 4 كلمات بترتيبها</div>' +
+        '<div class="stim-label">' +
+        esc(modeBadge) +
+        " — استعد لحفظ 4 مفردات بالترتيب</div>" +
         '<div class="stim-num">+</div>' +
         "</div>";
 
-      scheduleTimer(function () {
+      scheduleFrameAccurate(function () {
         presentWord(0);
-      }, 550);
+      }, 560);
 
       function presentWord(wIdx) {
         if (wIdx >= tr.words.length) {
+          if (tr.taskType === "pure") {
+            return showSilentMaintenance();
+          }
           return showProcessingTask();
         }
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">الكلمة <span class="ltr-iso">' +
+          '<div class="stim-label">المفردة <span class="ltr-iso">' +
           (wIdx + 1) +
           " / " +
           tr.words.length +
@@ -347,16 +661,32 @@
           renderDots(tr.words.length, wIdx) +
           "</div>";
 
-        scheduleTimer(function () {
-          domRefs.stage.innerHTML = '<div class="stimulus-card"></div>';
-          scheduleTimer(function () {
-            presentWord(wIdx + 1);
-          }, 160);
-        }, 920);
+        onNextFramePaint(function () {
+          scheduleFrameAccurate(function () {
+            domRefs.stage.innerHTML = '<div class="stimulus-card"></div>';
+            scheduleFrameAccurate(function () {
+              presentWord(wIdx + 1);
+            }, tr.wordIsiMs || 180);
+          }, tr.wordExposureMs || 900);
+        });
+      }
+
+      function showSilentMaintenance() {
+        var holdMs = tr.retentionMs || 2200;
+        domRefs.stage.innerHTML =
+          '<div class="stimulus-card">' +
+          '<div class="stim-label">احتفاظ صامت بدون معالجة حسابية...</div>' +
+          '<div class="stim-num" style="opacity:0.45;">•</div>' +
+          '<div class="tbrs-timer-track"><div id="pureHoldBar" class="tbrs-timer-fill"></div></div>' +
+          "</div>";
+        startCountdownBar(document.getElementById("pureHoldBar"), holdMs);
+        scheduleFrameAccurate(function () {
+          showSerialRecall(true, 0, false);
+        }, holdMs);
       }
 
       function showProcessingTask() {
-        var t0 = performance.now();
+        var deadlineMs = tr.deadlineMs || (tr.taskType === "math" ? 10500 : 14500);
         var optsHtml = "";
         for (var o = 0; o < tr.taskOptions.length; o += 1) {
           var isNum = /^\d+$/.test(tr.taskOptions[o]);
@@ -371,8 +701,9 @@
         domRefs.stage.innerHTML =
           '<div class="task-box">' +
           '<div class="stim-label">' +
-          (tr.taskType === "math" ? "معالجة حسابية فورية" : "معالجة منطقية علائقية فورية") +
+          (tr.taskType === "math" ? "معالجة حسابية فورية (موقوتة)" : "معالجة علائقية مقلوبة القطبية (موقوتة)") +
           "</div>" +
+          '<div class="tbrs-timer-track" aria-hidden="true"><div id="isoTaskTimerBar" class="tbrs-timer-fill"></div></div>' +
           '<p class="task-question">' +
           esc(tr.taskPrompt) +
           "</p>" +
@@ -381,32 +712,50 @@
           "</div>" +
           "</div>";
 
-        var chooseTaskOpt = function (chosenVal) {
-          unbindKeyHandler();
-          var taskRtMs = Math.round(performance.now() - t0);
-          var taskCorrect = String(chosenVal) === String(tr.taskAnswer);
-          showSerialRecall(taskCorrect, taskRtMs);
+        var tOnset = nowMs();
+        var answered = false;
+
+        onNextFramePaint(function (paintTs) {
+          tOnset = paintTs;
+          startCountdownBar(document.getElementById("isoTaskTimerBar"), deadlineMs);
+        });
+
+        var chooseTaskOpt = function (chosenVal, eventTs, isTimeout) {
+          if (answered) return;
+          answered = true;
+          cleanupActive();
+          var taskRtMs = Math.max(0, Math.round((eventTs || nowMs()) - tOnset));
+          var taskCorrect = !isTimeout && String(chosenVal) === String(tr.taskAnswer);
+          showSerialRecall(taskCorrect, taskRtMs, Boolean(isTimeout));
         };
+
+        // Enforce TBRS cognitive-load deadline so covert rehearsal before answering is impossible
+        scheduleTimer(function () {
+          chooseTaskOpt("__TIMEOUT__", nowMs(), true);
+        }, deadlineMs);
 
         var optBtns = domRefs.stage.querySelectorAll(".opt-btn");
         for (var b = 0; b < optBtns.length; b += 1) {
-          optBtns[b].addEventListener("click", function (ev) {
-            var i = Number(ev.currentTarget.getAttribute("data-opt-idx"));
-            chooseTaskOpt(tr.taskOptions[i]);
-          });
+          (function (btnEl) {
+            bindFastPress(btnEl, function (_ev, pressTs) {
+              var i = Number(btnEl.getAttribute("data-opt-idx"));
+              chooseTaskOpt(tr.taskOptions[i], pressTs, false);
+            });
+          })(optBtns[b]);
         }
 
         bindKeyHandler(function (ev) {
           var n = Number(ev.key);
           if (n >= 1 && n <= tr.taskOptions.length) {
             ev.preventDefault();
-            chooseTaskOpt(tr.taskOptions[n - 1]);
+            chooseTaskOpt(tr.taskOptions[n - 1], nowMs(), false);
           }
         });
       }
 
-      function showSerialRecall(taskCorrect, taskRtMs) {
+      function showSerialRecall(taskCorrect, taskRtMs, taskTimedOut) {
         var chosenWords = [];
+        var tRecallStart = nowMs();
 
         function renderRecallUI() {
           var slotsHtml = "";
@@ -438,7 +787,7 @@
 
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<p class="task-question">انقر الكلمات الأربع بترتيب ظهورها الأصلي من الخانة 1 إلى 4:</p>' +
+            '<p class="task-question">انقر المفردات الأربع بترتيب ظهورها الأصلي من الخانة 1 إلى 4:</p>' +
             '<div class="recall-slots">' +
             slotsHtml +
             "</div>" +
@@ -481,22 +830,40 @@
           chosenWords.push(val);
           if (chosenWords.length === 4) {
             var slotHits = [0, 0, 0, 0];
-            var hits = 0;
+            var strictHits = 0;
+            var itemSurvived = 0;
+            var transpositions = 0;
+            var wipeouts = 0;
+
             for (var c = 0; c < 4; c += 1) {
-              if (chosenWords[c] === tr.words[c]) {
+              var picked = chosenWords[c];
+              if (picked === tr.words[c]) {
                 slotHits[c] = 1;
-                hits += 1;
+                strictHits += 1;
+                itemSurvived += 1;
+              } else if (picked !== "__FORGOT__" && tr.words.indexOf(picked) !== -1) {
+                itemSurvived += 1;
+                transpositions += 1;
+              } else {
+                wipeouts += 1;
               }
             }
+
             results.push({
               taskType: tr.taskType,
               taskCorrect: taskCorrect,
+              taskTimedOut: taskTimedOut,
+              fastGuess: tr.taskType !== "pure" && !taskCorrect && taskRtMs > 0 && taskRtMs < 450,
               taskRtMs: taskRtMs,
-              hits: hits,
+              recallRtMs: Math.round(nowMs() - tRecallStart),
+              hits: strictHits,
+              itemSurvived: itemSurvived,
+              transpositions: transpositions,
+              wipeouts: wipeouts,
               slotHits: slotHits
             });
             idx += 1;
-            scheduleTimer(nextTrial, 220);
+            scheduleTimer(nextTrial, 200);
           } else {
             renderRecallUI();
           }
@@ -510,17 +877,57 @@
   }
 
   function finishIsolation(results) {
+    var pureHits = 0, pureTotal = 0;
     var mathHits = 0, mathTotal = 0, logicHits = 0, logicTotal = 0;
-    var s1 = 0, smid = 0, s4 = 0, taskAcc = 0;
-    var rts = [];
+    var weightedLoadedSum = 0, loadedSlotsTotal = 0;
+    var s1 = 0, smid = 0, s4 = 0, loadedCount = 0;
+    var taskAccCount = 0, transpositionsTotal = 0, wipeoutsTotal = 0;
+    var loadedRts = [], correctTaskRts = [], loadedTrialScores = [];
+
+    for (var p = 0; p < results.length; p += 1) {
+      if (results[p].taskType !== "pure") {
+        loadedCount += 1;
+        if (results[p].taskCorrect) taskAccCount += 1;
+      }
+    }
+    var denomLoaded = Math.max(1, loadedCount);
+    var taskAccPct = Math.round((taskAccCount / denomLoaded) * 100);
 
     for (var i = 0; i < results.length; i += 1) {
       var r = results[i];
-      rts.push(r.taskRtMs);
-      if (r.taskCorrect) taskAcc += 1;
+      if (r.taskType === "pure") {
+        pureHits += r.hits;
+        pureTotal += 4;
+        continue;
+      }
+
+      loadedSlotsTotal += 4;
+      loadedRts.push(r.taskRtMs);
+      if (r.taskCorrect) {
+        correctTaskRts.push(r.taskRtMs);
+      }
+
+      // Conway et al. (2005) conditional dual-task engagement gate:
+      // Blocks storage inflation via fast-guessing (<550ms), timeout, or neglecting processing (<75% criterion)
+      var engagementWeight = 1.0;
+      if (!r.taskCorrect) {
+        if (r.fastGuess || r.taskTimedOut || (r.taskRtMs > 0 && r.taskRtMs < 550)) {
+          engagementWeight = 0.0;
+        } else if (taskAccPct >= 75) {
+          engagementWeight = 0.75;
+        } else {
+          engagementWeight = 0.25 * (taskAccPct / 75);
+        }
+      }
+      weightedLoadedSum += r.hits * engagementWeight;
+      loadedTrialScores.push(Math.round(((r.hits * engagementWeight) / 4) * 100));
+
       s1 += r.slotHits[0];
       smid += r.slotHits[1] + r.slotHits[2];
       s4 += r.slotHits[3];
+      transpositionsTotal += r.transpositions;
+      wipeoutsTotal += r.wipeouts;
+
       if (r.taskType === "math") {
         mathHits += r.hits;
         mathTotal += 4;
@@ -530,54 +937,78 @@
       }
     }
 
-    var totalSlots = results.length * 4;
-    var rawRecallPct = Math.round(((mathHits + logicHits) / totalSlots) * 100);
-    var taskAccPct = Math.round((taskAcc / results.length) * 100);
-    var penalty = taskAccPct < 75 ? Math.round((75 - taskAccPct) * 0.25) : 0;
-    var finalScore = Math.max(0, Math.min(100, rawRecallPct - penalty));
+    var pureSpanPct = pureTotal > 0 ? Math.round((pureHits / pureTotal) * 100) : 100;
+    var rawLoadedRecallPct = loadedSlotsTotal > 0 ? Math.round(((mathHits + logicHits) / loadedSlotsTotal) * 100) : 0;
+    var gatedRecallPct = loadedSlotsTotal > 0 ? Math.round((weightedLoadedSum / loadedSlotsTotal) * 100) : 0;
+    var finalScore = Math.max(0, Math.min(100, gatedRecallPct));
 
+    var processingWipeoutPct = Math.max(0, pureSpanPct - rawLoadedRecallPct);
     var mathSurvivalPct = mathTotal > 0 ? Math.round((mathHits / mathTotal) * 100) : 0;
     var logicSurvivalPct = logicTotal > 0 ? Math.round((logicHits / logicTotal) * 100) : 0;
-    var slot1Pct = Math.round((s1 / results.length) * 100);
-    var middleSlotsPct = Math.round((smid / (results.length * 2)) * 100);
-    var slot4Pct = Math.round((s4 / results.length) * 100);
-    var meanRt = mean(rts);
+    var slot1Pct = Math.round((s1 / denomLoaded) * 100);
+    var middleSlotsPct = Math.round((smid / (denomLoaded * 2)) * 100);
+    var slot4Pct = Math.round((s4 / denomLoaded) * 100);
+    var meanRt = mean(loadedRts);
+    var lisasMs = computeLisasSafe(correctTaskRts, loadedRts, 1 - taskAccPct / 100);
+    var splitHalfPct = computeSplitHalf(loadedTrialScores);
+
+    var tradeoffNote = taskAccPct < 75
+      ? " [تنبيه Conway et al. (2005): دقة المعالجة الفاصلة (" + taskAccPct + "%) دون معيار الصلاحية 75% فطُبّق خصم مقايضة التسميع]."
+      : "";
 
     var diag =
-      "صمد من المخزون الخلفي " +
+      "السعة المجردة الصافية بلا معالجة بلغت " +
+      pureSpanPct +
+      "%، ثم هبط البقاء إلى " +
       mathSurvivalPct +
-      "% بعد الحساب مقابل " +
+      "% بعد الحساب و" +
       logicSurvivalPct +
-      "% بعد المقارنة المنطقية، مع بقاء الخانة الأولى بنسبة " +
-      slot1Pct +
-      "% والخانتين الوسطيين بنسبة " +
-      middleSlotsPct +
-      "%.";
+      "% بعد المنطق المقلوب (صافي المسح بالمعالجة: " +
+      processingWipeoutPct +
+      "%)؛ سُجلت " +
+      wipeoutsTotal +
+      " حالات انمساح تام مقابل " +
+      transpositionsTotal +
+      " أخطاء إبدال ترتيب." +
+      tradeoffNote;
 
-    completeProbe("isolation", finalScore, meanRt, {
-      mathSurvivalPct: mathSurvivalPct,
-      logicSurvivalPct: logicSurvivalPct,
-      slot1Pct: slot1Pct,
-      middleSlotsPct: middleSlotsPct,
-      slot4Pct: slot4Pct,
-      taskAccPct: taskAccPct,
-      taskMeanRtMs: meanRt
-    }, [
-      { label: "البقاء بعد الحساب", val: mathSurvivalPct + "%" },
-      { label: "البقاء بعد المنطق", val: logicSurvivalPct + "%" },
-      { label: "صمود الرأس الأول", val: slot1Pct + "%" },
-      { label: "صمود الوسط (2–3)", val: middleSlotsPct + "%" },
-      { label: "دقة المسألة الوسيطة", val: taskAccPct + "%" },
-      { label: "متوسط زمن المسألة", val: meanRt + " ms" }
-    ], diag);
+    completeProbe(
+      "isolation",
+      finalScore,
+      meanRt,
+      {
+        pureSpanPct: pureSpanPct,
+        processingWipeoutPct: processingWipeoutPct,
+        mathSurvivalPct: mathSurvivalPct,
+        logicSurvivalPct: logicSurvivalPct,
+        slot1Pct: slot1Pct,
+        middleSlotsPct: middleSlotsPct,
+        slot4Pct: slot4Pct,
+        transpositionCount: transpositionsTotal,
+        wipeoutCount: wipeoutsTotal,
+        taskAccPct: taskAccPct,
+        taskMeanRtMs: meanRt,
+        lisasMs: lisasMs,
+        splitHalfPct: splitHalfPct
+      },
+      [
+        { label: "السعة الصافية (ضابط)", val: pureSpanPct + "%" },
+        { label: "صافي المسح بالمعالجة", val: processingWipeoutPct + "%" },
+        { label: "البقاء بعد الحساب", val: mathSurvivalPct + "%" },
+        { label: "البقاء بعد المنطق", val: logicSurvivalPct + "%" },
+        { label: "إبدال الترتيب مقابل المسح", val: transpositionsTotal + " / " + wipeoutsTotal },
+        { label: "دقة المسألة الفاصلة", val: taskAccPct + "%" }
+      ],
+      diag
+    );
   }
 
   /* =========================================================================
-     PROBE 2: UPDATING (Peripheral Decay & Proactive Interference)
+     PROBE 2: UPDATING (Oberauer Focus vs Peripheral Shelf & Switch Cost)
      ========================================================================= */
   function runUpdatingProbe() {
     var S = getStimuli();
-    var trials = S.generateUpdatingTrials(4);
+    var trials = S.generateUpdatingTrials(5);
     var meta = findProbeMeta("updating");
     var idx = 0;
 
@@ -586,11 +1017,18 @@
       twoTotal: 0,
       threeCorrect: 0,
       threeTotal: 0,
+      inFocusCorrect: 0,
+      inFocusTotal: 0,
+      peripheralCorrect: 0,
+      peripheralTotal: 0,
       staleErrors: 0,
       decayErrors: 0,
       swapErrors: 0,
       calcErrors: 0,
-      stepRts: []
+      repeatStepRts: [],
+      switchStepRts: [],
+      allStepRts: [],
+      trialScores: []
     };
 
     function nextTrial() {
@@ -599,6 +1037,7 @@
         return finishUpdating(stats);
       }
       var tr = trials[idx];
+      var trialHits = 0;
       setHeader(meta.title, formatProgressPrefix("Trial " + (idx + 1) + "/" + trials.length));
 
       var initParts = [];
@@ -608,22 +1047,30 @@
         initParts.push(esc(vn) + ': <span class="ltr-iso">' + tr.initial[vn] + "</span>" + esc(unitStr));
       }
 
+      var initCapMs = tr.initDeadlineMs || 9500;
       domRefs.stage.innerHTML =
         '<div class="stimulus-card">' +
         '<div class="stim-label">القيم الابتدائية (' +
         tr.vars.length +
-        " متغيرات)</div>" +
+        " متغيرات — استرجاع عشوائي الترتيب)</div>" +
+        '<div class="tbrs-timer-track"><div id="updInitBar" class="tbrs-timer-fill"></div></div>' +
         '<div class="stim-step-text">' +
         initParts.join(" &nbsp;|&nbsp; ") +
         "</div>" +
         '<button id="btnBeginSteps" type="button" class="btn-primary">حفظت البداية — اعرض الخطوات (مسافة)</button>' +
         "</div>";
 
+      startCountdownBar(document.getElementById("updInitBar"), initCapMs);
+
+      var stepStarted = false;
       var goSteps = function () {
-        unbindKeyHandler();
+        if (stepStarted) return;
+        stepStarted = true;
+        cleanupActive();
         showStep(0);
       };
       document.getElementById("btnBeginSteps").addEventListener("click", goSteps);
+      scheduleTimer(goSteps, initCapMs);
       bindKeyHandler(function (ev) {
         if (ev.key === " " || ev.key === "Enter") {
           ev.preventDefault();
@@ -632,11 +1079,13 @@
       });
 
       function showStep(sIdx) {
+        cleanupActive();
         if (sIdx >= tr.steps.length) {
           return askFinalVars(0);
         }
         var stepObj = tr.steps[sIdx];
-        var tStep = performance.now();
+        var stepCapMs = tr.stepDeadlineMs || 8500;
+        var tStep = nowMs();
 
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
@@ -645,6 +1094,7 @@
           " / " +
           tr.steps.length +
           "</span></div>" +
+          '<div class="tbrs-timer-track"><div id="updStepBar" class="tbrs-timer-fill"></div></div>' +
           '<div class="stim-step-text">' +
           esc(stepObj.text) +
           "</div>" +
@@ -652,27 +1102,55 @@
           '<button id="btnNextUpdateStep" type="button" class="btn-primary">تم التحديث — التالي (مسافة)</button>' +
           "</div>";
 
-        var advance = function () {
-          unbindKeyHandler();
-          stats.stepRts.push(Math.round(performance.now() - tStep));
+        onNextFramePaint(function (paintTs) {
+          tStep = paintTs;
+          startCountdownBar(document.getElementById("updStepBar"), stepCapMs);
+        });
+
+        var doneStep = false;
+        var advance = function (pressTs) {
+          if (doneStep) return;
+          doneStep = true;
+          cleanupActive();
+          var rt = Math.max(120, Math.round((pressTs || nowMs()) - tStep));
+          stats.allStepRts.push(rt);
+          if (stepObj.transition === "repeat") {
+            stats.repeatStepRts.push(rt);
+          } else if (stepObj.transition === "switch") {
+            stats.switchStepRts.push(rt);
+          }
           showStep(sIdx + 1);
         };
-        document.getElementById("btnNextUpdateStep").addEventListener("click", advance);
+
+        bindFastPress(document.getElementById("btnNextUpdateStep"), function (_ev, pressTs) {
+          advance(pressTs);
+        });
+        scheduleTimer(function () {
+          advance(nowMs());
+        }, stepCapMs);
+
         bindKeyHandler(function (ev) {
           if (ev.key === " " || ev.key === "Enter") {
             ev.preventDefault();
-            advance();
+            advance(nowMs());
           }
         });
       }
 
-      function askFinalVars(vIdx) {
-        if (vIdx >= tr.vars.length) {
+      var queryList = Array.isArray(tr.queryOrder) && tr.queryOrder.length === tr.vars.length
+        ? tr.queryOrder
+        : tr.vars;
+
+      function askFinalVars(qIdx) {
+        cleanupActive();
+        if (qIdx >= queryList.length) {
+          stats.trialScores.push(Math.round((trialHits / queryList.length) * 100));
           idx += 1;
           scheduleTimer(nextTrial, 200);
           return;
         }
-        var varName = tr.vars[vIdx];
+        var varName = queryList[qIdx];
+        var isInFocus = tr.lagByVar ? tr.lagByVar[varName] === 0 : varName === tr.inFocusVar;
         var numpadHtml = "";
         for (var n = 1; n <= 9; n += 1) {
           numpadHtml += '<button type="button" class="key-btn" data-num="' + n + '">' + n + "</button>";
@@ -681,9 +1159,9 @@
         domRefs.stage.innerHTML =
           '<div class="task-box">' +
           '<div class="stim-label">استرجاع المتغير <span class="ltr-iso">' +
-          (vIdx + 1) +
+          (qIdx + 1) +
           " / " +
-          tr.vars.length +
+          queryList.length +
           "</span></div>" +
           '<p class="task-question">ما القيمة النهائية للمتغير «' +
           esc(varName) +
@@ -703,13 +1181,19 @@
           if (isTwo) stats.twoTotal += 1;
           else stats.threeTotal += 1;
 
+          if (isInFocus) stats.inFocusTotal += 1;
+          else stats.peripheralTotal += 1;
+
           if (valOrForgot === "__FORGOT__") {
             stats.decayErrors += 1;
           } else {
             var numVal = Number(valOrForgot);
             if (numVal === trueFinal) {
+              trialHits += 1;
               if (isTwo) stats.twoCorrect += 1;
               else stats.threeCorrect += 1;
+              if (isInFocus) stats.inFocusCorrect += 1;
+              else stats.peripheralCorrect += 1;
             } else {
               var prevVals = tr.historyByVar[varName] || [];
               var otherFinals = [];
@@ -725,7 +1209,7 @@
               }
             }
           }
-          askFinalVars(vIdx + 1);
+          askFinalVars(qIdx + 1);
         };
 
         var numBtns = domRefs.stage.querySelectorAll(".key-btn");
@@ -756,66 +1240,92 @@
     var score = totalVars > 0 ? Math.round((totalCorrect / totalVars) * 100) : 0;
     var twoVarPct = stats.twoTotal > 0 ? Math.round((stats.twoCorrect / stats.twoTotal) * 100) : 0;
     var threeVarPct = stats.threeTotal > 0 ? Math.round((stats.threeCorrect / stats.threeTotal) * 100) : 0;
-    var meanStepRt = mean(stats.stepRts);
+    var inFocusAccPct = stats.inFocusTotal > 0 ? Math.round((stats.inFocusCorrect / stats.inFocusTotal) * 100) : 0;
+    var peripheralAccPct = stats.peripheralTotal > 0 ? Math.round((stats.peripheralCorrect / stats.peripheralTotal) * 100) : 0;
+
+    var meanStepRt = mean(stats.allStepRts);
+    var medSwitch = median(stats.switchStepRts);
+    var medRepeat = median(stats.repeatStepRts);
+    var focusSwitchCostMs =
+      stats.switchStepRts.length > 0 && stats.repeatStepRts.length > 0
+        ? Math.round(medSwitch - medRepeat)
+        : 0;
+    var lisasMs = computeLisasSafe(stats.allStepRts, stats.allStepRts, 1 - score / 100);
+    var splitHalfPct = computeSplitHalf(stats.trialScores);
 
     var diag =
-      "دقة متغيرين: " +
-      twoVarPct +
-      "% مقابل 3 متغيرات: " +
-      threeVarPct +
-      "%؛ سُجلت " +
+      "بؤرة الانتباه النشطة (Lag 0) سجلت " +
+      inFocusAccPct +
+      "% مقابل " +
+      peripheralAccPct +
+      "% في الرف الجانبي (Lag ≥ 1)؛ رُصدت " +
       stats.staleErrors +
       " أخطاء التصاق بالقيمة القديمة و" +
       stats.decayErrors +
-      " حالات تبخر في الرف الجانبي.";
+      " حالات تبخر و" +
+      stats.swapErrors +
+      " حالات خلط، بكلفة تبديل بؤرة " +
+      (focusSwitchCostMs >= 0 ? "+" : "") +
+      focusSwitchCostMs +
+      " ms.";
 
-    completeProbe("updating", score, meanStepRt, {
-      twoVarPct: twoVarPct,
-      threeVarPct: threeVarPct,
-      staleErrors: stats.staleErrors,
-      decayErrors: stats.decayErrors,
-      swapErrors: stats.swapErrors,
-      stepMeanRtMs: meanStepRt
-    }, [
-      { label: "دقة متغيرين", val: twoVarPct + "%" },
-      { label: "دقة 3 متغيرات", val: threeVarPct + "%" },
-      { label: "التصاق قيمة قديمة", val: String(stats.staleErrors) },
-      { label: "تبخر الرقم الأخير", val: String(stats.decayErrors) },
-      { label: "خلط بين متغيرين", val: String(stats.swapErrors) },
-      { label: "زمن خطوة التحديث", val: meanStepRt + " ms" }
-    ], diag);
+    completeProbe(
+      "updating",
+      score,
+      meanStepRt,
+      {
+        inFocusAccPct: inFocusAccPct,
+        peripheralAccPct: peripheralAccPct,
+        twoVarPct: twoVarPct,
+        threeVarPct: threeVarPct,
+        staleErrors: stats.staleErrors,
+        decayErrors: stats.decayErrors,
+        swapErrors: stats.swapErrors,
+        focusSwitchCostMs: focusSwitchCostMs,
+        stepMeanRtMs: meanStepRt,
+        lisasMs: lisasMs,
+        splitHalfPct: splitHalfPct
+      },
+      [
+        { label: "بؤرة الانتباه النشطة", val: inFocusAccPct + "%" },
+        { label: "صمود الرف الجانبي", val: peripheralAccPct + "%" },
+        { label: "دقة 2 مقابل 3 متغيرات", val: twoVarPct + "% / " + threeVarPct + "%" },
+        { label: "التصاق القيمة القديمة", val: String(stats.staleErrors) },
+        { label: "تبخر الرقم الأخير", val: String(stats.decayErrors) },
+        { label: "كلفة تبديل البؤرة", val: (focusSwitchCostMs >= 0 ? "+" : "") + focusSwitchCostMs + " ms" }
+      ],
+      diag
+    );
   }
 
   /* =========================================================================
-     PROBE 3: GATING (Blocked vs Alternating Mode-Switching Cost)
+     PROBE 3: GATING (Counterbalanced Uncued Input-Gating & Switch Cost)
      ========================================================================= */
   function runGatingProbe() {
     var S = getStimuli();
-    var trials = S.generateGatingTrials(4);
+    var trials = S.generateGatingTrials(5);
     var meta = findProbeMeta("gating");
     var idx = 0;
     var trialScores = [];
+    var itemAssemblyRts = [];
 
     function nextTrial() {
       cleanupActive();
       if (idx >= trials.length) {
-        return finishGating(trialScores);
+        return finishGating(trialScores, itemAssemblyRts);
       }
       var tr = trials[idx];
-      var modeTitle = tr.mode === "blocked" ? "جولة متكتلة ضابطة" : "جولة متناوبة فاحصة";
       setHeader(meta.title, formatProgressPrefix("Trial " + (idx + 1) + "/" + trials.length));
 
       domRefs.stage.innerHTML =
         '<div class="stimulus-card">' +
-        '<div class="stim-label">' +
-        modeTitle +
-        " (" +
+        '<div class="stim-label">استعد لفرز سلسلة من <span class="ltr-iso">' +
         tr.sequence.length +
-        " عناصر)</div>" +
+        "</span> عناصر (الأرقام تصاعديا ثم الكلمات عكسيا)</div>" +
         '<div class="stim-num">+</div>' +
         "</div>";
 
-      scheduleTimer(function () {
+      scheduleFrameAccurate(function () {
         showItem(0);
       }, 600);
 
@@ -825,34 +1335,39 @@
         }
         var item = tr.sequence[sIdx];
         var isNum = item.kind === "num";
+        // No category pre-cue ("رقم" / "كلمة") — forces bottom-up Left IFS input gating upon reading!
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">' +
-          (isNum ? "رقم" : "كلمة") +
-          ' (<span class="ltr-iso">' +
+          '<div class="stim-label">العنصر <span class="ltr-iso">' +
           (sIdx + 1) +
-          "/" +
+          " / " +
           tr.sequence.length +
-          "</span>)</div>" +
-          (isNum
-            ? '<div class="stim-num">' + esc(item.value) + "</div>"
-            : '<div class="stim-word">' + esc(item.value) + "</div>") +
+          "</span></div>" +
+          '<div class="stim-token' +
+          (isNum ? " ltr-iso" : "") +
+          '">' +
+          esc(item.value) +
+          "</div>" +
           renderDots(tr.sequence.length, sIdx) +
           "</div>";
 
-        scheduleTimer(function () {
-          domRefs.stage.innerHTML = '<div class="stimulus-card"></div>';
-          scheduleTimer(function () {
-            showItem(sIdx + 1);
-          }, 170);
-        }, 1020);
+        onNextFramePaint(function () {
+          scheduleFrameAccurate(function () {
+            domRefs.stage.innerHTML = '<div class="stimulus-card"></div>';
+            scheduleFrameAccurate(function () {
+              showItem(sIdx + 1);
+            }, tr.itemIsiMs || 190);
+          }, tr.itemExposureMs || 950);
+        });
       }
 
       var chosenNums = [];
       var chosenWords = [];
+      var lastChoiceTs = nowMs();
 
       function askNumbersPhase() {
         var need = tr.expectedNumbersAsc.length;
+        lastChoiceTs = nowMs();
 
         function renderNumStage() {
           var slotsHtml = "";
@@ -888,7 +1403,7 @@
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
             '<div class="stim-label">المرحلة 1 من 2 — فرز الأرقام</div>' +
-            '<p class="task-question">اختر الأرقام وحدها مرتبة من الأصغر إلى الأكبر:</p>' +
+            '<p class="task-question">اختر الأرقام وحدها مرتبة تصاعديا من الأصغر إلى الأكبر:</p>' +
             '<div class="recall-slots">' +
             slotsHtml +
             "</div>" +
@@ -915,6 +1430,7 @@
           document.getElementById("btnUndoGNum").addEventListener("click", function () {
             if (chosenNums.length > 0) {
               chosenNums.pop();
+              lastChoiceTs = nowMs();
               renderNumStage();
             }
           });
@@ -922,6 +1438,9 @@
 
         function pushNum(v) {
           if (chosenNums.length >= need) return;
+          var now = nowMs();
+          itemAssemblyRts.push(Math.max(80, Math.round(now - lastChoiceTs)));
+          lastChoiceTs = now;
           chosenNums.push(v);
           if (chosenNums.length === need) {
             unbindKeyHandler();
@@ -943,6 +1462,7 @@
 
       function askWordsPhase() {
         var needW = tr.expectedWordsRev.length;
+        lastChoiceTs = nowMs();
 
         function renderWordStage() {
           var slotsHtml = "";
@@ -1006,6 +1526,7 @@
           document.getElementById("btnUndoGWord").addEventListener("click", function () {
             if (chosenWords.length > 0) {
               chosenWords.pop();
+              lastChoiceTs = nowMs();
               renderWordStage();
             }
           });
@@ -1013,15 +1534,25 @@
 
         function pushWord(w) {
           if (chosenWords.length >= needW) return;
+          var now = nowMs();
+          itemAssemblyRts.push(Math.max(80, Math.round(now - lastChoiceTs)));
+          lastChoiceTs = now;
           chosenWords.push(w);
           if (chosenWords.length === needW) {
-            var hits = 0;
+            var numHits = 0;
+            var wordHits = 0;
             for (var a = 0; a < needW; a += 1) {
-              if (chosenNums[a] === tr.expectedNumbersAsc[a]) hits += 1;
-              if (chosenWords[a] === tr.expectedWordsRev[a]) hits += 1;
+              if (chosenNums[a] === tr.expectedNumbersAsc[a]) numHits += 1;
+              if (chosenWords[a] === tr.expectedWordsRev[a]) wordHits += 1;
             }
-            var pct = Math.round((hits / (needW * 2)) * 100);
-            trialScores.push({ mode: tr.mode, pairs: tr.pairCount, pct: pct });
+            var pct = Math.round(((numHits + wordHits) / (needW * 2)) * 100);
+            trialScores.push({
+              mode: tr.mode,
+              pairs: tr.pairCount,
+              pct: pct,
+              numPct: Math.round((numHits / needW) * 100),
+              wordPct: Math.round((wordHits / needW) * 100)
+            });
             idx += 1;
             scheduleTimer(nextTrial, 220);
           } else {
@@ -1036,50 +1567,78 @@
     nextTrial();
   }
 
-  function finishGating(trialScores) {
+  function finishGating(trialScores, itemAssemblyRts) {
     var blockedArr = [], alt4Arr = [], alt6Arr = [];
+    var altNumArr = [], altWordArr = [], allAltScores = [];
+
     for (var i = 0; i < trialScores.length; i += 1) {
       var t = trialScores[i];
-      if (t.mode === "blocked") blockedArr.push(t.pct);
-      else if (t.pairs === 2) alt4Arr.push(t.pct);
-      else alt6Arr.push(t.pct);
+      if (t.mode === "blocked") {
+        blockedArr.push(t.pct);
+      } else {
+        allAltScores.push(t.pct);
+        altNumArr.push(t.numPct);
+        altWordArr.push(t.wordPct);
+        if (t.pairs === 2) alt4Arr.push(t.pct);
+        else alt6Arr.push(t.pct);
+      }
     }
 
     var blockedPct = mean(blockedArr);
     var alt4Pct = mean(alt4Arr);
     var alt6Pct = mean(alt6Arr);
+    var numStreamAltPct = mean(altNumArr);
+    var wordStreamAltPct = mean(altWordArr);
     var alternatingPct = Math.round(0.25 * alt4Pct + 0.75 * alt6Pct);
     var switchingPenalty = Math.max(0, Math.round(blockedPct - alt6Pct));
+    var meanAssemblyRtMs = mean(itemAssemblyRts);
+    var splitHalfPct = computeSplitHalf(allAltScores);
 
     var diag =
-      "الفرز المتكتل سجل " +
+      "الفرز المتكتل المتوازن سجل " +
       blockedPct +
       "% مقابل " +
       alt6Pct +
-      "% عند تناوب 6 عناصر؛ عقوبة التناوب الصافية على بوابة الإدخال بلغت " +
+      "% عند تناوب 6 عناصر (عقوبة التناوب الطرحية: " +
       switchingPenalty +
-      " نقطة مئوية.";
+      "%)؛ تحت التناوب صمد مسار الأرقام بنسبة " +
+      numStreamAltPct +
+      "% ومسار عكس الكلمات بنسبة " +
+      wordStreamAltPct +
+      "%.";
 
-    completeProbe("gating", alternatingPct, 0, {
-      blockedPct: blockedPct,
-      alt4Pct: alt4Pct,
-      alt6Pct: alt6Pct,
-      alternatingPct: alternatingPct,
-      switchingPenalty: switchingPenalty
-    }, [
-      { label: "دقة المتكتل (6 عناصر)", val: blockedPct + "%" },
-      { label: "تناوب 4 عناصر", val: alt4Pct + "%" },
-      { label: "تناوب 6 عناصر", val: alt6Pct + "%" },
-      { label: "عقوبة التناوب الصافية", val: switchingPenalty + "%" }
-    ], diag);
+    completeProbe(
+      "gating",
+      alternatingPct,
+      meanAssemblyRtMs,
+      {
+        blockedPct: blockedPct,
+        alt4Pct: alt4Pct,
+        alt6Pct: alt6Pct,
+        alternatingPct: alternatingPct,
+        switchingPenalty: switchingPenalty,
+        numStreamAltPct: numStreamAltPct,
+        wordStreamAltPct: wordStreamAltPct,
+        splitHalfPct: splitHalfPct
+      },
+      [
+        { label: "دقة المتكتل المتوازن", val: blockedPct + "%" },
+        { label: "تناوب 4 عناصر", val: alt4Pct + "%" },
+        { label: "تناوب 6 عناصر", val: alt6Pct + "%" },
+        { label: "عقوبة التناوب الصافية", val: switchingPenalty + "%" },
+        { label: "مسار الأرقام مقابل الكلمات", val: numStreamAltPct + "% / " + wordStreamAltPct + "%" },
+        { label: "زمن اختيار العنصر", val: meanAssemblyRtMs + " ms" }
+      ],
+      diag
+    );
   }
 
   /* =========================================================================
-     PROBE 4: BINDING (Lexical Pointer Binding & Polarity Flip)
+     PROBE 4: BINDING (Non-Redundant 6-Foil Matrix + 2-Step Node Verification)
      ========================================================================= */
   function runBindingProbe() {
     var S = getStimuli();
-    var trials = S.generateBindingTrials(5);
+    var trials = S.generateBindingTrials(6);
     var meta = findProbeMeta("binding");
     var idx = 0;
     var records = [];
@@ -1096,40 +1655,54 @@
       showPremise(0);
 
       function showPremise(pIdx) {
+        cleanupActive();
         if (pIdx >= tr.premises.length) {
           return showBindingQuestion();
         }
-        var t0 = performance.now();
+        var t0 = nowMs();
+        var totalP = tr.premises.length;
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">المقدمة <span class="ltr-iso">' +
+          '<div class="stim-label">المقدمة الضرورية <span class="ltr-iso">' +
           (pIdx + 1) +
-          " / 3</span> (تختفي بعد الانتقال)</div>" +
+          " / " +
+          totalP +
+          "</span> (لا توجد جمل مكررة)</div>" +
           '<div class="stim-step-text">' +
           esc(tr.premises[pIdx]) +
           "</div>" +
-          renderDots(3, pIdx) +
+          renderDots(totalP, pIdx) +
           '<button id="btnNextPremise" type="button" class="btn-primary">' +
-          (pIdx < 2 ? "الجملة التالية (مسافة)" : "اعرض السؤال (مسافة)") +
+          (pIdx < totalP - 1 ? "المقدمة التالية (مسافة)" : "اعرض سؤال الاستنتاج (مسافة)") +
           "</button>" +
           "</div>";
 
-        var adv = function () {
+        onNextFramePaint(function (pTs) {
+          t0 = pTs;
+        });
+
+        var advanced = false;
+        var adv = function (pressTs) {
+          if (advanced) return;
+          advanced = true;
           unbindKeyHandler();
-          premiseRts.push(Math.round(performance.now() - t0));
+          premiseRts.push(Math.max(120, Math.round((pressTs || nowMs()) - t0)));
           showPremise(pIdx + 1);
         };
-        document.getElementById("btnNextPremise").addEventListener("click", adv);
+        bindFastPress(document.getElementById("btnNextPremise"), function (_ev, pressTs) {
+          adv(pressTs);
+        });
         bindKeyHandler(function (ev) {
           if (ev.key === " " || ev.key === "Enter") {
             ev.preventDefault();
-            adv();
+            adv(nowMs());
           }
         });
       }
 
       function showBindingQuestion() {
-        var tQ = performance.now();
+        cleanupActive();
+        var tQ = nowMs();
         var optsHtml = "";
         for (var e = 0; e < tr.entities.length; e += 1) {
           optsHtml +=
@@ -1143,7 +1716,9 @@
         domRefs.stage.innerHTML =
           '<div class="task-box">' +
           '<div class="stim-label">' +
-          (tr.polarity === "flipped" ? "علاقات مقلوبة القطبية" : "علاقات خطية متسقة") +
+          (tr.polarity === "flipped"
+            ? "سلسلة مقلوبة القطبية (" + tr.entityCount + " عناصر وسط 6 بدائل)"
+            : "سلسلة خطية متسقة (3 عناصر وسط 6 بدائل)") +
           "</div>" +
           '<p class="task-question">' +
           esc(tr.question) +
@@ -1152,41 +1727,123 @@
           optsHtml +
           "</div>" +
           '<div class="arena-utility-row">' +
-          '<button id="btnPointerDecay" type="button" class="btn-forgot">عرفت الموقع المنطقي وتبخر الاسم اللفظي</button>' +
+          '<button id="btnPointerDecay" type="button" class="btn-forgot">عرفت الموقع المنطقي للعقدة وتبخر اسمها اللفظي</button>' +
           "</div>" +
           "</div>";
 
-        var choose = function (val, isPointerDecay) {
-          unbindKeyHandler();
-          var qRt = Math.round(performance.now() - tQ);
-          var totalReadAndSolve = qRt + premiseRts[0] + premiseRts[1] + premiseRts[2];
+        onNextFramePaint(function (pTs) {
+          tQ = pTs;
+        });
+
+        var decided = false;
+        var sumPremisesMs = 0;
+        for (var p = 0; p < premiseRts.length; p += 1) sumPremisesMs += premiseRts[p];
+
+        function recordAndAdvance(val, isPointerDecayReport, nodeVerified, qRt) {
+          var isExact = !isPointerDecayReport && val === tr.answer;
+          var isFoil =
+            !isPointerDecayReport &&
+            !isExact &&
+            Array.isArray(tr.foilEntities) &&
+            tr.foilEntities.indexOf(val) !== -1;
+          var isPolaritySwap =
+            !isPointerDecayReport &&
+            !isExact &&
+            !isFoil;
+
           records.push({
             polarity: tr.polarity,
-            correct: !isPointerDecay && val === tr.answer,
-            pointerDecay: Boolean(isPointerDecay),
+            correct: isExact,
+            verifiedPointerDecay: Boolean(isPointerDecayReport && nodeVerified),
+            unverifiedCollapse: Boolean(isPointerDecayReport && !nodeVerified),
+            foilIntrusion: isFoil,
+            polarityError: isPolaritySwap,
             qRtMs: qRt,
-            totalRtMs: totalReadAndSolve
+            totalRtMs: qRt + sumPremisesMs
           });
           idx += 1;
           scheduleTimer(nextTrial, 200);
+        }
+
+        function askObjectiveStructuralCheck(qRt) {
+          cleanupActive();
+          var sc = tr.structuralCheck;
+          if (!sc || !Array.isArray(sc.options)) {
+            return recordAndAdvance("", true, true, qRt);
+          }
+
+          var scHtml = "";
+          for (var s = 0; s < sc.options.length; s += 1) {
+            scHtml +=
+              '<button type="button" class="opt-btn" data-sc-idx="' +
+              s +
+              '">' +
+              esc(sc.options[s]) +
+              "</button>";
+          }
+
+          domRefs.stage.innerHTML =
+            '<div class="task-box">' +
+            '<div class="stim-label">فحص موضوعي لسلامة العقدة المنطقية بمعزل عن الاسم</div>' +
+            '<p class="task-question">' +
+            esc(sc.prompt) +
+            "</p>" +
+            '<div class="options-grid">' +
+            scHtml +
+            "</div>" +
+            "</div>";
+
+          var scBtns = domRefs.stage.querySelectorAll(".opt-btn");
+          for (var b = 0; b < scBtns.length; b += 1) {
+            scBtns[b].addEventListener("click", function (ev) {
+              unbindKeyHandler();
+              var pickIdx = Number(ev.currentTarget.getAttribute("data-sc-idx"));
+              var okNode = sc.options[pickIdx] === sc.answer;
+              recordAndAdvance("", true, okNode, qRt);
+            });
+          }
+
+          bindKeyHandler(function (ev) {
+            var n = Number(ev.key);
+            if (n >= 1 && n <= sc.options.length) {
+              ev.preventDefault();
+              unbindKeyHandler();
+              var okNode = sc.options[n - 1] === sc.answer;
+              recordAndAdvance("", true, okNode, qRt);
+            }
+          });
+        }
+
+        var choose = function (val, isPointerDecay, pressTs) {
+          if (decided) return;
+          decided = true;
+          unbindKeyHandler();
+          var qRt = Math.max(120, Math.round((pressTs || nowMs()) - tQ));
+          if (isPointerDecay) {
+            askObjectiveStructuralCheck(qRt);
+          } else {
+            recordAndAdvance(val, false, false, qRt);
+          }
         };
 
         var btns = domRefs.stage.querySelectorAll(".opt-btn");
         for (var b = 0; b < btns.length; b += 1) {
-          btns[b].addEventListener("click", function (ev) {
-            var k = Number(ev.currentTarget.getAttribute("data-ent-idx"));
-            choose(tr.entities[k], false);
-          });
+          (function (btnEl) {
+            bindFastPress(btnEl, function (_ev, pressTs) {
+              var k = Number(btnEl.getAttribute("data-ent-idx"));
+              choose(tr.entities[k], false, pressTs);
+            });
+          })(btns[b]);
         }
         document.getElementById("btnPointerDecay").addEventListener("click", function () {
-          choose("", true);
+          choose("", true, nowMs());
         });
 
         bindKeyHandler(function (ev) {
           var n = Number(ev.key);
           if (n >= 1 && n <= tr.entities.length) {
             ev.preventDefault();
-            choose(tr.entities[n - 1], false);
+            choose(tr.entities[n - 1], false, nowMs());
           }
         });
       }
@@ -1197,13 +1854,25 @@
 
   function finishBinding(records) {
     var linCorrect = 0, linCount = 0, flipCorrect = 0, flipCount = 0;
-    var pointerDecayCount = 0;
-    var linRts = [], flipRts = [], allQ = [];
+    var verifiedPointerDecayCount = 0, polarityErrorCount = 0, foilIntrusionCount = 0;
+    var structuralResolvedTotal = 0;
+    var linRts = [], flipRts = [], allQ = [], correctQ = [], trialScores = [];
 
     for (var i = 0; i < records.length; i += 1) {
       var r = records[i];
       allQ.push(r.qRtMs);
-      if (r.pointerDecay) pointerDecayCount += 1;
+      if (r.correct) {
+        correctQ.push(r.qRtMs);
+        structuralResolvedTotal += 1;
+      } else if (r.verifiedPointerDecay) {
+        verifiedPointerDecayCount += 1;
+        structuralResolvedTotal += 1;
+      }
+      if (r.polarityError) polarityErrorCount += 1;
+      if (r.foilIntrusion) foilIntrusionCount += 1;
+
+      trialScores.push(r.correct ? 100 : 0);
+
       if (r.polarity === "linear") {
         linCount += 1;
         if (r.correct) linCorrect += 1;
@@ -1215,39 +1884,64 @@
       }
     }
 
-    var score = Math.round(((linCorrect + flipCorrect) / records.length) * 100);
+    var score = Math.round(((linCorrect + flipCorrect) / Math.max(1, records.length)) * 100);
+    var structuralResolutionPct = Math.round((structuralResolvedTotal / Math.max(1, records.length)) * 100);
     var linearAccPct = linCount > 0 ? Math.round((linCorrect / linCount) * 100) : 0;
     var flippedAccPct = flipCount > 0 ? Math.round((flipCorrect / flipCount) * 100) : 0;
     var linMean = mean(linRts);
     var flipMean = mean(flipRts);
     var flipCost = Math.round(flipMean - linMean);
+    var meanQRt = mean(allQ);
+    var lisasMs = computeLisasSafe(correctQ, allQ, 1 - score / 100);
+    var splitHalfPct = computeSplitHalf(trialScores);
 
     var diag =
-      "دقة الاتجاه الموحد " +
+      "دقة ربط الاسم الكامل بلغت " +
       linearAccPct +
-      "% مقابل " +
+      "% في الاتجاه الموحد مقابل " +
       flippedAccPct +
-      "% عند انقلاب القطبية، مع تسجيل " +
-      pointerDecayCount +
-      " مرات انفكاك للاسم اللفظي عن عقدته المنطقية.";
+      "% عند انقلاب القطبية، بينما بلغت سلامة حل العقدة البنيوية " +
+      structuralResolutionPct +
+      "% (مع ثبوت " +
+      verifiedPointerDecayCount +
+      " حالات انفكاك محقق للاسم عن عقدة صحيحة، و" +
+      polarityErrorCount +
+      " أخطاء عكس قطبية، و" +
+      foilIntrusionCount +
+      " اقتحامات لبدائل غير مذكورة).";
 
-    completeProbe("binding", score, mean(allQ), {
-      linearAccPct: linearAccPct,
-      flippedAccPct: flippedAccPct,
-      pointerDecayCount: pointerDecayCount,
-      linearRtMs: linMean,
-      flippedRtMs: flipMean,
-      polarityFlipRtCostMs: flipCost
-    }, [
-      { label: "دقة الاتجاه الموحد", val: linearAccPct + "%" },
-      { label: "دقة انقلاب القطبية", val: flippedAccPct + "%" },
-      { label: "تبخر الاسم مع بقاء العقدة", val: String(pointerDecayCount) },
-      { label: "كلفة قلب القطبية", val: (flipCost >= 0 ? "+" : "") + flipCost + " ms" }
-    ], diag);
+    completeProbe(
+      "binding",
+      score,
+      meanQRt,
+      {
+        linearAccPct: linearAccPct,
+        flippedAccPct: flippedAccPct,
+        structuralResolutionPct: structuralResolutionPct,
+        pointerDecayCount: verifiedPointerDecayCount + foilIntrusionCount,
+        verifiedPointerDecayCount: verifiedPointerDecayCount,
+        polarityErrorCount: polarityErrorCount,
+        foilIntrusionCount: foilIntrusionCount,
+        linearRtMs: linMean,
+        flippedRtMs: flipMean,
+        polarityFlipRtCostMs: flipCost,
+        lisasMs: lisasMs,
+        splitHalfPct: splitHalfPct
+      },
+      [
+        { label: "دقة الاتجاه الموحد", val: linearAccPct + "%" },
+        { label: "دقة انقلاب القطبية", val: flippedAccPct + "%" },
+        { label: "سلامة العقدة البنيوية", val: structuralResolutionPct + "%" },
+        { label: "تبخر اسم محقق بنيويا", val: String(verifiedPointerDecayCount) },
+        { label: "أخطاء عكس القطبية", val: String(polarityErrorCount) },
+        { label: "كلفة قلب القطبية", val: (flipCost >= 0 ? "+" : "") + flipCost + " ms" }
+      ],
+      diag
+    );
   }
 
   /* =========================================================================
-     PROBE 5: VIGILANCE (4-Beat RLPFC Sequence Counter & Local Sleep Lapses)
+     PROBE 5: VIGILANCE (Endogenous Cycle Resync + Ex-Gaussian Tau + PVT)
      ========================================================================= */
   function runVigilanceProbe() {
     var S = getStimuli();
@@ -1259,7 +1953,7 @@
       '<div class="vigilance-pad">' +
       '<div class="probe-bar-track" style="max-width:340px;"><div id="vigProgFill" class="probe-bar-fill" style="width:0%"></div></div>' +
       '<div id="vigPulseRing" class="pulse-ring">●</div>' +
-      '<p id="vigStatusMsg" class="vig-status-msg">عدّ الومضات في دورات رباعية (1، 2، 3 ثم أغلق 4)</p>' +
+      '<p id="vigStatusMsg" class="vig-status-msg">عدّ الومضات غير الإيقاعية في دورات رباعية (1، 2، 3 ثم أغلق 4)</p>' +
       '<div class="vig-actions">' +
       '<button id="btnVigStep" type="button" class="vig-btn-step">خطوة 1 أو 2 أو 3 (مسافة)</button>' +
       '<button id="btnVigClose" type="button" class="vig-btn-close">إغلاق الدورة 4 (Enter)</button>' +
@@ -1274,97 +1968,158 @@
     var fillEl = document.getElementById("vigProgFill");
 
     var pulseIdx = 0;
-    var internalCyclePos = 0; // 1..4
+    var beatsSinceBoundary = 0; // Endogenous cycle tracker (resynchronizes on user boundary closure!)
     var respondedCurrent = true;
     var pulseStartTs = 0;
 
-    var rts = [];
-    var stepCorrect = 0;
-    var stepTotal = 0;
-    var closeCorrect = 0;
-    var closeTotal = 0;
+    var validRts = [];
+    var half1Rts = [];
+    var half2Rts = [];
+    var halfPulseScores = [];
+
+    var stepOrCloseCorrect = 0;
+    var exactCycles = 0;
+    var prematureClosures = 0;
+    var autopilotOverruns = 0;
     var localSleepLapses = 0;
     var missedPulses = 0;
+    var falseStarts = 0;
     var dmnResets = 0;
 
-    function handleAction(actionType) {
+    function handleAction(actionType, pressTs) {
+      var eventTime = pressTs || nowMs();
+
       if (actionType === "reset") {
         dmnResets += 1;
-        internalCyclePos = 0;
+        beatsSinceBoundary = 0;
         respondedCurrent = true;
         if (msgEl) msgEl.textContent = "تمت إعادة المزامنة — الومضة القادمة ستكون رقم 1";
         return;
       }
-      if (respondedCurrent || pulseIdx === 0) return;
+
+      if (pulseIdx === 0) {
+        falseStarts += 1;
+        if (msgEl) msgEl.textContent = "انتبه: استجابة استباقية قبل الومضة الأولى";
+        return;
+      }
+
+      if (respondedCurrent) {
+        // Extra press between pulses = anticipatory false start
+        falseStarts += 1;
+        if (msgEl) msgEl.textContent = "انتبه: لا تضغط قبل ظهور الومضة الضوئية";
+        return;
+      }
+
+      var rt = Math.max(1, Math.round(eventTime - pulseStartTs));
+
+      // Basner & Dinges (2011) PVT standard: RT < 120ms is an anticipatory false start, not a true visual response
+      if (rt < (cfg.anticipationMs || 120)) {
+        falseStarts += 1;
+        if (msgEl) msgEl.textContent = "استباقي مبكر (" + rt + " ms < 120 ms)";
+        return;
+      }
+
       respondedCurrent = true;
-      var rt = Math.round(performance.now() - pulseStartTs);
-      rts.push(rt);
+      validRts.push(rt);
+      if (pulseIdx <= Math.floor(cfg.totalPulses / 2)) {
+        half1Rts.push(rt);
+      } else {
+        half2Rts.push(rt);
+      }
+
       if (rt > cfg.lapseThresholdMs) {
         localSleepLapses += 1;
       }
 
-      var expectedClose = internalCyclePos === 4;
-      if (expectedClose) {
-        if (actionType === "close") closeCorrect += 1;
+      var pulseHit = 0;
+      if (actionType === "close") {
+        if (beatsSinceBoundary === cfg.cycleLength) {
+          exactCycles += 1;
+          stepOrCloseCorrect += 1;
+          pulseHit = 100;
+        } else if (beatsSinceBoundary < cfg.cycleLength) {
+          prematureClosures += 1;
+        } else {
+          // Late recovery closure after overrun: resynchronize without double-counting exact cycle
+          pulseHit = 50;
+        }
+        // Crucial endogenous resynchronization: closing a cycle resets user's internal accumulator to 0!
+        beatsSinceBoundary = 0;
       } else {
-        if (actionType === "step") stepCorrect += 1;
+        // actionType === "step"
+        if (beatsSinceBoundary > 0 && beatsSinceBoundary % cfg.cycleLength === 0) {
+          // Beat 4 (or 8) passed with "step" instead of "close": DLS Autopilot Overrun!
+          autopilotOverruns += 1;
+        } else {
+          stepOrCloseCorrect += 1;
+          pulseHit = 100;
+        }
       }
 
+      halfPulseScores.push(pulseHit);
       if (msgEl) {
         msgEl.textContent = rt + " ms";
       }
     }
 
-    document.getElementById("btnVigStep").addEventListener("click", function () {
-      handleAction("step");
+    bindFastPress(document.getElementById("btnVigStep"), function (_ev, ts) {
+      handleAction("step", ts);
     });
-    document.getElementById("btnVigClose").addEventListener("click", function () {
-      handleAction("close");
+    bindFastPress(document.getElementById("btnVigClose"), function (_ev, ts) {
+      handleAction("close", ts);
     });
-    document.getElementById("btnVigReset").addEventListener("click", function () {
-      handleAction("reset");
+    bindFastPress(document.getElementById("btnVigReset"), function (_ev, ts) {
+      handleAction("reset", ts);
     });
 
     bindKeyHandler(function (ev) {
+      var ts = nowMs();
       if (ev.key === " ") {
         ev.preventDefault();
-        handleAction("step");
+        handleAction("step", ts);
       } else if (ev.key === "Enter") {
         ev.preventDefault();
-        handleAction("close");
+        handleAction("close", ts);
       } else if (ev.key === "r" || ev.key === "R" || ev.key === "0") {
         ev.preventDefault();
-        handleAction("reset");
+        handleAction("reset", ts);
       }
     });
 
     function fireNextPulse() {
-      // Evaluate missed previous pulse
       if (pulseIdx > 0 && !respondedCurrent) {
         missedPulses += 1;
         localSleepLapses += 1;
+        halfPulseScores.push(0);
       }
 
       if (pulseIdx >= cfg.totalPulses) {
         return finishVigilance({
-          rts: rts,
-          stepCorrect: stepCorrect,
-          stepTotal: stepTotal,
-          closeCorrect: closeCorrect,
-          closeTotal: closeTotal,
+          totalPulses: cfg.totalPulses,
+          expectedCycles: Math.floor(cfg.totalPulses / cfg.cycleLength),
+          validRts: validRts,
+          half1Rts: half1Rts,
+          half2Rts: half2Rts,
+          halfPulseScores: halfPulseScores,
+          stepOrCloseCorrect: stepOrCloseCorrect,
+          exactCycles: exactCycles,
+          prematureClosures: prematureClosures,
+          autopilotOverruns: autopilotOverruns,
           localSleepLapses: localSleepLapses,
           missedPulses: missedPulses,
+          falseStarts: falseStarts,
           dmnResets: dmnResets
         });
       }
 
-      pulseIdx += 1;
-      internalCyclePos = (internalCyclePos % cfg.cycleLength) + 1;
-      if (internalCyclePos === 4) closeTotal += 1;
-      else stepTotal += 1;
+      var currentInterval =
+        Array.isArray(cfg.intervalsMs) && cfg.intervalsMs[pulseIdx]
+          ? cfg.intervalsMs[pulseIdx]
+          : cfg.baseIntervalMs + Math.floor((Math.random() * 2 - 1) * cfg.jitterMs);
 
+      pulseIdx += 1;
+      beatsSinceBoundary += 1;
       respondedCurrent = false;
-      pulseStartTs = performance.now();
 
       if (fillEl) {
         fillEl.style.width = Math.round((pulseIdx / cfg.totalPulses) * 100) + "%";
@@ -1372,84 +2127,171 @@
       if (ringEl) {
         ringEl.classList.add("is-flashing");
       }
-      scheduleTimer(function () {
-        if (ringEl) ringEl.classList.remove("is-flashing");
-      }, cfg.flashDurationMs);
 
-      var jitter = Math.floor((Math.random() * 2 - 1) * cfg.jitterMs);
-      scheduleTimer(fireNextPulse, cfg.baseIntervalMs + jitter);
+      onNextFramePaint(function (paintTs) {
+        pulseStartTs = paintTs;
+        scheduleFrameAccurate(function () {
+          if (ringEl) ringEl.classList.remove("is-flashing");
+        }, cfg.flashDurationMs);
+      });
+
+      scheduleFrameAccurate(fireNextPulse, currentInterval);
     }
 
-    scheduleTimer(fireNextPulse, 850);
+    scheduleFrameAccurate(fireNextPulse, 900);
   }
 
   function finishVigilance(st) {
-    var totalPulses = st.stepTotal + st.closeTotal;
-    var overallAcc = totalPulses > 0 ? Math.round(((st.stepCorrect + st.closeCorrect) / totalPulses) * 100) : 0;
-    var cycleCloseAccPct = st.closeTotal > 0 ? Math.round((st.closeCorrect / st.closeTotal) * 100) : 0;
-    var meanRtMs = mean(st.rts);
-    var sd = stdDev(st.rts);
-    var rtIcvPct = meanRtMs > 0 ? Math.round((sd / meanRtMs) * 100) : 0;
+    var A = getAnalytics();
+    var exG = typeof A.computeExGaussian === "function"
+      ? A.computeExGaussian(st.validRts)
+      : { meanMs: mean(st.validRts), medianMs: median(st.validRts), icvPct: 0, tauMs: 0, muMs: mean(st.validRts) };
 
-    var stabilityScore = Math.max(0, 100 - st.localSleepLapses * 11 - st.dmnResets * 14);
+    var expectedCycles = Math.max(1, st.expectedCycles);
+    var cycleCloseAccPct = Math.min(100, Math.round((st.exactCycles / expectedCycles) * 100));
+    var overallAcc = st.totalPulses > 0 ? Math.round((st.stepOrCloseCorrect / st.totalPulses) * 100) : 0;
+
+    var medH1 = median(st.half1Rts);
+    var medH2 = median(st.half2Rts);
+    var vigilanceDecrementMs =
+      st.half1Rts.length > 0 && st.half2Rts.length > 0 ? Math.round(medH2 - medH1) : 0;
+
+    var stabilityScore = Math.max(
+      0,
+      100 - st.localSleepLapses * 10 - st.dmnResets * 13 - st.falseStarts * 5
+    );
     var cycleComposite = Math.round(0.55 * cycleCloseAccPct + 0.45 * overallAcc);
     var finalScore = Math.max(0, Math.min(100, Math.round(0.65 * cycleComposite + 0.35 * stabilityScore)));
+    var splitHalfPct = computeSplitHalf(st.halfPulseScores);
 
     var diag =
-      "دقة إغلاق الدورة الرابعة سجلت " +
+      "أُغلقت " +
+      st.exactCycles +
+      " من " +
+      expectedCycles +
+      " دورات رباعية بدقة (" +
       cycleCloseAccPct +
-      "%، مع رصد " +
+      "%) مع " +
+      st.autopilotOverruns +
+      " حالات تجاوز على الطيار الآلي و" +
+      st.prematureClosures +
+      " إغلاقات مبكرة؛ الذيل الأسي للشرود والنوم الموضعي (Tau) بلغ " +
+      exG.tauMs +
+      " ms مقابل سرعة قاعدية (Mu) " +
+      exG.muMs +
+      " ms، وهفوات النوم الموضعي " +
       st.localSleepLapses +
-      " هفوات نوم موضعي (>900ms أو فوات) و" +
-      st.dmnResets +
-      " مرات إعادة ضبط لضياع العدّاد.";
+      ".";
 
-    completeProbe("vigilance", finalScore, meanRtMs, {
-      cycleCloseAccPct: cycleCloseAccPct,
-      overallStepAccPct: overallAcc,
-      localSleepLapses: st.localSleepLapses,
-      dmnResets: st.dmnResets,
-      meanRtMs: meanRtMs,
-      rtIcvPct: rtIcvPct
-    }, [
-      { label: "دقة إغلاق الدورة 4", val: cycleCloseAccPct + "%" },
-      { label: "الدقة الكلية للخطوات", val: overallAcc + "%" },
-      { label: "هفوات النوم الموضعي", val: String(st.localSleepLapses) },
-      { label: "ضياع العدّاد (DMN)", val: String(st.dmnResets) },
-      { label: "متوسط الاستجابة", val: meanRtMs + " ms" },
-      { label: "معامل التذبذب ICV", val: rtIcvPct + "%" }
-    ], diag);
+    completeProbe(
+      "vigilance",
+      finalScore,
+      exG.meanMs,
+      {
+        cycleCloseAccPct: cycleCloseAccPct,
+        overallStepAccPct: overallAcc,
+        autopilotOverruns: st.autopilotOverruns,
+        prematureClosures: st.prematureClosures,
+        localSleepLapses: st.localSleepLapses,
+        dmnResets: st.dmnResets,
+        falseStarts: st.falseStarts,
+        meanRtMs: exG.meanMs,
+        medianRtMs: exG.medianMs,
+        rtTauMs: exG.tauMs,
+        rtIcvPct: exG.icvPct,
+        vigilanceDecrementMs: vigilanceDecrementMs,
+        splitHalfPct: splitHalfPct
+      },
+      [
+        { label: "دقة إغلاق الدورة 4", val: cycleCloseAccPct + "%" },
+        { label: "ذيل الشرود الأسي (Tau)", val: exG.tauMs + " ms" },
+        { label: "تجاوز الطيار الآلي", val: String(st.autopilotOverruns) },
+        { label: "هفوات النوم الموضعي", val: String(st.localSleepLapses) },
+        { label: "وسيط الاستجابة / التدهور", val: exG.medianMs + " ms (" + (vigilanceDecrementMs >= 0 ? "+" : "") + vigilanceDecrementMs + ")" },
+        { label: "ضياع العدّاد (DMN)", val: String(st.dmnResets) }
+      ],
+      diag
+    );
   }
 
   /* =========================================================================
-     PROBE 6: CONTROL ANCHOR (3-Level Call Stack + 0.8s 2D Visual Flash)
+     PROBE 6: CONTROL ANCHOR (Stack + Rule-Interrupt + 2D Visual Cache)
      ========================================================================= */
   function renderPolygonSVG(points) {
-    var d = "";
-    for (var i = 0; i < points.length; i += 1) {
-      d += (i === 0 ? "M " : " L ") + points[i][0] + " " + points[i][1];
-    }
-    d += " Z";
     return (
       '<svg viewBox="0 0 100 100" aria-hidden="true">' +
       '<polygon points="' +
       points.map(function (p) { return p[0] + "," + p[1]; }).join(" ") +
       '" fill="currentColor" fill-opacity="0.16" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>' +
-      '<circle cx="50" cy="50" r="2.2" fill="currentColor" opacity="0.45"/>' +
+      '<circle cx="50" cy="50" r="2.1" fill="currentColor" opacity="0.42"/>' +
       "</svg>"
     );
   }
 
-  function renderMaskSVG() {
-    var cells = "";
-    for (var r = 0; r < 8; r += 1) {
-      for (var c = 0; c < 8; c += 1) {
+  function renderProportionWindowSVG(spec) {
+    var w = spec ? spec.w : 66;
+    var h = spec ? spec.h : 64;
+    var x0 = Math.round((100 - w) / 2 * 10) / 10;
+    var y0 = Math.round((100 - h) / 2 * 10) / 10;
+    var vx = Math.round((x0 + (w * (spec ? spec.sx : 60)) / 100) * 10) / 10;
+    var hy = Math.round((y0 + (h * (spec ? spec.sy : 38)) / 100) * 10) / 10;
+
+    return (
+      '<svg viewBox="0 0 100 100" aria-hidden="true">' +
+      '<rect x="' + x0 + '" y="' + y0 + '" width="' + w + '" height="' + h + '" rx="2" fill="currentColor" fill-opacity="0.11" stroke="currentColor" stroke-width="2.7"/>' +
+      '<line x1="' + vx + '" y1="' + y0 + '" x2="' + vx + '" y2="' + (y0 + h) + '" stroke="currentColor" stroke-width="2.4"/>' +
+      '<line x1="' + x0 + '" y1="' + hy + '" x2="' + (x0 + w) + '" y2="' + hy + '" stroke="currentColor" stroke-width="2.4"/>' +
+      '<circle cx="' + vx + '" cy="' + hy + '" r="2.4" fill="currentColor"/>' +
+      "</svg>"
+    );
+  }
+
+  function renderVisualStimulusSVG(tr, optionIdx) {
+    if (tr.visualSubtype === "window" && tr.targetWindow) {
+      var winSpec = typeof optionIdx === "number" ? tr.optionsWindows[optionIdx] : tr.targetWindow;
+      return renderProportionWindowSVG(winSpec);
+    }
+    var pts = typeof optionIdx === "number" ? tr.optionsPoints[optionIdx] : tr.targetPoints;
+    return renderPolygonSVG(pts);
+  }
+
+  // High-density multi-orientation contour + spatial-frequency luminance mask
+  // Terminates V1 oriented-edge iconic persistence (<300ms) to isolate pure V4/LOC Visual Cache
+  function renderMaskSVG(seed) {
+    var s = Number(seed) || 1337;
+    function nextRand() {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return (s & 0xffff) / 65536;
+    }
+
+    var parts = [];
+    for (var r = 0; r < 10; r += 1) {
+      for (var c = 0; c < 10; c += 1) {
         if ((r + c) % 2 === 0) {
-          cells += '<rect x="' + c * 12.5 + '" y="' + r * 12.5 + '" width="12.5" height="12.5" fill="currentColor" opacity="0.55"/>';
+          parts.push(
+            '<rect x="' + (c * 10) + '" y="' + (r * 10) + '" width="10" height="10" fill="currentColor" opacity="0.28"/>'
+          );
         }
       }
     }
-    return '<svg viewBox="0 0 100 100" aria-hidden="true">' + cells + "</svg>";
+    for (var l = 0; l < 28; l += 1) {
+      var x1 = Math.round(nextRand() * 96 + 2);
+      var y1 = Math.round(nextRand() * 96 + 2);
+      var x2 = Math.round(nextRand() * 96 + 2);
+      var y2 = Math.round(nextRand() * 96 + 2);
+      parts.push(
+        '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="currentColor" stroke-width="2.4" opacity="0.68"/>'
+      );
+    }
+    for (var k = 0; k < 5; k += 1) {
+      var cx = Math.round(nextRand() * 68 + 16);
+      var cy = Math.round(nextRand() * 68 + 16);
+      var rad = Math.round(nextRand() * 18 + 8);
+      parts.push(
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + rad + '" fill="none" stroke="currentColor" stroke-width="2.1" opacity="0.55"/>'
+      );
+    }
+    return '<svg viewBox="0 0 100 100" aria-hidden="true">' + parts.join("") + "</svg>";
   }
 
   function runControlProbe() {
@@ -1457,19 +2299,23 @@
     var trials = S.generateControlTrials();
     var meta = findProbeMeta("control");
     var idx = 0;
-    var stackHits = 0, stackTotal = 0, visHits = 0, visTotal = 0;
-    var stackRts = [], visRts = [];
+    var stackHits = 0, stackTotal = 0;
+    var ruleHits = 0, ruleTotal = 0;
+    var visHits = 0, visTotal = 0;
+    var stackRts = [], visRts = [], trialScores = [];
 
     function nextTrial() {
       cleanupActive();
       if (idx >= trials.length) {
-        return finishControl(stackHits, stackTotal, visHits, visTotal, stackRts, visRts);
+        return finishControl(stackHits, stackTotal, ruleHits, ruleTotal, visHits, visTotal, stackRts, visRts, trialScores);
       }
       var tr = trials[idx];
       setHeader(meta.title, formatProgressPrefix("Trial " + (idx + 1) + "/" + trials.length));
 
       if (tr.kind === "stack") {
         runStackTrial(tr);
+      } else if (tr.kind === "rule_interrupt") {
+        runRuleInterruptTrial(tr);
       } else {
         runVisualTrial(tr);
       }
@@ -1477,14 +2323,15 @@
 
     function runStackTrial(tr) {
       var frames = [
-        { label: "الطبقة 1 من 3 (الأصل)", text: tr.frame1Text, btn: "افتح الفرع الأول (مسافة)" },
-        { label: "الطبقة 2 من 3 (الفرع الأول)", text: tr.frame2Text, btn: "افتح الفرع الثاني (مسافة)" },
+        { label: "الطبقة 1 من 3 (الأصل المعلّق)", text: tr.frame1Text, btn: "افتح الفرع الأول (مسافة)" },
+        { label: "الطبقة 2 من 3 (الفرع الأول المعلّق)", text: tr.frame2Text, btn: "افتح الفرع الثاني (مسافة)" },
         { label: "الطبقة 3 من 3 (القاعدة المباشرة)", text: tr.frame3Text, btn: "احسب وعوّض صعودا (مسافة)" }
       ];
 
       function showFrame(fIdx) {
+        cleanupActive();
         if (fIdx >= frames.length) {
-          var t0 = performance.now();
+          var t0 = nowMs();
           var optsHtml = "";
           for (var o = 0; o < tr.options.length; o += 1) {
             optsHtml +=
@@ -1496,7 +2343,7 @@
           }
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<div class="stim-label">إغلاق المكدس الصاعد</div>' +
+            '<div class="stim-label">إغلاق المكدس الصاعد (6 بدائل)</div>' +
             '<p class="task-question">' +
             esc(tr.closeText) +
             "</p>" +
@@ -1505,26 +2352,35 @@
             "</div>" +
             "</div>";
 
-          var pick = function (val) {
+          onNextFramePaint(function (pTs) { t0 = pTs; });
+
+          var pickedDone = false;
+          var pick = function (val, pressTs) {
+            if (pickedDone) return;
+            pickedDone = true;
             unbindKeyHandler();
-            stackRts.push(Math.round(performance.now() - t0));
+            stackRts.push(Math.max(100, Math.round((pressTs || nowMs()) - t0)));
             stackTotal += 1;
-            if (Number(val) === Number(tr.answer)) stackHits += 1;
+            var hit = Number(val) === Number(tr.answer);
+            if (hit) stackHits += 1;
+            trialScores.push(hit ? 100 : 0);
             idx += 1;
             scheduleTimer(nextTrial, 200);
           };
 
           var btns = domRefs.stage.querySelectorAll(".opt-btn");
           for (var b = 0; b < btns.length; b += 1) {
-            btns[b].addEventListener("click", function (ev) {
-              pick(ev.currentTarget.getAttribute("data-val"));
-            });
+            (function (btnEl) {
+              bindFastPress(btnEl, function (_ev, pressTs) {
+                pick(btnEl.getAttribute("data-val"), pressTs);
+              });
+            })(btns[b]);
           }
           bindKeyHandler(function (ev) {
             var n = Number(ev.key);
             if (n >= 1 && n <= tr.options.length) {
               ev.preventDefault();
-              pick(tr.options[n - 1]);
+              pick(tr.options[n - 1], nowMs());
             }
           });
           return;
@@ -1561,119 +2417,282 @@
       showFrame(0);
     }
 
+    function runRuleInterruptTrial(tr) {
+      // Step 1: Encode IF-ELSE rule -> Step 2: Compute single accumulator -> Step 3: Semantic interruption -> Step 4: Apply rule
+      function stepRule() {
+        cleanupActive();
+        domRefs.stage.innerHTML =
+          '<div class="stimulus-card">' +
+          '<div class="stim-label">مخزن القواعد الأمامي (الخطوة 1 من 3)</div>' +
+          '<div class="stim-step-text">' + esc(tr.ruleText) + "</div>" +
+          renderDots(3, 0) +
+          '<button id="btnRuleNext1" type="button" class="btn-primary">حفظت القاعدة الشرطية — التالي (مسافة)</button>' +
+          "</div>";
+        var go = function () { unbindKeyHandler(); stepAccum(); };
+        document.getElementById("btnRuleNext1").addEventListener("click", go);
+        bindKeyHandler(function (ev) {
+          if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); go(); }
+        });
+      }
+
+      function stepAccum() {
+        cleanupActive();
+        domRefs.stage.innerHTML =
+          '<div class="stimulus-card">' +
+          '<div class="stim-label">المتغير النشط الواحد (الخطوة 2 من 3)</div>' +
+          '<div class="stim-step-text">' + esc(tr.calcText) + "</div>" +
+          renderDots(3, 1) +
+          '<button id="btnRuleNext2" type="button" class="btn-primary">حسبت العدد — اعرض المقاطعة (مسافة)</button>' +
+          "</div>";
+        var go = function () { unbindKeyHandler(); stepInterrupt(); };
+        document.getElementById("btnRuleNext2").addEventListener("click", go);
+        bindKeyHandler(function (ev) {
+          if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); go(); }
+        });
+      }
+
+      function stepInterrupt() {
+        cleanupActive();
+        var iHtml = "";
+        for (var i = 0; i < tr.interruptOptions.length; i += 1) {
+          iHtml +=
+            '<button type="button" class="opt-btn" data-iv="' +
+            esc(tr.interruptOptions[i]) +
+            '">' +
+            esc(tr.interruptOptions[i]) +
+            "</button>";
+        }
+        domRefs.stage.innerHTML =
+          '<div class="task-box">' +
+          '<div class="stim-label">مقاطعة استرجاعية عابرة (الخطوة 3 من 3)</div>' +
+          '<p class="task-question">' + esc(tr.interruptPrompt) + "</p>" +
+          '<div class="options-grid">' + iHtml + "</div>" +
+          "</div>";
+
+        var pickIntr = function (chosenI) {
+          unbindKeyHandler();
+          var intrOk = chosenI === tr.interruptAnswer;
+          stepApply(intrOk);
+        };
+        var btns = domRefs.stage.querySelectorAll(".opt-btn");
+        for (var b = 0; b < btns.length; b += 1) {
+          btns[b].addEventListener("click", function (ev) {
+            pickIntr(ev.currentTarget.getAttribute("data-iv"));
+          });
+        }
+        bindKeyHandler(function (ev) {
+          var n = Number(ev.key);
+          if (n >= 1 && n <= tr.interruptOptions.length) {
+            ev.preventDefault();
+            pickIntr(tr.interruptOptions[n - 1]);
+          }
+        });
+      }
+
+      function stepApply(intrOk) {
+        cleanupActive();
+        var t0 = nowMs();
+        var oHtml = "";
+        for (var o = 0; o < tr.options.length; o += 1) {
+          oHtml +=
+            '<button type="button" class="opt-btn" data-rv="' +
+            tr.options[o] +
+            '"><span class="ltr-iso">' +
+            tr.options[o] +
+            "</span></button>";
+        }
+        domRefs.stage.innerHTML =
+          '<div class="task-box">' +
+          '<div class="stim-label">العودة لتطبيق القاعدة الشرطية بعد المقاطعة</div>' +
+          '<p class="task-question">' + esc(tr.applyPrompt) + "</p>" +
+          '<div class="options-grid">' + oHtml + "</div>" +
+          "</div>";
+
+        onNextFramePaint(function (pTs) { t0 = pTs; });
+
+        var doneApply = false;
+        var finishRule = function (val, pressTs) {
+          if (doneApply) return;
+          doneApply = true;
+          unbindKeyHandler();
+          stackRts.push(Math.max(100, Math.round((pressTs || nowMs()) - t0)));
+          ruleTotal += 1;
+          var hit = intrOk && Number(val) === Number(tr.answer);
+          if (hit) ruleHits += 1;
+          trialScores.push(hit ? 100 : 0);
+          idx += 1;
+          scheduleTimer(nextTrial, 200);
+        };
+
+        var btns = domRefs.stage.querySelectorAll(".opt-btn");
+        for (var b = 0; b < btns.length; b += 1) {
+          (function (btnEl) {
+            bindFastPress(btnEl, function (_ev, pressTs) {
+              finishRule(btnEl.getAttribute("data-rv"), pressTs);
+            });
+          })(btns[b]);
+        }
+        bindKeyHandler(function (ev) {
+          var n = Number(ev.key);
+          if (n >= 1 && n <= tr.options.length) {
+            ev.preventDefault();
+            finishRule(tr.options[n - 1], nowMs());
+          }
+        });
+      }
+
+      stepRule();
+    }
+
     function runVisualTrial(tr) {
       domRefs.stage.innerHTML =
         '<div class="visual-canvas-wrap">' +
-        '<div class="stim-label">ثبّت بصرك لالتقاط التناسب المسطح (0.8 ثانية)</div>' +
+        '<div class="stim-label">ثبّت بصرك لالتقاط التناسب المسطح الصامت (0.8 ثانية)</div>' +
         '<div class="visual-svg-box"><span class="stim-num">+</span></div>' +
         "</div>";
 
-      scheduleTimer(function () {
+      scheduleFrameAccurate(function () {
         domRefs.stage.innerHTML =
           '<div class="visual-canvas-wrap">' +
-          '<div class="stim-label">ومضة الشكل الهدف</div>' +
+          '<div class="stim-label">' +
+          (tr.visualSubtype === "window" ? "ومضة نافذة التناسب اللارمزية" : "ومضة المضلع الأملس") +
+          "</div>" +
           '<div class="visual-svg-box">' +
-          renderPolygonSVG(tr.targetPoints) +
+          renderVisualStimulusSVG(tr, null) +
           "</div>" +
           "</div>";
 
-        scheduleTimer(function () {
-          domRefs.stage.innerHTML =
-            '<div class="visual-canvas-wrap">' +
-            '<div class="stim-label">قناع بصري</div>' +
-            '<div class="visual-svg-box">' +
-            renderMaskSVG() +
-            "</div>" +
-            "</div>";
-
-          scheduleTimer(function () {
+        onNextFramePaint(function () {
+          scheduleFrameAccurate(function () {
             domRefs.stage.innerHTML =
               '<div class="visual-canvas-wrap">' +
-              '<div class="stim-label">احتفاظ صامت (2 ثانية)...</div>' +
-              '<div class="visual-svg-box"></div>' +
+              '<div class="stim-label">قناع تقنيع بصري متعدد الاتجاهات</div>' +
+              '<div class="visual-svg-box">' +
+              renderMaskSVG(tr.maskSeed) +
+              "</div>" +
               "</div>";
 
-            scheduleTimer(function () {
-              var t0 = performance.now();
-              var gridHtml = "";
-              for (var o = 0; o < tr.optionsPoints.length; o += 1) {
-                gridHtml +=
-                  '<button type="button" class="visual-opt-btn" data-opt="' +
-                  o +
-                  '">' +
-                  renderPolygonSVG(tr.optionsPoints[o]) +
-                  "</button>";
-              }
+            onNextFramePaint(function () {
+              scheduleFrameAccurate(function () {
+                domRefs.stage.innerHTML =
+                  '<div class="visual-canvas-wrap">' +
+                  '<div class="stim-label">احتفاظ بصري صامت (2.2 ثانية)...</div>' +
+                  '<div class="visual-svg-box"></div>' +
+                  "</div>";
 
-              domRefs.stage.innerHTML =
-                '<div class="task-box">' +
-                '<p class="task-question">اختر الشكل المطابق تماما للشكل الذي ومض:</p>' +
-                '<div class="visual-options-grid">' +
-                gridHtml +
-                "</div>" +
-                "</div>";
+                scheduleFrameAccurate(function () {
+                  var t0 = nowMs();
+                  var numOpts = tr.visualSubtype === "window" ? tr.optionsWindows.length : tr.optionsPoints.length;
+                  var gridHtml = "";
+                  for (var o = 0; o < numOpts; o += 1) {
+                    gridHtml +=
+                      '<button type="button" class="visual-opt-btn" data-opt="' +
+                      o +
+                      '">' +
+                      renderVisualStimulusSVG(tr, o) +
+                      "</button>";
+                  }
 
-              var pickVis = function (chosenIdx) {
-                unbindKeyHandler();
-                visRts.push(Math.round(performance.now() - t0));
-                visTotal += 1;
-                if (Number(chosenIdx) === Number(tr.correctIndex)) visHits += 1;
-                idx += 1;
-                scheduleTimer(nextTrial, 200);
-              };
+                  domRefs.stage.innerHTML =
+                    '<div class="task-box">' +
+                    '<p class="task-question">اختر الشكل المطابق تماما في التناسب للشكل الذي ومض:</p>' +
+                    '<div class="visual-options-grid">' +
+                    gridHtml +
+                    "</div>" +
+                    "</div>";
 
-              var btns = domRefs.stage.querySelectorAll(".visual-opt-btn");
-              for (var b = 0; b < btns.length; b += 1) {
-                btns[b].addEventListener("click", function (ev) {
-                  pickVis(ev.currentTarget.getAttribute("data-opt"));
-                });
-              }
-              bindKeyHandler(function (ev) {
-                var n = Number(ev.key);
-                if (n >= 1 && n <= 4) {
-                  ev.preventDefault();
-                  pickVis(n - 1);
-                }
-              });
-            }, tr.delayMs);
-          }, tr.maskMs);
-        }, tr.flashMs);
+                  onNextFramePaint(function (pTs) { t0 = pTs; });
+
+                  var visPicked = false;
+                  var pickVis = function (chosenIdx, pressTs) {
+                    if (visPicked) return;
+                    visPicked = true;
+                    unbindKeyHandler();
+                    visRts.push(Math.max(100, Math.round((pressTs || nowMs()) - t0)));
+                    visTotal += 1;
+                    var hit = Number(chosenIdx) === Number(tr.correctIndex);
+                    if (hit) visHits += 1;
+                    trialScores.push(hit ? 100 : 0);
+                    idx += 1;
+                    scheduleTimer(nextTrial, 200);
+                  };
+
+                  var btns = domRefs.stage.querySelectorAll(".visual-opt-btn");
+                  for (var b = 0; b < btns.length; b += 1) {
+                    (function (btnEl) {
+                      bindFastPress(btnEl, function (_ev, pressTs) {
+                        pickVis(btnEl.getAttribute("data-opt"), pressTs);
+                      });
+                    })(btns[b]);
+                  }
+                  bindKeyHandler(function (ev) {
+                    var n = Number(ev.key);
+                    if (n >= 1 && n <= 4) {
+                      ev.preventDefault();
+                      pickVis(n - 1, nowMs());
+                    }
+                  });
+                }, tr.delayMs);
+              }, tr.maskMs);
+            });
+          }, tr.flashMs);
+        });
       }, 550);
     }
 
     nextTrial();
   }
 
-  function finishControl(stackHits, stackTotal, visHits, visTotal, stackRts, visRts) {
-    var stackAccPct = stackTotal > 0 ? Math.round((stackHits / stackTotal) * 100) : 0;
+  function finishControl(stackHits, stackTotal, ruleHits, ruleTotal, visHits, visTotal, stackRts, visRts, trialScores) {
+    var frontalHits = stackHits + ruleHits;
+    var frontalTotal = stackTotal + ruleTotal;
+    var stackAccPct = frontalTotal > 0 ? Math.round((frontalHits / frontalTotal) * 100) : 0;
+    var ruleInterruptAccPct = ruleTotal > 0 ? Math.round((ruleHits / ruleTotal) * 100) : 100;
     var visual2dAccPct = visTotal > 0 ? Math.round((visHits / visTotal) * 100) : 0;
-    var score = Math.round(0.5 * stackAccPct + 0.5 * visual2dAccPct);
+
+    var totalTrials = frontalTotal + visTotal;
+    var score = totalTrials > 0 ? Math.round(((frontalHits + visHits) / totalTrials) * 100) : 0;
     var stackRtMs = mean(stackRts);
     var visual2dRtMs = mean(visRts);
     var allMean = mean(stackRts.concat(visRts));
+    var splitHalfPct = computeSplitHalf(trialScores);
 
     var diag =
-      "مكدس الأقواس الهرمي سجل " +
+      "مكدس الاستدعاء والقاعدة الشرطية تحت المقاطعة سجلا " +
       stackAccPct +
-      "% وومضة التناسب المسطح (0.8 ثانية) سجلت " +
+      "%، والمخزن البصري الصامت (0.8s مع تقنيع متعدد الاتجاهات) سجل " +
       visual2dAccPct +
-      "%؛ يمثل هذا المسبار خط الضبط السليم لمقارنة المناطق المتضررة.";
+      "%؛ " +
+      (score >= 82
+        ? "ثبات المرساة فوق 82% يؤكد سلامة اليقظة العامة وصلاحية الجلسة للتفسير البؤري."
+        : "هبوط المرساة دون 82% يشير إلى إرهاق عام عابر ينبغي مراعاته عند قراءة بقية المسبارات.");
 
-    completeProbe("control", score, allMean, {
-      stackAccPct: stackAccPct,
-      visual2dAccPct: visual2dAccPct,
-      stackRtMs: stackRtMs,
-      visual2dRtMs: visual2dRtMs
-    }, [
-      { label: "مكدس 3 طبقات", val: stackAccPct + "%" },
-      { label: "ومضة 2D (0.8s)", val: visual2dAccPct + "%" },
-      { label: "زمن حل المكدس", val: stackRtMs + " ms" },
-      { label: "زمن مطابقة 2D", val: visual2dRtMs + " ms" }
-    ], diag);
+    completeProbe(
+      "control",
+      score,
+      allMean,
+      {
+        stackAccPct: stackAccPct,
+        ruleInterruptAccPct: ruleInterruptAccPct,
+        visual2dAccPct: visual2dAccPct,
+        stackRtMs: stackRtMs,
+        visual2dRtMs: visual2dRtMs,
+        splitHalfPct: splitHalfPct
+      },
+      [
+        { label: "المكدس والقاعدة الشرطية", val: stackAccPct + "%" },
+        { label: "صمود القاعدة بعد المقاطعة", val: ruleInterruptAccPct + "%" },
+        { label: "المخزن البصري 2D (0.8s)", val: visual2dAccPct + "%" },
+        { label: "زمن حل المكدس والشرط", val: stackRtMs + " ms" },
+        { label: "زمن مطابقة التناسب 2D", val: visual2dRtMs + " ms" },
+        { label: "اتساق الجلسة النصفي", val: splitHalfPct + "%" }
+      ],
+      diag
+    );
   }
 
   /* =========================================================================
-     COMPLETION, PERSISTENCE & REPORT RENDERING
+     COMPLETION, PERSISTENCE & REPORT RENDERING (WITH RCI & VALIDITY)
      ========================================================================= */
   function completeProbe(probeId, score, rtMeanMs, submetrics, displayCards, diagnosisText) {
     cleanupActive();
@@ -1682,6 +2701,11 @@
     var ctx = sessionState.contextSnapshot || captureContext();
     var nowTs = Date.now();
     var recId = "rec_" + probeId + "_" + nowTs + "_" + Math.floor(Math.random() * 1000);
+
+    var enrichedSubmetrics = Object.assign({}, submetrics || {});
+    if (sessionState.tabInterruptions > 0) {
+      enrichedSubmetrics.tabInterruptions = sessionState.tabInterruptions;
+    }
 
     var saved = null;
     if (typeof A.recordProbeResult === "function") {
@@ -1693,10 +2717,11 @@
           probeId: probeId,
           score: score,
           rtMeanMs: rtMeanMs,
-          submetrics: submetrics,
+          submetrics: enrichedSubmetrics,
           phase: ctx.phase,
           sleepQuality: ctx.sleepQuality,
           alertness: ctx.alertness,
+          nasalPatency: ctx.nasalPatency,
           notes: ctx.notes || ""
         });
       } catch (err) {
@@ -1720,6 +2745,11 @@
     var deltaSign = deltaBase > 0 ? "+" : "";
     var deltaCls = deltaBase > 0 ? "is-up" : deltaBase < 0 ? "is-down" : "is-neutral";
 
+    var rciInfo = typeof A.computeRCI === "function"
+      ? A.computeRCI(deltaBase, probeId, 1, 1)
+      : { rci: 0, sem: meta.sem || 8, statusAr: "معاير", isReliable: false };
+    var rciCls = rciInfo.rci >= 1.96 ? "is-up" : rciInfo.rci <= -1.96 ? "is-down" : "is-neutral";
+
     var cardsHtml = "";
     for (var i = 0; i < displayCards.length; i += 1) {
       cardsHtml +=
@@ -1727,11 +2757,18 @@
         '<span class="stim-label">' +
         esc(displayCards[i].label) +
         "</span>" +
-        '<strong style="font-size:1.08rem;"><span class="ltr-iso">' +
+        '<strong style="font-size:1.06rem;"><span class="ltr-iso">' +
         esc(displayCards[i].val) +
         "</span></strong>" +
         "</div>";
     }
+
+    var interruptionNotice =
+      sessionState.tabInterruptions > 0
+        ? '<div class="warmup-feedback is-warning">ملاحظة ضبط الجودة: رُصدت مغادرة للتبويب أثناء القياس (' +
+          sessionState.tabInterruptions +
+          " مرة)؛ يُفضل عدم مغادرة النافذة لضمان دقة الملي ثانية.</div>"
+        : "";
 
     var isLastBatteryStep =
       sessionState.isBattery && sessionState.batteryIndex >= sessionState.batteryQueue.length - 1;
@@ -1766,12 +2803,23 @@
       '">عن خط الأساس: <span class="ltr-iso">' +
       deltaSign +
       deltaBase +
-      "%</span></span>" +
+      "% (±" +
+      rciInfo.sem +
+      "%)</span></span>" +
+      '<span class="delta-pill ' +
+      rciCls +
+      '">' +
+      esc(rciInfo.statusAr) +
+      ' (<span class="ltr-iso">RCI ' +
+      (rciInfo.rci > 0 ? "+" : "") +
+      rciInfo.rci +
+      "</span>)</span>" +
       '<span class="delta-pill is-neutral">الهدف السليم: <span class="ltr-iso">' +
       (meta.normScore || 85) +
       "%</span></span>" +
       "</div>" +
       "</div>" +
+      interruptionNotice +
       '<div class="submetrics-grid">' +
       cardsHtml +
       "</div>" +
@@ -1846,6 +2894,10 @@
     var ctrl = runRec ? runRec.controlScore : sessionState.batteryScores.control || 0;
     var deltaComp = comp - 36;
     var gap = ctrl - comp;
+    var compRciObj = typeof A.computeRCI === "function"
+      ? A.computeRCI(deltaComp, "composite", 1, 1)
+      : { rci: 0, statusAr: "معاير", ci95Pts: 10.7 };
+    var ctrlValid = ctrl >= 82;
 
     setHeader("الحصيلة الجراحية للبطارية الكاملة", "6/6 Completed");
 
@@ -1859,20 +2911,34 @@
       '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">' +
       '<span class="delta-pill ' +
       (deltaComp >= 0 ? "is-up" : "is-down") +
-      '">التحسن عن خط الأساس (36%): <span class="ltr-iso">' +
+      '">عن خط الأساس (36%): <span class="ltr-iso">' +
       (deltaComp >= 0 ? "+" : "") +
       deltaComp +
       "%</span></span>" +
-      '<span class="delta-pill is-neutral">مرساة التحكم: <span class="ltr-iso">' +
+      '<span class="delta-pill ' +
+      (compRciObj.rci >= 1.96 ? "is-up" : compRciObj.rci <= -1.96 ? "is-down" : "is-neutral") +
+      '">' +
+      esc(compRciObj.statusAr) +
+      ' (<span class="ltr-iso">RCI ' +
+      (compRciObj.rci > 0 ? "+" : "") +
+      compRciObj.rci +
+      "</span>)</span>" +
+      '<span class="delta-pill ' +
+      (ctrlValid ? "is-neutral" : "is-down") +
+      '">مرساة الضبط: <span class="ltr-iso">' +
       ctrl +
       "%</span></span>" +
-      '<span class="delta-pill is-neutral">فجوة التباين الحالية: <span class="ltr-iso">' +
+      '<span class="delta-pill is-neutral">فجوة التباين: <span class="ltr-iso">' +
       gap +
       " نقطة</span></span>" +
       "</div>" +
       "</div>" +
       '<div class="diagnosis-callout">' +
-      "اكتمل توثيق المسبارات الستة وحُفظت الجلسة في السجل الطولي؛ انتقل إلى تبويب المنحنيات لمقارنة ردم الفجوة العصبية عبر المراحل العلاجية." +
+      (ctrlValid
+        ? "اكتمل توثيق المسبارات الستة بثبات سليم لمرساة الضبط (≥82%)؛ تبلغ عتبة التحسن المركب الموثوق إحصائيا عند p<0.05 مقدار +" +
+          compRciObj.ci95Pts +
+          " نقطة فوق خط الأساس. راجع تبويب المنحنيات لمعاينة التحليل الإحصائي الشامل."
+        : "تنبيه منهجي: سجلت مرساة الضبط هبوطا دون 82% مما يشير إلى إرهاق عام أو نعاس عارض في هذه الجلسة؛ راجع تبويب المنحنيات لمقارنة الجلسة بالسجل الطولي.") +
       "</div>" +
       '<div class="result-actions">' +
       '<button id="btnCloseBatterySummary" type="button" class="btn-primary">العودة إلى لوحة القيادة والمنحنيات (Enter)</button>' +
@@ -1906,7 +2972,8 @@
     startSingleProbe: startSingleProbe,
     startProbe: startSingleProbe,
     runProbe: startSingleProbe,
-    launchProbe: startSingleProbe
+    launchProbe: startSingleProbe,
+    runInteractiveWarmup: runInteractiveWarmup
   };
 
   root.NeuroLab.Engine = Engine;

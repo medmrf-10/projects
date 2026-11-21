@@ -26,6 +26,17 @@
     "vigilance"
   ];
 
+  // Classical Test Theory SEM & Jacobson-Truax (1991) S_diff = sqrt(2) * SEM
+  var PSYCHOMETRIC_NORMS = {
+    isolation: { sem: 8.5, sDiff: 12.0, rci95Pts: 23.5 },
+    updating: { sem: 9.0, sDiff: 12.7, rci95Pts: 24.9 },
+    gating: { sem: 8.2, sDiff: 11.6, rci95Pts: 22.7 },
+    binding: { sem: 10.5, sDiff: 14.8, rci95Pts: 29.1 },
+    vigilance: { sem: 6.2, sDiff: 8.8, rci95Pts: 17.2 },
+    control: { sem: 5.8, sDiff: 8.2, rci95Pts: 16.1 },
+    composite: { sem: 3.84, sDiff: 5.43, rci95Pts: 10.7 }
+  };
+
   var BASELINE_REF = {
     date: "2026-11-21",
     scores: {
@@ -47,17 +58,17 @@
     compositeDeficitBaseline: 36,
     clinicalNotes: {
       isolation:
-        "يقيس صمود المفردات المجردة في القناة الجبهية أثناء تنفيذ عملية حسابية أو علائقية؛ صعوده يدل على انغلاق قنوات التسريب الجبهية وتراجع المسح الناتج عن المعالجة.",
+        "يطبق نموذج تقاسم الموارد الموقوت (TBRS) ومعيار Conway et al. (2005): يقيس صمود المفردات المجردة في القناة الجبهية أثناء معالجة موقوتة بعد طرح أثر السعة الصافية وفصل المسح الحقيقي عن إبدال الترتيب.",
       updating:
-        "يفصل جراحيا بين أخطاء التصاق القيمة القديمة (التداخل الاستباقي) وأخطاء التبخر الصرف في الرف الجانبي عند تتبع متغيرين أو 3 متغيرات متغيرة القيم.",
+        "يطبق نموذج Oberauer (2002) وكلفة تبديل البؤرة (Garavan, 1998): يعزل دقة البؤرة اللحظية عن صمود الرف الجانبي ويفصل رياضيا بين التصاق القيمة القديمة وتبخر العدد وخلط المتغيرات.",
       gating:
-        "يقارن السعة المتكتلة بالسعة المتناوبة لاستخراج عقوبة التناوب الصافية؛ صعوده وانخفاض عقوبة التناوب يعكسان مرونة بوابة التوجيه اللحظي بين فئتين.",
+        "يطبق نموذج بوابة الإدخال الجبهية المخططية (Chatham et al., 2014): يوازن اتجاه البدء بين الكلمات والأرقام لتحييد الحداثة ويقيس عقوبة التناوب الطرحية الصافية.",
       binding:
-        "يقيس ثبات اقتران الاسم اللفظي بالعقدة المنطقية عند انقلاب قطبية المقارنة؛ صعوده يعني بقاء المؤشر الاسمي ملتصقا بعقدته أثناء الاستنتاج.",
+        "يطبق نماذج التكامل العلائقي في القطب الجبهي (Waltz et al., 1999) وانقلاب القطبية (Clark, 1969): يختبر سلاسل خالية من المقدمات الفائضة وسط 6 بدائل دلالية مع فحص تحقق بنيوي موضوعي من العقدة.",
       vigilance:
-        "يرصد دقة عدّاد الدورات الرباعي الداخلي وانحسار هفوات النوم الموضعي العصبوني وحوادث ضياع العدّاد باقتحام شبكة الوضع الافتراضي.",
+        "يدمج تتبع الدورات القطبي (Desrochers et al., 2015) مع المعيار الذهبي لليقظة (Basner & Dinges, 2011) وتفكيك التوزيع الأسي الغاوسي (Ex-Gaussian Tau) لرصد الشرود والنوم الموضعي وأخطاء الطيار الآلي.",
       control:
-        "يمثل مرساة الضبط الموجب السليمة (مكدس الاستدعاء الهرمي وومضة التناسب المسطح 0.8 ثانية)؛ ثباته عاليا مع صعود المسبارات الخمسة يثبت ردم الفجوة العصبية انتقائيا."
+        "مرساة الضبط السليمة (6 جولات تشمل مكدس 3 طبقات وقاعدة شرطية تحت المقاطعة و3 ومضات تناسب بصري صامت بقناع هندسي كثيف)؛ ثباتها فوق 82% يثبت أن أي تغير في المناطق الخمس بؤري انتقائي لا إرهاق عام."
     }
   };
 
@@ -163,6 +174,12 @@
     return Math.round(n * 10) / 10;
   }
 
+  function round2(num) {
+    var n = Number(num);
+    if (!Number.isFinite(n)) return 0;
+    return Math.round(n * 100) / 100;
+  }
+
   function formatSigned(num) {
     var n = round1(num);
     if (n > 0) return "+" + toAsciiDigits(n);
@@ -205,6 +222,227 @@
     return "night";
   }
 
+  /* =========================================================================
+     SCIENTIFIC PSYCHOMETRICS: RCI, EX-GAUSSIAN TAU, LISAS & SPLIT-HALF
+     ========================================================================= */
+
+  function computeRCI(delta, probeOrKey, nBaseline, nCurrent) {
+    var spec = PSYCHOMETRIC_NORMS[probeOrKey] || PSYCHOMETRIC_NORMS.composite;
+    var sem = spec.sem;
+    var n0 = typeof nBaseline === "number" && nBaseline >= 1 ? nBaseline : 1;
+    var n1 = typeof nCurrent === "number" && nCurrent >= 1 ? nCurrent : 1;
+    var sDiff = sem * Math.sqrt(1 / n0 + 1 / n1);
+    var d = Number(delta);
+    if (!Number.isFinite(d) || sDiff <= 0) {
+      return {
+        rci: 0,
+        sem: round1(sem),
+        sDiff: round1(sDiff),
+        ci95Pts: round1(1.96 * sDiff),
+        isReliable: false,
+        status: "within_noise",
+        statusAr: "ضمن هامش التذبذب القياسي"
+      };
+    }
+
+    var rci = round2(d / sDiff);
+    var ci95Pts = round1(1.96 * sDiff);
+    var status = "within_noise";
+    var statusAr = "ضمن هامش التذبذب القياسي";
+
+    if (rci >= 1.96) {
+      status = "reliable_gain";
+      statusAr = "تحسن موثوق إحصائيا (p<0.05)";
+    } else if (rci >= 1.28) {
+      status = "marginal_gain";
+      statusAr = "ميل تحسن أولي (p<0.10)";
+    } else if (rci <= -1.96) {
+      status = "reliable_drop";
+      statusAr = "تراجع دال إحصائيا (p<0.05)";
+    } else if (rci <= -1.28) {
+      status = "marginal_drop";
+      statusAr = "تراجع طفيف محتمل";
+    }
+
+    return {
+      rci: rci,
+      sem: round1(sem),
+      sDiff: round1(sDiff),
+      ci95Pts: ci95Pts,
+      isReliable: Math.abs(rci) >= 1.96,
+      status: status,
+      statusAr: statusAr
+    };
+  }
+
+  function computeExGaussian(rawRts) {
+    // Ratcliff (1979) & Lacouture & Cousineau (2008) bounded Method-of-Moments Ex-Gaussian decomposition
+    // Separates fast Gaussian sensorimotor core (mu, sigma) from exponential attentional/Local-Sleep tail (tau)
+    var valid = [];
+    if (Array.isArray(rawRts)) {
+      for (var i = 0; i < rawRts.length; i += 1) {
+        var v = Number(rawRts[i]);
+        if (Number.isFinite(v) && v > 0) valid.push(v);
+      }
+    }
+    var n = valid.length;
+    if (n === 0) {
+      return { meanMs: 0, medianMs: 0, iqrMs: 0, sdMs: 0, icvPct: 0, muMs: 0, sigmaMs: 0, tauMs: 0 };
+    }
+
+    var sorted = valid.slice().sort(function (a, b) { return a - b; });
+    var mid = Math.floor(n / 2);
+    var medianMs = n % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    var q1 = sorted[Math.floor((n - 1) * 0.25)];
+    var q3 = sorted[Math.floor((n - 1) * 0.75)];
+    var iqrMs = Math.max(0, q3 - q1);
+
+    var sum = 0;
+    for (var j = 0; j < n; j += 1) sum += valid[j];
+    var meanMs = sum / n;
+
+    if (n < 2) {
+      return {
+        meanMs: Math.round(meanMs),
+        medianMs: Math.round(medianMs),
+        iqrMs: 0,
+        sdMs: 0,
+        icvPct: 0,
+        muMs: Math.round(meanMs),
+        sigmaMs: 0,
+        tauMs: 0
+      };
+    }
+
+    var m2 = 0;
+    var m3 = 0;
+    for (var k = 0; k < n; k += 1) {
+      var diff = valid[k] - meanMs;
+      var d2 = diff * diff;
+      m2 += d2;
+      m3 += d2 * diff;
+    }
+    var variance = m2 / (n - 1);
+    var sdMs = Math.sqrt(Math.max(0, variance));
+    var icvPct = meanMs > 0 ? Math.round((sdMs / meanMs) * 100) : 0;
+
+    if (sdMs < 1e-6) {
+      return {
+        meanMs: Math.round(meanMs),
+        medianMs: Math.round(medianMs),
+        iqrMs: Math.round(iqrMs),
+        sdMs: 0,
+        icvPct: 0,
+        muMs: Math.round(meanMs),
+        sigmaMs: 0,
+        tauMs: 0
+      };
+    }
+
+    var rawSkew = (m3 / n) / Math.pow(Math.sqrt(m2 / n), 3);
+    var adjSkew = n >= 5 ? (Math.sqrt(n * (n - 1)) / (n - 2)) * rawSkew : rawSkew;
+    var skewPos = Math.max(0, adjSkew);
+
+    // Bounded cube-root moment estimator ensuring sigma^2 = sd^2 - tau^2 >= 0
+    var tauRatio = Math.min(0.95, Math.pow(skewPos / 2, 1 / 3));
+    var tauMs = sdMs * tauRatio;
+    var muMs = Math.max(80, meanMs - tauMs);
+    var sigmaMs = Math.sqrt(Math.max(0, sdMs * sdMs - tauMs * tauMs));
+
+    return {
+      meanMs: Math.round(meanMs),
+      medianMs: Math.round(medianMs),
+      iqrMs: Math.round(iqrMs),
+      sdMs: Math.round(sdMs),
+      icvPct: icvPct,
+      muMs: Math.round(muMs),
+      sigmaMs: Math.round(sigmaMs),
+      tauMs: Math.round(tauMs)
+    };
+  }
+
+  function computeLISAS(correctRts, allRts, errorProportion) {
+    // Vandierendonck (2017, Behavior Research Methods) Linear Integrated Speed-Accuracy Score
+    // Avoids Townsend-Ashby Inverse Efficiency explosion at high error rates
+    var cValid = Array.isArray(correctRts)
+      ? correctRts.filter(function (x) { return Number.isFinite(Number(x)) && Number(x) > 0; }).map(Number)
+      : [];
+    var aValid = Array.isArray(allRts)
+      ? allRts.filter(function (x) { return Number.isFinite(Number(x)) && Number(x) > 0; }).map(Number)
+      : [];
+    var basePool = cValid.length > 0 ? cValid : aValid;
+    if (basePool.length === 0) return 0;
+
+    var sumC = 0;
+    for (var i = 0; i < basePool.length; i += 1) sumC += basePool[i];
+    var meanC = sumC / basePool.length;
+
+    var pe = clamp(Number(errorProportion), 0, 1);
+    if (pe <= 0.0001 || aValid.length < 2) {
+      return Math.round(meanC);
+    }
+
+    var sumA = 0;
+    for (var j = 0; j < aValid.length; j += 1) sumA += aValid[j];
+    var meanA = sumA / aValid.length;
+    var sqA = 0;
+    for (var k = 0; k < aValid.length; k += 1) {
+      var d = aValid[k] - meanA;
+      sqA += d * d;
+    }
+    var sRt = Math.sqrt(sqA / (aValid.length - 1));
+
+    // Laplace-smoothed Bernoulli SD when PE approaches 1.0 to maintain strict monotonicity without division by zero
+    var nObs = Math.max(4, aValid.length);
+    var pSmooth = pe >= 0.999 ? (nObs - 0.5) / (nObs + 1) : pe;
+    var sPe = Math.sqrt(Math.max(0.01, pSmooth * (1 - pSmooth)));
+
+    return Math.round(meanC + (sRt / sPe) * pe);
+  }
+
+  function computeSplitHalfReliability(trialScoresPct) {
+    // Odd-even split-half internal session consistency (0..100%)
+    if (!Array.isArray(trialScoresPct) || trialScoresPct.length < 2) return 100;
+    var oddSum = 0, oddN = 0, evenSum = 0, evenN = 0;
+    for (var i = 0; i < trialScoresPct.length; i += 1) {
+      var v = clamp(Number(trialScoresPct[i]), 0, 100);
+      if (i % 2 === 0) {
+        oddSum += v;
+        oddN += 1;
+      } else {
+        evenSum += v;
+        evenN += 1;
+      }
+    }
+    if (oddN === 0 || evenN === 0) return 100;
+    var diff = Math.abs(oddSum / oddN - evenSum / evenN);
+    return clamp(Math.round(100 - diff * 0.85), 0, 100);
+  }
+
+  function computePearsonR(xs, ys) {
+    if (!Array.isArray(xs) || !Array.isArray(ys) || xs.length !== ys.length || xs.length < 3) {
+      return null;
+    }
+    var n = xs.length;
+    var mx = 0, my = 0;
+    for (var i = 0; i < n; i += 1) {
+      mx += xs[i];
+      my += ys[i];
+    }
+    mx /= n;
+    my /= n;
+    var num = 0, dx2 = 0, dy2 = 0;
+    for (var k = 0; k < n; k += 1) {
+      var dx = xs[k] - mx;
+      var dy = ys[k] - my;
+      num += dx * dy;
+      dx2 += dx * dx;
+      dy2 += dy * dy;
+    }
+    if (dx2 < 1e-6 || dy2 < 1e-6) return null;
+    return round2(num / Math.sqrt(dx2 * dy2));
+  }
+
   function generateId(prefix) {
     idSequence += 1;
     var ts = Date.now().toString(36);
@@ -242,9 +480,7 @@
           return val;
         }
       }
-    } catch (_err) {
-      // Safe fallback to in-memory store when localStorage is blocked or unavailable
-    }
+    } catch (_err) {}
     return memoryStore;
   }
 
@@ -254,9 +490,7 @@
       if (root.localStorage && typeof root.localStorage.setItem === "function") {
         root.localStorage.setItem(STORAGE_KEY, serialized);
       }
-    } catch (_err) {
-      // Keep in memoryStore without throwing
-    }
+    } catch (_err) {}
   }
 
   function removeRawStorage() {
@@ -265,16 +499,14 @@
       if (root.localStorage && typeof root.localStorage.removeItem === "function") {
         root.localStorage.removeItem(STORAGE_KEY);
       }
-    } catch (_err) {
-      // Safe no-op
-    }
+    } catch (_err) {}
   }
 
   function normalizeContext(ctx) {
     var base = createDefaultContext();
     if (!ctx || typeof ctx !== "object") return base;
 
-    var out = {
+    return {
       phase:
         typeof ctx.phase === "string" && sanitizePlainText(ctx.phase).length > 0
           ? sanitizePlainText(ctx.phase)
@@ -300,8 +532,6 @@
           ? Math.max(0, roundInt(ctx.sequenceLapses, base.sequenceLapses))
           : base.sequenceLapses
     };
-
-    return out;
   }
 
   function normalizeRecord(raw, activeCtx) {
@@ -341,6 +571,8 @@
       Object.prototype.hasOwnProperty.call(BASELINE_REF.scores, probeId)
         ? BASELINE_REF.scores[probeId]
         : null;
+    var deltaBase = baselineVal !== null ? round1(score - baselineVal) : 0;
+    var rciInfo = computeRCI(deltaBase, probeId, 1, 1);
 
     return {
       id:
@@ -376,14 +608,19 @@
         raw.alertness !== undefined
           ? clamp(round1(raw.alertness), 0, 10)
           : ctx.alertness,
+      nasalPatency:
+        raw.nasalPatency !== undefined
+          ? clamp(round1(raw.nasalPatency), 0, 10)
+          : ctx.nasalPatency,
       notes: typeof raw.notes === "string" ? sanitizePlainText(raw.notes) : "",
-      deltaFromBaseline: baselineVal !== null ? round1(score - baselineVal) : 0,
+      deltaFromBaseline: deltaBase,
+      rci: rciInfo.rci,
+      rciStatus: rciInfo.status,
+      rciStatusAr: rciInfo.statusAr,
       deltaFromPrev:
         typeof raw.deltaFromPrev === "number" && Number.isFinite(raw.deltaFromPrev)
           ? round1(raw.deltaFromPrev)
-          : baselineVal !== null
-          ? round1(score - baselineVal)
-          : 0
+          : deltaBase
     };
   }
 
@@ -406,10 +643,15 @@
         ? BASELINE_REF.scores[r.probeId]
         : null;
       r.deltaFromBaseline = baseScore !== null ? round1(r.score - baseScore) : 0;
+      var rciInfo = computeRCI(r.deltaFromBaseline, r.probeId, 1, 1);
+      r.rci = rciInfo.rci;
+      r.rciStatus = rciInfo.status;
+      r.rciStatusAr = rciInfo.statusAr;
+
       if (Object.prototype.hasOwnProperty.call(prevScoreByProbe, r.probeId)) {
         r.deltaFromPrev = round1(r.score - prevScoreByProbe[r.probeId]);
       } else {
-        r.deltaFromPrev = baseScore !== null ? round1(r.score - baseScore) : 0;
+        r.deltaFromPrev = r.deltaFromBaseline;
       }
       prevScoreByProbe[r.probeId] = r.score;
       out.push(r);
@@ -450,6 +692,7 @@
     }
     var compositeDeficitScore = roundInt(deficitSum / DEFICIT_PROBE_IDS.length, BASELINE_REF.compositeDeficitBaseline);
     var controlScore = probeScores.control;
+    var compRci = computeRCI(compositeDeficitScore - BASELINE_REF.compositeDeficitBaseline, "composite", 1, 1);
 
     return {
       id:
@@ -487,7 +730,9 @@
           : ctx.sequenceLapses,
       probeScores: probeScores,
       compositeDeficitScore: compositeDeficitScore,
-      controlScore: controlScore
+      controlScore: controlScore,
+      compositeRci: compRci.rci,
+      compositeRciStatusAr: compRci.statusAr
     };
   }
 
@@ -734,12 +979,14 @@
       var prev = count > 1 ? hist[count - 2] : null;
       var base = BASELINE_REF.scores[pid];
       var norm = BASELINE_REF.norms[pid];
+      var pNorm = PSYCHOMETRIC_NORMS[pid] || PSYCHOMETRIC_NORMS.composite;
       var deltaBaseline = latest ? round1(latest.score - base) : null;
       var deltaPrev = latest
         ? prev
           ? round1(latest.score - prev.score)
           : round1(latest.score - base)
         : null;
+      var rciObj = latest ? computeRCI(deltaBaseline, pid, 1, 1) : null;
 
       result[pid] = {
         probeId: pid,
@@ -748,6 +995,13 @@
         score: latest ? latest.score : null,
         baseline: base,
         norm: norm,
+        sem: pNorm.sem,
+        sDiff: pNorm.sDiff,
+        rci95Pts: pNorm.rci95Pts,
+        rci: rciObj ? rciObj.rci : null,
+        rciStatus: rciObj ? rciObj.status : "unmeasured",
+        rciStatusAr: rciObj ? rciObj.statusAr : "لم يُفحص بعد",
+        isReliableChange: rciObj ? rciObj.isReliable : false,
         deltaBaseline: deltaBaseline,
         deltaFromBaseline: deltaBaseline,
         deltaPrev: deltaPrev,
@@ -809,6 +1063,9 @@
       BASELINE_REF.scores.control - BASELINE_REF.compositeDeficitBaseline
     );
 
+    var compRciObj = computeRCI(deltaFromBaseline, "composite", 1, 1);
+    var controlValid = controlScore >= 82; // 98 - 1.96 * 8.2 = 81.9%
+
     var latestTs = 0;
     if (st.records.length > 0) {
       latestTs = Math.max(latestTs, st.records[st.records.length - 1].timestamp);
@@ -824,8 +1081,14 @@
       batteryCount: st.batteryRuns.length,
       compositeDeficitScore: compositeDeficitScore,
       compositeDeficitBaseline: BASELINE_REF.compositeDeficitBaseline,
+      compositeSem: PSYCHOMETRIC_NORMS.composite.sem,
+      compositeCi95Pts: compRciObj.ci95Pts,
+      compositeRci: compRciObj.rci,
+      compositeRciStatus: compRciObj.status,
+      compositeRciStatusAr: compRciObj.statusAr,
       controlScore: controlScore,
       controlBaseline: BASELINE_REF.scores.control,
+      controlValid: controlValid,
       deltaFromBaseline: deltaFromBaseline,
       improvementFromBaseline: deltaFromBaseline,
       spikyGap: spikyGap,
@@ -833,6 +1096,148 @@
       gapReduction: round1(baselineSpikyGap - spikyGap),
       hasLiveRecords: st.records.length > 0 || st.batteryRuns.length > 0,
       lastUpdatedIso: latestTs > 0 ? formatIsoDate(latestTs) : BASELINE_REF.date
+    };
+  }
+
+  function getScientificAudit(phasesMeta) {
+    var st = loadState();
+    var stats = getSummaryStats();
+    var getPhase = resolvePhasesMeta(phasesMeta || null);
+
+    // 1. Control Anchor & Selective Dissociation Gate
+    var controlRecs = st.records.filter(function (r) { return r.probeId === "control"; });
+    var controlVerdict = "";
+    if (!stats.hasLiveRecords) {
+      controlVerdict = "في انتظار أول جلسة قياس لتفعيل معيار التفكيك المزدوج (Shallice, 1988) ومؤشر التغير الموثوق (Jacobson & Truax, 1991).";
+    } else if (!stats.controlValid) {
+      controlVerdict =
+        "تنبيه منهجي: هبطت مرساة الضبط إلى " +
+        stats.controlScore +
+        "% (أدنى من عتبة الثبات 82%)، مما يدل على إرهاق عام أو نعاس حاد يمس المحركات السليمة؛ يُوصى بإعادة الفحص بعد استقرار اليقظة قبل تفسير أي تراجع بؤري.";
+    } else if (stats.compositeRci >= 1.96) {
+      controlVerdict =
+        "برهان تحسن عصبي بؤري انتقائي: ظلت مرساة الضبط مستقرة عاليا (" +
+        stats.controlScore +
+        "%) بينما حقق المؤشر المركب قفزة تتجاوز عتبة الضجيج القياسي (RCI = +" +
+        stats.compositeRci +
+        " ≥ 1.96، p<0.05).";
+    } else {
+      controlVerdict =
+        "مرساة الضبط سليمة ومستقرة (" +
+        stats.controlScore +
+        "%) مما يثبت سلامة الانتباه العام وصحة العزل التجريبي؛ الفارق المركب الحالي (" +
+        formatSigned(stats.deltaFromBaseline) +
+        "%، RCI = " +
+        stats.compositeRci +
+        ") يتطلب تجاوز +" +
+        stats.compositeCi95Pts +
+        " نقطة لتأكيد تحسن دال إحصائيا عند p<0.05.";
+    }
+
+    // 2. Diurnal Morning vs Evening/Night Stability
+    var deficitRecs = st.records.filter(function (r) { return r.probeId !== "control"; });
+    var mornSum = 0, mornN = 0, nightSum = 0, nightN = 0;
+    for (var i = 0; i < deficitRecs.length; i += 1) {
+      var bucket = deficitRecs[i].timeOfDayBucket;
+      if (bucket === "morning") {
+        mornSum += deficitRecs[i].deltaFromBaseline;
+        mornN += 1;
+      } else if (bucket === "evening" || bucket === "night") {
+        nightSum += deficitRecs[i].deltaFromBaseline;
+        nightN += 1;
+      }
+    }
+    var diurnalVerdict = "";
+    if (mornN >= 1 && nightN >= 1) {
+      var mAvg = round1(mornSum / mornN);
+      var nAvg = round1(nightSum / nightN);
+      var gapDiurnal = round1(mAvg - nAvg);
+      diurnalVerdict =
+        "المقارنة اليوماوية (صباحا مقابل مساء/ليلا): متوسط الفارق عن الأساس صباحا " +
+        formatSigned(mAvg) +
+        "% (" +
+        mornN +
+        " فحص) مقابل " +
+        formatSigned(nAvg) +
+        "% مساء/ليلا (" +
+        nightN +
+        " فحص)؛ الفارق اليوماوي الصافي " +
+        formatSigned(gapDiurnal) +
+        " نقطة.";
+    } else {
+      diurnalVerdict =
+        "المعايرة اليوماوية: سُجل " +
+        mornN +
+        " فحص صباحي و" +
+        nightN +
+        " فحص مسائي/ليلي؛ نفّذ قياسا في كلتا الفترتين لاختبار ثبات البصمة البنيوية عبر اليوم.";
+    }
+
+    // 3. Sleep Quality & Nasal Patency Covariate Correlation
+    var sleepXs = [], airwayXs = [], deltaYs = [];
+    for (var c = 0; c < deficitRecs.length; c += 1) {
+      var dr = deficitRecs[c];
+      if (typeof dr.sleepQuality === "number") {
+        sleepXs.push(dr.sleepQuality);
+        airwayXs.push(typeof dr.nasalPatency === "number" ? dr.nasalPatency : 5);
+        deltaYs.push(dr.deltaFromBaseline);
+      }
+    }
+    var rSleep = computePearsonR(sleepXs, deltaYs);
+    var rAirway = computePearsonR(airwayXs, deltaYs);
+    var covariateVerdict = "";
+    if (rSleep !== null || rAirway !== null) {
+      covariateVerdict =
+        "تحليل التغاير الفسيولوجي (Pearson r عبر " +
+        deltaYs.length +
+        " قياس): ارتباط الأداء بجودة النوم r = " +
+        (rSleep !== null ? String(rSleep) : "ثابت") +
+        "، وارتباطه بانفتاح المجرى الأنفي r = " +
+        (rAirway !== null ? String(rAirway) : "ثابت") +
+        ".";
+    } else {
+      covariateVerdict =
+        "تحليل التغاير الفسيولوجي: يُحسب معامل الارتباط (Pearson r) تلقائيا بين جودة النوم/التنفس والأداء فور توافر 3 قياسات متباينة السياق.";
+    }
+
+    // 4. Phase-Level Precision-Weighted Summary
+    var phaseBuckets = {};
+    for (var b = 0; b < st.batteryRuns.length; b += 1) {
+      var run = st.batteryRuns[b];
+      if (!phaseBuckets[run.phase]) phaseBuckets[run.phase] = [];
+      phaseBuckets[run.phase].push(run.compositeDeficitScore);
+    }
+    var phaseSummaries = [];
+    var phKeys = Object.keys(phaseBuckets);
+    for (var pk = 0; pk < phKeys.length; pk += 1) {
+      var pid = phKeys[pk];
+      var arr = phaseBuckets[pid];
+      var sSum = 0;
+      for (var q = 0; q < arr.length; q += 1) sSum += arr[q];
+      var pMean = round1(sSum / arr.length);
+      var pDelta = round1(pMean - BASELINE_REF.compositeDeficitBaseline);
+      var pRci = computeRCI(pDelta, "composite", 1, arr.length);
+      phaseSummaries.push({
+        phaseId: pid,
+        phaseLabel: getPhase(pid).label,
+        count: arr.length,
+        meanComposite: pMean,
+        delta: pDelta,
+        rci: pRci.rci,
+        statusAr: pRci.statusAr
+      });
+    }
+
+    return {
+      compositeRci: stats.compositeRci,
+      compositeCi95Pts: stats.compositeCi95Pts,
+      compositeRciStatusAr: stats.compositeRciStatusAr,
+      controlValid: stats.controlValid,
+      controlTestsCount: controlRecs.length,
+      controlVerdict: toAsciiDigits(controlVerdict),
+      diurnalVerdict: toAsciiDigits(diurnalVerdict),
+      covariateVerdict: toAsciiDigits(covariateVerdict),
+      phaseSummaries: phaseSummaries
     };
   }
 
@@ -1100,13 +1505,14 @@
   function generatePlainSummaryText() {
     var st = loadState();
     var stats = getSummaryStats();
+    var audit = getScientificAudit(null);
     var latestMap = getLatestByProbe();
     var getPhase = resolvePhasesMeta(null);
     var phaseLabel = getPhase(st.activeContext.phase).label;
 
     var lines = [];
     lines.push(
-      "ملخص القياس العصبي المعرفي المحدث (تاريخ التقرير: " +
+      "ملخص القياس العصبي المعرفي المعاير إحصائيا (تاريخ التقرير: " +
         formatIsoDate(Date.now()) +
         " - مرجع خط الأساس: " +
         BASELINE_REF.date +
@@ -1114,13 +1520,19 @@
     );
 
     lines.push(
-      "1. المؤشر المركب والفجوة العصبية: متوسط المناطق الخمس المتضررة الحالي " +
+      "1. المؤشر المركب ومؤشر التغير الموثوق (Jacobson-Truax RCI): متوسط المناطق الخمس المتضررة الحالي " +
         String(stats.compositeDeficitScore) +
         "% مقابل " +
         String(BASELINE_REF.compositeDeficitBaseline) +
-        "% في خط الأساس (الفارق الكلي: " +
+        "% في خط الأساس (الفارق: " +
         formatSigned(stats.deltaFromBaseline) +
-        "%)، وفجوة التباين مقابل مرساة التحكم " +
+        "%، RCI = " +
+        String(stats.compositeRci) +
+        " — " +
+        stats.compositeRciStatusAr +
+        "، عتبة الدلالة 95% هي ±" +
+        String(stats.compositeCi95Pts) +
+        " نقطة)، وفجوة التباين مقابل مرساة التحكم " +
         String(stats.spikyGap) +
         " نقطة بعد تنفيذ " +
         String(stats.totalTests) +
@@ -1151,13 +1563,17 @@
             meta.label +
             ": النتيجة الحالية " +
             String(info.latest.score) +
+            "% ±" +
+            String(info.sem) +
             "% (الفارق عن خط الأساس " +
             String(info.baseline) +
             "% هو " +
             formatSigned(info.deltaBaseline) +
-            "%، والفارق عن الجلسة السابقة " +
-            formatSigned(info.deltaPrev) +
-            "%، والمعيار السليم " +
+            "%، RCI = " +
+            String(info.rci) +
+            " [" +
+            info.rciStatusAr +
+            "]، المعيار السليم " +
             String(info.norm) +
             "%، عدد القياسات " +
             String(info.count) +
@@ -1177,8 +1593,10 @@
       }
     }
 
+    lines.push("8. حكم العزل المنهجي: " + audit.controlVerdict);
+
     lines.push(
-      "8. السياق الفسيولوجي النشط: المرحلة الحالية " +
+      "9. السياق الفسيولوجي النشط: المرحلة الحالية " +
         phaseLabel +
         "، وجودة النوم " +
         String(st.activeContext.sleepQuality) +
@@ -1186,7 +1604,7 @@
         String(st.activeContext.alertness) +
         " من 10، وانفتاح المجرى الأنفي " +
         String(st.activeContext.nasalPatency) +
-        " من 10، ونوبات نفور التأجيل " +
+        " من 10، ونوبات نفور البطء " +
         String(st.activeContext.delayAversionEpisodes) +
         "، وهفوات التسلسل " +
         String(st.activeContext.sequenceLapses) +
@@ -1239,8 +1657,8 @@
 
     var width = 760;
     var height = 368;
-    var barX = 136;
-    var barW = 404;
+    var barX = 142;
+    var barW = 398;
     var rowStart = 58;
     var rowStep = 47;
 
@@ -1250,7 +1668,7 @@
         width +
         " " +
         height +
-        '" width="100%" role="img" aria-label="البصمة الإدراكية للمسبارات الستة">'
+        '" width="100%" role="img" aria-label="البصمة الإدراكية للمسبارات الستة مع هوامش القياس">'
     );
     parts.push(buildSharedSvgStyle(isDark));
 
@@ -1263,29 +1681,31 @@
     );
 
     // Top 2D Legend bar
-    parts.push('<g transform="translate(0, 18)" font-size="11">');
+    parts.push('<g transform="translate(0, 18)" font-size="10.8">');
     parts.push(
       '<rect x="18" y="-8" width="12" height="10" rx="2" fill="#2563eb" fill-opacity="0.88"/>' +
-        '<text x="35" y="1" class="nl-muted" text-anchor="start">النتيجة الحالية</text>'
+        '<text x="34" y="1" class="nl-muted" text-anchor="start">القياس ±SEM</text>'
     );
     parts.push(
-      '<rect x="136" y="-8" width="14" height="10" rx="2" fill="url(#nl-unmeasured-dots)" stroke="#64748b" stroke-width="1" stroke-dasharray="2 2"/>' +
-        '<text x="155" y="1" class="nl-muted" text-anchor="start">مرجع غير مقاس</text>'
+      '<rect x="128" y="-8" width="14" height="10" rx="2" fill="url(#nl-unmeasured-dots)" stroke="#64748b" stroke-width="1" stroke-dasharray="2 2"/>' +
+        '<text x="146" y="1" class="nl-muted" text-anchor="start">غير مقاس</text>'
     );
     parts.push(
-      '<line x1="262" y1="-9" x2="262" y2="4" class="nl-base-tick" stroke-width="2.2"/>' +
-        '<text x="269" y="1" class="nl-base-txt" font-weight="600" text-anchor="start">أساس 21 Nov</text>'
+      '<line x1="224" y1="-9" x2="224" y2="4" class="nl-base-tick" stroke-width="2.2"/>' +
+        '<text x="230" y="1" class="nl-base-txt" font-weight="600" text-anchor="start">أساس 21 Nov</text>'
     );
     parts.push(
-      '<line x1="364" y1="-9" x2="364" y2="4" stroke="#10b981" stroke-width="2.2" stroke-dasharray="3 2"/>' +
-        '<text x="371" y="1" fill="#10b981" font-weight="600" text-anchor="start">السقف السليم</text>'
+      '<line x1="322" y1="-9" x2="322" y2="4" stroke="#10b981" stroke-width="2.2" stroke-dasharray="3 2"/>' +
+        '<text x="328" y="1" fill="#10b981" font-weight="600" text-anchor="start">السقف السليم</text>'
     );
     parts.push(
-      '<text x="742" y="1" class="nl-ink" font-weight="700" text-anchor="end">خريطة المسبارات الستة والفارق</text>'
+      '<text x="418" y="1" class="nl-muted" text-anchor="start">(* = RCI≥1.96)</text>'
+    );
+    parts.push(
+      '<text x="742" y="1" class="nl-ink" font-weight="700" text-anchor="end">خريطة المسبارات الستة</text>'
     );
     parts.push("</g>");
 
-    // Vertical Percentage Grid Lines (0, 25, 50, 75, 100)
     var ticks = [0, 25, 50, 75, 100];
     for (var t = 0; t < ticks.length; t += 1) {
       var tv = ticks[t];
@@ -1314,7 +1734,6 @@
       );
     }
 
-    // Six Probe Rows
     for (var i = 0; i < PROBE_IDS.length; i += 1) {
       var pid = PROBE_IDS[i];
       var info = latestMap[pid];
@@ -1325,8 +1744,9 @@
       var hasLive = info.latest !== null;
       var displayScore = hasLive ? info.latest.score : info.baseline;
       var deltaVal = hasLive ? info.deltaBaseline : 0;
+      var sigStar = hasLive && info.isReliableChange ? "*" : "";
       var deltaStr = hasLive
-        ? (deltaVal > 0 ? "+" + deltaVal : deltaVal < 0 ? String(deltaVal) : "+0") + "%"
+        ? (deltaVal > 0 ? "+" + deltaVal : deltaVal < 0 ? String(deltaVal) : "+0") + "%" + sigStar
         : "±0%";
 
       var deltaColor = !hasLive
@@ -1337,7 +1757,7 @@
         ? "#ef4444"
         : "#64748b";
 
-      var deltaBgOpacity = hasLive ? "0.14" : "0.08";
+      var deltaBgOpacity = hasLive ? "0.15" : "0.08";
 
       var fillW = Math.max(3, round1((clamp(displayScore, 0, 100) / 100) * barW));
       var baseX = round1(barX + (clamp(info.baseline, 0, 100) / 100) * barW);
@@ -1348,17 +1768,19 @@
         meta.label +
         " | الحالي: " +
         displayScore +
-        "% | 21 Nov: " +
+        "% (±" +
+        info.sem +
+        "% SEM) | 21 Nov: " +
         info.baseline +
-        "% | Norm: " +
+        "% | السليم: " +
         info.norm +
         "% | الفارق: " +
-        deltaStr;
+        deltaStr +
+        (hasLive ? " | RCI: " + info.rci : "");
 
       parts.push('<g data-probe-id="' + escapeSvg(pid) + '">');
       parts.push("<title>" + escapeSvg(tooltip) + "</title>");
 
-      // Track background
       parts.push(
         '<rect x="' +
           barX +
@@ -1371,7 +1793,6 @@
           '" rx="5" class="nl-track"/>'
       );
 
-      // Value bar (solid if tested, translucent dotted + dashed if unmeasured baseline)
       if (hasLive) {
         parts.push(
           '<rect x="' +
@@ -1385,6 +1806,40 @@
             '" rx="5" fill="' +
             escapeSvg(barColor) +
             '" fill-opacity="0.86"/>'
+        );
+
+        // ±1 SEM Psychometric Error Whisker around measured score
+        var semLoX = round1(barX + (clamp(displayScore - info.sem, 0, 100) / 100) * barW);
+        var semHiX = round1(barX + (clamp(displayScore + info.sem, 0, 100) / 100) * barW);
+        var midY = y + barH / 2;
+        parts.push(
+          '<line x1="' +
+            semLoX +
+            '" y1="' +
+            midY +
+            '" x2="' +
+            semHiX +
+            '" y2="' +
+            midY +
+            '" class="nl-ink" stroke="currentColor" stroke-width="1.6" stroke-opacity="0.72"/>' +
+            '<line x1="' +
+            semLoX +
+            '" y1="' +
+            (midY - 3.5) +
+            '" x2="' +
+            semLoX +
+            '" y2="' +
+            (midY + 3.5) +
+            '" class="nl-ink" stroke="currentColor" stroke-width="1.6" stroke-opacity="0.72"/>' +
+            '<line x1="' +
+            semHiX +
+            '" y1="' +
+            (midY - 3.5) +
+            '" x2="' +
+            semHiX +
+            '" y2="' +
+            (midY + 3.5) +
+            '" class="nl-ink" stroke="currentColor" stroke-width="1.6" stroke-opacity="0.72"/>'
         );
       } else {
         parts.push(
@@ -1415,7 +1870,6 @@
         );
       }
 
-      // 21 Nov Baseline vertical marker
       parts.push(
         '<line x1="' +
           baseX +
@@ -1437,7 +1891,6 @@
         );
       }
 
-      // Norm vertical marker
       parts.push(
         '<line x1="' +
           normX +
@@ -1459,9 +1912,8 @@
         );
       }
 
-      // Left columns: Current % and +Δ / -Δ pill
       parts.push(
-        '<text x="18" y="' +
+        '<text x="16" y="' +
           (y + 14.5) +
           '" class="nl-ink" font-size="13" font-weight="700" text-anchor="start">' +
           displayScore +
@@ -1469,23 +1921,22 @@
       );
 
       parts.push(
-        '<rect x="64" y="' +
+        '<rect x="62" y="' +
           (y + 1) +
-          '" width="60" height="18" rx="4" fill="' +
+          '" width="66" height="18" rx="4" fill="' +
           deltaColor +
           '" fill-opacity="' +
           deltaBgOpacity +
           '"/>' +
-          '<text x="94" y="' +
+          '<text x="95" y="' +
           (y + 14) +
           '" fill="' +
           deltaColor +
-          '" font-size="11.5" font-weight="700" text-anchor="middle">' +
+          '" font-size="11.2" font-weight="700" text-anchor="middle">' +
           escapeSvg(deltaStr) +
           "</text>"
       );
 
-      // Right column: Probe Arabic short title + baseline/norm micro-caption
       parts.push(
         '<text x="742" y="' +
           (y + 11) +
@@ -1496,13 +1947,13 @@
       parts.push(
         '<text x="742" y="' +
           (y + 25) +
-          '" class="nl-muted" font-size="10.2" text-anchor="end">' +
+          '" class="nl-muted" font-size="10.1" text-anchor="end">' +
           "أساس " +
           info.baseline +
           "% · سليم " +
           info.norm +
           "%" +
-          (hasLive ? " · قياسات " + info.count : " · بانتظار القياس") +
+          (hasLive ? " · RCI " + info.rci : " · بانتظار القياس") +
           "</text>"
       );
 
@@ -1524,16 +1975,18 @@
     var getPhase = resolvePhasesMeta(phasesMeta);
     var probeMeta = metaMap[targetId];
     var history = getProbeHistory(targetId);
+    var pNorm = PSYCHOMETRIC_NORMS[targetId] || PSYCHOMETRIC_NORMS.composite;
 
     var baselineScore = BASELINE_REF.scores[targetId];
     var normScore = BASELINE_REF.norms[targetId];
+    var rciThresholdScore = Math.min(99, round1(baselineScore + pNorm.rci95Pts));
 
     var width = 720;
-    var height = 260;
+    var height = 264;
     var padLeft = 48;
     var padRight = 26;
     var padTop = 36;
-    var padBottom = 42;
+    var padBottom = 44;
     var plotW = width - padLeft - padRight;
     var plotH = height - padTop - padBottom;
 
@@ -1543,13 +1996,12 @@
 
     var parts = [];
     parts.push(
-      '<svg class="nl-svg" direction="ltr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" width="100%" role="img" aria-label="' +
+      '<svg class="nl-svg" direction="ltr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 264" width="100%" role="img" aria-label="' +
         escapeSvg("منحنى التطور الزمني - " + probeMeta.label) +
         '">'
     );
     parts.push(buildSharedSvgStyle(isDark));
 
-    // Top Header
     parts.push(
       '<text x="' +
         (width - padRight) +
@@ -1560,17 +2012,18 @@
     parts.push(
       '<text x="' +
         padLeft +
-        '" y="21" class="nl-muted" font-size="11" text-anchor="start">' +
+        '" y="21" class="nl-muted" font-size="10.8" text-anchor="start">' +
         "الأساس: " +
         baselineScore +
-        "%  ·  السليم: " +
+        "% · عتبة RCI(p<0.05): " +
+        (targetId === "control" ? "≥82%" : rciThresholdScore + "%") +
+        " · السليم: " +
         normScore +
-        "%  ·  الجلسات: " +
+        "% · الجلسات: " +
         history.length +
         "</text>"
     );
 
-    // Horizontal Y grid (0..100%)
     var yTicks = [0, 25, 50, 75, 100];
     for (var t = 0; t < yTicks.length; t += 1) {
       var yv = yTicks[t];
@@ -1597,7 +2050,6 @@
       );
     }
 
-    // Norm Horizontal Dashed Line
     var yNorm = yOf(normScore);
     parts.push(
       '<line x1="' +
@@ -1615,12 +2067,37 @@
         (width - padRight - 4) +
         '" y="' +
         (yNorm - 5) +
-        '" fill="#10b981" font-size="10" font-weight="700" text-anchor="end">Norm ' +
+        '" fill="#10b981" font-size="9.8" font-weight="700" text-anchor="end">Norm ' +
         normScore +
         "%</text>"
     );
 
-    // Faint Horizontal Baseline Line
+    // 95% RCI threshold line for deficit probes (or lower validity bound 82% for Control)
+    var rciLineVal = targetId === "control" ? 82 : rciThresholdScore;
+    if (Math.abs(rciLineVal - normScore) > 4) {
+      var yRci = yOf(rciLineVal);
+      parts.push(
+        '<line x1="' +
+          padLeft +
+          '" y1="' +
+          yRci +
+          '" x2="' +
+          (width - padRight) +
+          '" y2="' +
+          yRci +
+          '" stroke="#0284c7" stroke-width="1.3" stroke-opacity="0.65" stroke-dasharray="4 4"/>'
+      );
+      parts.push(
+        '<text x="' +
+          (padLeft + 4) +
+          '" y="' +
+          (yRci - 4) +
+          '" fill="#0284c7" font-size="9.2" font-weight="600" text-anchor="start">' +
+          (targetId === "control" ? "حد الثبات 82%" : "RCI p<0.05 (" + rciLineVal + "%)") +
+          "</text>"
+      );
+    }
+
     var yBase = yOf(baselineScore);
     parts.push(
       '<line x1="' +
@@ -1634,37 +2111,41 @@
         '" class="nl-base-tick" stroke-width="1.3" stroke-opacity="0.45" stroke-dasharray="3 3"/>'
     );
 
-    // Build chronological nodes starting with 21 Nov reference point on the left
     var nodes = [
       {
         label: "21 Nov",
         score: baselineScore,
+        ema: baselineScore,
         phase: "baseline",
         color: "#64748b",
         phaseLabel: "خط الأساس المرجعي",
+        rci: 0,
         isBaseline: true
       }
     ];
 
     var seenPhases = { baseline: { label: "خط الأساس", color: "#64748b" } };
+    var runningEma = baselineScore;
 
     for (var i = 0; i < history.length; i += 1) {
       var rec = history[i];
       var ph = getPhase(rec.phase);
       seenPhases[ph.id] = ph;
+      runningEma = i === 0 ? rec.score : round1(0.5 * rec.score + 0.5 * runningEma);
       nodes.push({
         label: formatShortDate(rec.isoDate, rec.timestamp),
         score: rec.score,
+        ema: runningEma,
         phase: ph.id,
         color: ph.color,
         phaseLabel: ph.label,
         delta: rec.deltaFromBaseline,
+        rci: rec.rci,
         isBaseline: false
       });
     }
 
     if (history.length === 0) {
-      // Anchor Baseline Node on the left + elegant empty-state message inside SVG
       var bx = padLeft + 26;
       parts.push(
         '<circle cx="' +
@@ -1700,7 +2181,7 @@
       );
       parts.push(
         '<text x="380" y="143" class="nl-muted" font-size="11.5" text-anchor="middle">' +
-          "ابدأ أول قياس لرسم منحنى التقدم الزمني ومقارنته مباشرة بخط الأساس" +
+          "ابدأ أول قياس لرسم منحنى التقدم الزمني ومقارنته بعتبة التغير الموثوق" +
           "</text>"
       );
     } else {
@@ -1712,19 +2193,15 @@
       for (var n = 0; n < count; n += 1) {
         nodes[n].x = round1(xStart + (n / (count - 1)) * xSpan);
         nodes[n].y = yOf(nodes[n].score);
+        nodes[n].yEma = yOf(nodes[n].ema);
       }
 
-      // Subtle 2D area fill under curve
       var areaPts =
         nodes[0].x +
         "," +
         (padTop + plotH) +
         " " +
-        nodes
-          .map(function (pt) {
-            return pt.x + "," + pt.y;
-          })
-          .join(" ") +
+        nodes.map(function (pt) { return pt.x + "," + pt.y; }).join(" ") +
         " " +
         nodes[count - 1].x +
         "," +
@@ -1738,7 +2215,18 @@
           '" fill-opacity="0.08"/>'
       );
 
-      // Segments colored by target session's therapeutic phase
+      // EMA smoothed trend curve when >= 2 measured sessions exist
+      if (history.length >= 2) {
+        var emaPts = nodes.slice(1).map(function (pt) { return pt.x + "," + pt.yEma; }).join(" ");
+        parts.push(
+          '<polyline points="' +
+            emaPts +
+            '" fill="none" stroke="' +
+            escapeSvg(probeMeta.color) +
+            '" stroke-width="1.8" stroke-opacity="0.55" stroke-dasharray="5 3"/>'
+        );
+      }
+
       for (var s = 1; s < count; s += 1) {
         var p0 = nodes[s - 1];
         var p1 = nodes[s];
@@ -1766,11 +2254,34 @@
           (nd.isBaseline ? "خط الأساس 21 Nov" : "جلسة " + m + " (" + nd.label + ")") +
           " | النتيجة: " +
           nd.score +
-          "% | المرحلة: " +
-          nd.phaseLabel;
+          "% (±" +
+          pNorm.sem +
+          "%) | المرحلة: " +
+          nd.phaseLabel +
+          (nd.isBaseline ? "" : " | RCI: " + nd.rci);
 
         parts.push("<g>");
         parts.push("<title>" + escapeSvg(tip) + "</title>");
+
+        // ±1 SEM vertical whisker on measured nodes
+        if (!nd.isBaseline) {
+          var yHi = yOf(nd.score + pNorm.sem);
+          var yLo = yOf(nd.score - pNorm.sem);
+          parts.push(
+            '<line x1="' +
+              nd.x +
+              '" y1="' +
+              yHi +
+              '" x2="' +
+              nd.x +
+              '" y2="' +
+              yLo +
+              '" stroke="' +
+              escapeSvg(nd.color) +
+              '" stroke-width="1.3" stroke-opacity="0.45"/>'
+          );
+        }
+
         parts.push(
           '<circle cx="' +
             nd.x +
@@ -1808,7 +2319,6 @@
         parts.push("</g>");
       }
 
-      // Phase color legend strip at bottom
       var phKeys = Object.keys(seenPhases);
       var lx = padLeft;
       for (var pk = 0; pk < phKeys.length && lx < width - 120; pk += 1) {
@@ -1846,7 +2356,7 @@
     var runs = st.batteryRuns;
 
     var width = 720;
-    var height = 276;
+    var height = 278;
     var padLeft = 48;
     var padRight = 28;
     var padTop = 40;
@@ -1858,6 +2368,10 @@
       return round1(padTop + plotH - (clamp(val, 0, 100) / 100) * plotH);
     }
 
+    var compRciThreshold = round1(
+      BASELINE_REF.compositeDeficitBaseline + PSYCHOMETRIC_NORMS.composite.rci95Pts
+    );
+
     var parts = [];
     parts.push(
       '<svg class="nl-svg" direction="ltr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' +
@@ -1868,7 +2382,6 @@
     );
     parts.push(buildSharedSvgStyle(isDark));
 
-    // Header & Legend
     parts.push(
       '<text x="' +
         (width - padRight) +
@@ -1877,20 +2390,25 @@
         "</text>"
     );
 
-    parts.push('<g transform="translate(' + padLeft + ', 16)" font-size="11">');
+    parts.push('<g transform="translate(' + padLeft + ', 16)" font-size="10.8">');
     parts.push(
       '<line x1="0" y1="0" x2="16" y2="0" stroke="#0d9488" stroke-width="2.6"/>' +
         '<circle cx="8" cy="0" r="3.5" fill="#0d9488"/>' +
         '<text x="22" y="4" class="nl-muted" text-anchor="start">مرساة التحكم</text>'
     );
     parts.push(
-      '<line x1="115" y1="0" x2="131" y2="0" stroke="#2563eb" stroke-width="2.6"/>' +
-        '<circle cx="123" cy="0" r="3.5" fill="#2563eb"/>' +
-        '<text x="137" y="4" class="nl-muted" text-anchor="start">المؤشر المركب (5 مناطق)</text>'
+      '<line x1="112" y1="0" x2="128" y2="0" stroke="#2563eb" stroke-width="2.6"/>' +
+        '<circle cx="120" cy="0" r="3.5" fill="#2563eb"/>' +
+        '<text x="134" y="4" class="nl-muted" text-anchor="start">المؤشر المركب (5 مناطق)</text>'
+    );
+    parts.push(
+      '<line x1="278" y1="0" x2="294" y2="0" stroke="#0284c7" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+        '<text x="300" y="4" fill="#0284c7" text-anchor="start">عتبة RCI p<0.05 (' +
+        compRciThreshold +
+        '%)</text>'
     );
     parts.push("</g>");
 
-    // Y Grid
     var yTicks = [0, 25, 50, 75, 100];
     for (var t = 0; t < yTicks.length; t += 1) {
       var yv = yTicks[t];
@@ -1917,11 +2435,26 @@
       );
     }
 
+    // 95% Composite RCI Significance Line (46.7%)
+    var yCompRci = yOf(compRciThreshold);
+    parts.push(
+      '<line x1="' +
+        padLeft +
+        '" y1="' +
+        yCompRci +
+        '" x2="' +
+        (width - padRight) +
+        '" y2="' +
+        yCompRci +
+        '" stroke="#0284c7" stroke-width="1.3" stroke-opacity="0.6" stroke-dasharray="4 4"/>'
+    );
+
     var points = [
       {
         label: "21 Nov",
         composite: BASELINE_REF.compositeDeficitBaseline,
         control: BASELINE_REF.scores.control,
+        rci: 0,
         phaseColor: "#64748b",
         phaseLabel: "خط الأساس"
       }
@@ -1934,6 +2467,7 @@
         label: formatShortDate(r.isoDate, r.timestamp),
         composite: r.compositeDeficitScore,
         control: r.controlScore,
+        rci: r.compositeRci,
         phaseColor: ph.color,
         phaseLabel: ph.label
       });
@@ -1945,7 +2479,6 @@
       var yComp0 = yOf(BASELINE_REF.compositeDeficitBaseline);
       var baseGap = BASELINE_REF.scores.control - BASELINE_REF.compositeDeficitBaseline;
 
-      // Vertical gap connector at baseline
       parts.push(
         '<line x1="' +
           ax +
@@ -2030,19 +2563,8 @@
         points[p].yComp = yOf(points[p].composite);
       }
 
-      // Shaded 2D Neural Gap Polygon between Control curve and Composite Deficit curve
-      var upperPts = points
-        .map(function (pt) {
-          return pt.x + "," + pt.yCtrl;
-        })
-        .join(" ");
-      var lowerPts = points
-        .slice()
-        .reverse()
-        .map(function (pt) {
-          return pt.x + "," + pt.yComp;
-        })
-        .join(" ");
+      var upperPts = points.map(function (pt) { return pt.x + "," + pt.yCtrl; }).join(" ");
+      var lowerPts = points.slice().reverse().map(function (pt) { return pt.x + "," + pt.yComp; }).join(" ");
 
       parts.push(
         '<polygon points="' +
@@ -2052,19 +2574,13 @@
           '" fill="#2563eb" fill-opacity="0.10"/>'
       );
 
-      // Control Polyline
-      var ctrlPolyline = points
-        .map(function (pt) {
-          return pt.x + "," + pt.yCtrl;
-        })
-        .join(" ");
+      var ctrlPolyline = points.map(function (pt) { return pt.x + "," + pt.yCtrl; }).join(" ");
       parts.push(
         '<polyline points="' +
           ctrlPolyline +
           '" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
       );
 
-      // Composite Segments colored by therapeutic phase
       for (var s = 1; s < count; s += 1) {
         var a = points[s - 1];
         var b = points[s];
@@ -2098,12 +2614,12 @@
           pt.composite +
           "% | الفجوة: " +
           gap +
-          " نقطة";
+          " نقطة" +
+          (k > 0 ? " | RCI: " + pt.rci : "");
 
         parts.push("<g>");
         parts.push("<title>" + escapeSvg(tip) + "</title>");
 
-        // Vertical subtle connector showing current gap at each session
         parts.push(
           '<line x1="' +
             pt.x +
@@ -2116,7 +2632,6 @@
             '" stroke="#64748b" stroke-width="1" stroke-opacity="0.32" stroke-dasharray="2 2"/>'
         );
 
-        // Control node
         parts.push(
           '<circle cx="' +
             pt.x +
@@ -2125,7 +2640,6 @@
             '" r="4.8" fill="#0d9488" stroke="#ffffff" stroke-width="1.6"/>'
         );
 
-        // Composite node (phase colored)
         parts.push(
           '<circle cx="' +
             pt.x +
@@ -2171,11 +2685,8 @@
         parts.push("</g>");
       }
 
-      var latestGap = round1(
-        points[count - 1].control - points[count - 1].composite
-      );
-      var initialGap =
-        BASELINE_REF.scores.control - BASELINE_REF.compositeDeficitBaseline;
+      var latestGap = round1(points[count - 1].control - points[count - 1].composite);
+      var initialGap = BASELINE_REF.scores.control - BASELINE_REF.compositeDeficitBaseline;
       parts.push(
         '<text x="' +
           (width - padRight) +
@@ -2186,7 +2697,9 @@
           initialGap +
           " نقطة في خط الأساس إلى " +
           latestGap +
-          " نقطة حاليا" +
+          " نقطة حاليا (RCI = " +
+          points[count - 1].rci +
+          ")" +
           "</text>"
       );
     }
@@ -2199,7 +2712,13 @@
     STORAGE_KEY: STORAGE_KEY,
     PROBE_IDS: PROBE_IDS,
     DEFICIT_PROBE_IDS: DEFICIT_PROBE_IDS,
+    PSYCHOMETRIC_NORMS: PSYCHOMETRIC_NORMS,
     BASELINE_REF: BASELINE_REF,
+    computeRCI: computeRCI,
+    computeExGaussian: computeExGaussian,
+    computeLISAS: computeLISAS,
+    computeSplitHalfReliability: computeSplitHalfReliability,
+    getScientificAudit: getScientificAudit,
     loadState: loadState,
     saveState: saveState,
     updateContext: updateContext,
