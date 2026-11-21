@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="./styles.css?v=5" />
+  <link rel="stylesheet" href="./styles.css?v=6" />
 
   <style>
     :where(.topbar-inner) {
@@ -87,6 +87,16 @@
         <button
           type="button"
           class="tab-btn"
+          data-view="falsify"
+          role="tab"
+          aria-selected="false"
+          aria-controls="view-falsify"
+        >
+          حسم الفرضية الفراغية (4)
+        </button>
+        <button
+          type="button"
+          class="tab-btn"
           data-view="trends"
           role="tab"
           aria-selected="false"
@@ -115,6 +125,13 @@
           title="تبديل الوضع الليلي والنهاري"
         >
           الوضع الليلي
+        </button>
+        <button
+          id="topFalsifyBtn"
+          type="button"
+          class="pill-btn"
+        >
+          حسم الفرضية (4)
         </button>
         <button
           id="topBatteryBtn"
@@ -232,6 +249,11 @@
         </header>
         <div id="probesGrid" class="probes-grid"></div>
       </section>
+    </section>
+
+    <!-- قسم حسم الفرضية الفراغية (4 تجارب) -->
+    <section id="view-falsify" class="view-panel" role="tabpanel" hidden>
+      <div id="falsifyMount"></div>
     </section>
 
     <!-- القسم الثاني: المنحنيات والسجل الطولي -->
@@ -455,9 +477,11 @@
   <!-- إشعار سريع لطيف -->
   <div id="toastEl" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="./stimuli.js?v=5"></script>
-  <script src="./analytics.js?v=5"></script>
-  <script src="./engine.js?v=5"></script>
+  <script src="./stimuli.js?v=6"></script>
+  <script src="./analytics.js?v=6"></script>
+  <script src="./engine.js?v=6"></script>
+  <script src="./falsify-core.js?v=6"></script>
+  <script src="./falsify.js?v=6"></script>
   <script>
     (function () {
       "use strict";
@@ -615,11 +639,15 @@
       const dom = {
         html: document.documentElement,
         themeToggleBtn: document.getElementById("themeToggleBtn"),
+        topFalsifyBtn: document.getElementById("topFalsifyBtn"),
         topBatteryBtn: document.getElementById("topBatteryBtn"),
         launchBatteryBtn: document.getElementById("launchBatteryBtn"),
         viewTabs: Array.from(document.querySelectorAll(".view-tabs [data-view]")),
+        viewFalsify: document.getElementById("view-falsify"),
+        falsifyMount: document.getElementById("falsifyMount"),
         views: {
           dashboard: document.getElementById("view-dashboard"),
+          falsify: document.getElementById("view-falsify"),
           trends: document.getElementById("view-trends"),
           data: document.getElementById("view-data")
         },
@@ -869,7 +897,12 @@
           btn.setAttribute("aria-selected", isActive ? "true" : "false");
         });
 
-        if (normalized === "trends") {
+        if (normalized === "falsify") {
+          if (dom.viewFalsify) dom.viewFalsify.hidden = false;
+          if (window.NeuroLab && window.NeuroLab.Falsify && typeof window.NeuroLab.Falsify.render === "function") {
+            window.NeuroLab.Falsify.render();
+          }
+        } else if (normalized === "trends") {
           renderTrendsView();
         } else if (normalized === "dashboard") {
           renderDashboardView();
@@ -1492,6 +1525,9 @@
       function refreshAllViews() {
         renderDashboardView();
         renderTrendsView();
+        if (state.activeView === "falsify" && window.NeuroLab && window.NeuroLab.Falsify && typeof window.NeuroLab.Falsify.render === "function") {
+          try { window.NeuroLab.Falsify.render(); } catch (_) {}
+        }
       }
 
       function handleSessionUpdate(payload) {
@@ -1775,6 +1811,11 @@
         if (dom.launchBatteryBtn) {
           dom.launchBatteryBtn.addEventListener("click", launchFullBattery);
         }
+        if (dom.topFalsifyBtn) {
+          dom.topFalsifyBtn.addEventListener("click", function () {
+            switchView("falsify");
+          });
+        }
         if (dom.topBatteryBtn) {
           dom.topBatteryBtn.addEventListener("click", launchFullBattery);
         }
@@ -1842,6 +1883,9 @@
 
         if (dom.arenaAbortBtn) {
           dom.arenaAbortBtn.addEventListener("click", function () {
+            if (window.NeuroLab && window.NeuroLab.Falsify && typeof window.NeuroLab.Falsify.abort === "function") {
+              try { window.NeuroLab.Falsify.abort(); } catch (_) {}
+            }
             const E = getEngineApi();
             if (dom.arenaOverlay && !dom.arenaOverlay.hidden) {
               if (typeof E.abort === "function") {
@@ -1855,6 +1899,23 @@
             refreshAllViews();
           });
         }
+
+        window.addEventListener("hashchange", function () {
+          if (shouldOpenFalsifyFromUrl()) {
+            switchView("falsify");
+          }
+        });
+      }
+
+      function shouldOpenFalsifyFromUrl() {
+        try {
+          const hash = String(window.location.hash || "").trim().toLowerCase();
+          if (hash === "#falsify" || hash === "#view-falsify") return true;
+          const params = new URLSearchParams(window.location.search || "");
+          const mode = String(params.get("mode") || "").trim().toLowerCase();
+          if (mode === "falsify") return true;
+        } catch (_) {}
+        return false;
       }
 
       function bootstrap() {
@@ -1867,8 +1928,15 @@
         populatePhases();
         hydrateContextInputs();
         bindEngine();
+        if (window.NeuroLab && window.NeuroLab.Falsify && typeof window.NeuroLab.Falsify.init === "function") {
+          window.NeuroLab.Falsify.init({ mountEl: dom.falsifyMount });
+        }
         bindEvents();
         refreshAllViews();
+
+        if (shouldOpenFalsifyFromUrl()) {
+          switchView("falsify");
+        }
       }
 
       if (document.readyState === "loading") {
