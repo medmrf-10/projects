@@ -555,17 +555,14 @@
       '<h2 class="probe-title" style="font-size:1.3rem;margin:0;">' +
       esc(meta.title) +
       "</h2>" +
-      '<p class="probe-deficit" style="margin:0;">العطل المستهدف: <strong>' +
-      esc(meta.deficitName || meta.deficit || "") +
-      "</strong></p>" +
       warmupBanner +
       '<ol class="probe-steps">' +
       stepsHtml +
       "</ol>" +
       (meta.example ? '<div class="probe-example-box">' + esc(meta.example) + "</div>" : "") +
       '<div class="result-actions">' +
-      '<button id="btnWarmupProbe" type="button" class="btn-ghost">جولة تدريبية غير محسوبة (تعلّم الأداة)</button>' +
-      '<button id="btnStartProbeNow" type="button" class="btn-primary">ابدأ القياس الفعلي الآن (Enter)</button>' +
+      '<button id="btnWarmupProbe" type="button" class="btn-ghost">تجربة سريعة (غير محسوبة)</button>' +
+      '<button id="btnStartProbeNow" type="button" class="btn-primary">ابدأ الآن (Enter)</button>' +
       "</div>" +
       "</div>";
 
@@ -601,7 +598,7 @@
     var S = getStimuli();
     var meta = findProbeMeta(probeId);
     var sample = typeof S.generateWarmupTrial === "function" ? S.generateWarmupTrial(probeId) : null;
-    setHeader(meta.title + " — جولة تدريبية", "Practice (Unscored)");
+    setHeader(meta.title + " — تجربة سريعة", "Practice");
 
     if (probeId === "isolation" && sample) {
       var wIdx = 0;
@@ -611,10 +608,14 @@
           var optsH = sample.taskOptions.map(function (o) {
             return '<button type="button" class="opt-btn" data-v="' + esc(o) + '"><span class="ltr-iso">' + esc(o) + "</span></button>";
           }).join("");
+          var promptStr = String(sample.taskPrompt || "");
+          var promptHtml = promptStr.trim().indexOf("(") === 0
+            ? '<span class="ltr-iso math-expr">' + esc(promptStr) + "</span>"
+            : esc(promptStr);
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<div class="stim-label">تدريب غير محسوب — المسألة الفاصلة</div>' +
-            '<p class="task-question">' + esc(sample.taskPrompt) + "</p>" +
+            '<div class="stim-label">المسألة</div>' +
+            '<p class="task-question">' + promptHtml + "</p>" +
             '<div class="options-grid">' + optsH + "</div></div>";
           var bs = domRefs.stage.querySelectorAll(".opt-btn");
           for (var b = 0; b < bs.length; b += 1) {
@@ -626,9 +627,9 @@
           return;
         }
         domRefs.stage.innerHTML =
-          '<div class="stimulus-card"><div class="stim-label">تدريب: احفظ بترتيب الظهور (<span class="ltr-iso">' +
-          (wIdx + 1) + "/" + wLen +
-          '</span>)</div><div class="stim-word">' +
+          '<div class="stimulus-card"><div class="stim-label"><span class="ltr-iso">' +
+          (wIdx + 1) + " / " + wLen +
+          '</span></div><div class="stim-word">' +
           esc(sample.words[wIdx]) +
           "</div></div>";
         wIdx += 1;
@@ -648,9 +649,9 @@
             return '<button type="button" class="key-btn" data-w="' + esc(w) + '"' + (picks.indexOf(w) !== -1 ? " disabled" : "") + ">" + esc(w) + "</button>";
           }).join("");
           domRefs.stage.innerHTML =
-            '<div class="task-box"><div class="stim-label">تدريب لوحة الاسترجاع المرتب</div>' +
+            '<div class="task-box"><p class="task-question">رتّب الكلمات (1 ← 4):</p>' +
             '<div class="recall-slots">' + sl + '</div><div class="keypad-grid">' + kh + "</div>" +
-            '<div class="arena-utility-row"><button id="wIsoForgot" type="button" class="btn-forgot">تبخر العنصر ؟</button></div></div>';
+            '<div class="arena-utility-row"><button id="wIsoForgot" type="button" class="btn-forgot">نسيت ؟</button></div></div>';
           var kbs = domRefs.stage.querySelectorAll(".key-btn");
           for (var k = 0; k < kbs.length; k += 1) {
             kbs[k].addEventListener("click", function (e) { addPick(e.currentTarget.getAttribute("data-w")); });
@@ -664,8 +665,8 @@
             for (var c = 0; c < wLen; c += 1) if (picks[c] === sample.words[c]) hits += 1;
             launchProbeIntro(
               probeId,
-              "اكتملت الجولة التدريبية (غير محسوبة): استرجعت " + hits + "/" + wLen +
-              " بالترتيب (" + sample.words.join(" ← ") + ")، والمسألة " + (mathOk ? "صحيحة" : "جوابها " + sample.taskAnswer) + "."
+              "نتيجة التجربة: " + hits + "/" + wLen +
+              " (" + sample.words.join(" ← ") + ") · المسألة " + (mathOk ? "صحيحة" : "جوابها " + sample.taskAnswer) + "."
             );
           } else {
             drawPad();
@@ -686,18 +687,18 @@
             return esc(vn) + ': <span class="ltr-iso">' + sample.initial[vn] + "</span>";
           }).join(" &nbsp;|&nbsp; ");
           domRefs.stage.innerHTML =
-            '<div class="stimulus-card"><div class="stim-label">تدريب غير محسوب — القيم الابتدائية</div>' +
+            '<div class="stimulus-card"><div class="stim-label">البداية</div>' +
             '<div class="stim-step-text">' + initTxt + "</div>" +
-            '<button id="wUpdGo" type="button" class="btn-primary">حفظت البداية — اعرض الخطوات</button></div>';
+            '<button id="wUpdGo" type="button" class="btn-primary">ابدأ</button></div>';
           document.getElementById("wUpdGo").addEventListener("click", function () { uStep = 0; renderWarmUpd(); });
           return;
         }
         if (uStep < sample.steps.length) {
           domRefs.stage.innerHTML =
-            '<div class="stimulus-card"><div class="stim-label">تدريب التحديث (<span class="ltr-iso">' +
-            (uStep + 1) + "/" + sample.steps.length + '</span>)</div>' +
+            '<div class="stimulus-card"><div class="stim-label"><span class="ltr-iso">' +
+            (uStep + 1) + " / " + sample.steps.length + '</span></div>' +
             '<div class="stim-step-text">' + esc(sample.steps[uStep].text) + "</div>" +
-            '<button id="wUpdStep" type="button" class="btn-primary">تم التحديث — التالي</button></div>';
+            '<button id="wUpdStep" type="button" class="btn-primary">التالي</button></div>';
           document.getElementById("wUpdStep").addEventListener("click", function () { uStep += 1; renderWarmUpd(); });
           return;
         }
@@ -705,8 +706,8 @@
         var np = "";
         for (var d = 1; d <= 9; d += 1) np += '<button type="button" class="key-btn" data-d="' + d + '">' + d + "</button>";
         domRefs.stage.innerHTML =
-          '<div class="task-box"><div class="stim-label">تدريب لوحة الأرقام</div>' +
-          '<p class="task-question">ما القيمة النهائية للمتغير «' + esc(targetV) + '»؟</p>' +
+          '<div class="task-box"><div class="stim-label"><span class="ltr-iso">1 / 1</span></div>' +
+          '<p class="task-question">' + esc(targetV) + ' = ؟</p>' +
           '<div class="keypad-grid is-numpad">' + np + "</div></div>";
         var nbs = domRefs.stage.querySelectorAll(".key-btn");
         for (var n = 0; n < nbs.length; n += 1) {
@@ -715,8 +716,8 @@
             var ans = sample.final[targetV];
             launchProbeIntro(
               probeId,
-              "اكتمل التدريب غير المحسوب: القيمة النهائية لـ «" + targetV + "» كانت " + ans +
-              (got === ans ? " (إجابة صحيحة)." : " (اخترت " + got + ").")
+              "نتيجة التجربة: " + targetV + " = " + ans +
+              (got === ans ? " (صحيحة)." : " (اخترت " + got + ").")
             );
           });
         }
@@ -735,8 +736,8 @@
         }
         var it = sample.sequence[gIdx];
         domRefs.stage.innerHTML =
-          '<div class="stimulus-card"><div class="stim-label">تدريب بوابة التناوب — العنصر <span class="ltr-iso">' +
-          (gIdx + 1) + '/4</span></div><div class="stim-token">' + esc(it.value) + "</div></div>";
+          '<div class="stimulus-card"><div class="stim-label"><span class="ltr-iso">' +
+          (gIdx + 1) + ' / 4</span></div><div class="stim-token">' + esc(it.value) + "</div></div>";
         gIdx += 1;
         scheduleFrameAccurate(showWarmGate, 900);
       }
@@ -747,8 +748,8 @@
           np += '<button type="button" class="key-btn" data-n="' + n + '"' + dis + ">" + n + "</button>";
         }
         domRefs.stage.innerHTML =
-          '<div class="task-box"><div class="stim-label">تدريب المرحلة 1 من 2 — الأرقام تصاعديا</div>' +
-          '<p class="task-question">اختر الرقمين مرتبين من الأصغر إلى الأكبر (' + wNums.length + '/2):</p>' +
+          '<div class="task-box"><div class="stim-label"><span class="ltr-iso">1 / 2</span></div>' +
+          '<p class="task-question">1) الأرقام: من الأصغر للأكبر</p>' +
           '<div class="keypad-grid is-numpad">' + np + "</div></div>";
         var nbs = domRefs.stage.querySelectorAll(".key-btn");
         for (var b = 0; b < nbs.length; b += 1) {
@@ -757,7 +758,7 @@
             if (wNums.length >= 2) {
               launchProbeIntro(
                 probeId,
-                "اكتمل التدريب غير المحسوب: الأرقام تصاعديا (3 ثم 7) وتليها في القياس الفعلي الكلمات عكسيا (عذر ثم غرض)."
+                "نتيجة التجربة: الأرقام (3 ← 7)، وتليها في الاختبار الكلمات عكسيا (عذر ← غرض)."
               );
             } else {
               renderWarmGateNums();
@@ -775,10 +776,11 @@
         cleanupActive();
         if (bpIdx < sample.premises.length) {
           domRefs.stage.innerHTML =
-            '<div class="stimulus-card"><div class="stim-label">تدريب الاستنتاج — المقدمة <span class="ltr-iso">' +
-            (bpIdx + 1) + "/" + sample.premises.length + '</span></div>' +
+            '<div class="stimulus-card"><div class="stim-label"><span class="ltr-iso">' +
+            (bpIdx + 1) + " / " + sample.premises.length + '</span></div>' +
             '<div class="stim-step-text">' + esc(sample.premises[bpIdx]) + "</div>" +
-            '<button id="wBndNext" type="button" class="btn-primary">التالي</button></div>';
+            '<button id="wBndNext" type="button" class="btn-primary">' +
+            (bpIdx < sample.premises.length - 1 ? "التالي" : "السؤال") + "</button></div>";
           document.getElementById("wBndNext").addEventListener("click", function () { bpIdx += 1; showWarmPremise(); });
           return;
         }
@@ -786,7 +788,7 @@
           return '<button type="button" class="opt-btn" data-e="' + esc(ent) + '">' + esc(ent) + "</button>";
         }).join("");
         domRefs.stage.innerHTML =
-          '<div class="task-box"><div class="stim-label">تدريب الاسترجاع وسط 6 بدائل</div>' +
+          '<div class="task-box"><div class="stim-label">السؤال</div>' +
           '<p class="task-question">' + esc(sample.question) + "</p>" +
           '<div class="options-grid">' + oh + "</div></div>";
         var obs = domRefs.stage.querySelectorAll(".opt-btn");
@@ -795,8 +797,7 @@
             var ch = e.currentTarget.getAttribute("data-e");
             launchProbeIntro(
               probeId,
-              "اكتمل التدريب غير المحسوب: الجواب الصحيح «" + sample.answer + "» (" +
-              sample.structuralCheck.answer + ") — " + (ch === sample.answer ? "إصابة دقيقة." : "اخترت «" + ch + "».")
+              "نتيجة التجربة: «" + sample.answer + "» (" + (ch === sample.answer ? "صحيحة" : "اخترت «" + ch + "»") + ")."
             );
           });
         }
@@ -811,12 +812,12 @@
       var vWaiting = false;
       domRefs.stage.innerHTML =
         '<div class="vigilance-pad">' +
-        '<div class="stim-label">تدريب تفاعلي لدورة رباعية واحدة (4 ومضات غير محسوبة)</div>' +
+        '<div class="stim-label">4 ومضات تجريبية</div>' +
         '<div id="wVigRing" class="pulse-ring">●</div>' +
-        '<p id="wVigMsg" class="vig-status-msg">انتظر الومضة الأولى...</p>' +
+        '<p id="wVigMsg" class="vig-status-msg">انتظر الضوء...</p>' +
         '<div class="vig-actions">' +
-        '<button id="wVigStep" type="button" class="vig-btn-step">خطوة 1 أو 2 أو 3</button>' +
-        '<button id="wVigClose" type="button" class="vig-btn-close">إغلاق الدورة 4</button>' +
+        '<button id="wVigStep" type="button" class="vig-btn-step">ومضة 1 أو 2 أو 3</button>' +
+        '<button id="wVigClose" type="button" class="vig-btn-close">الومضة 4 فقط</button>' +
         "</div></div>";
       var wRing = document.getElementById("wVigRing");
       var wMsg = document.getElementById("wVigMsg");
@@ -825,19 +826,19 @@
         vWaiting = false;
         var ok = (vpIdx < 4 && kind === "step") || (vpIdx === 4 && kind === "close");
         if (ok) vHits += 1;
-        if (wMsg) wMsg.textContent = ok ? "استجابة متطابقة للومضة " + vpIdx : "تنبه: الومضة 4 فقط تُغلق بزر إغلاق الدورة";
+        if (wMsg) wMsg.textContent = ok ? "صحيح (" + vpIdx + " / 4)" : "الومضة 4 لها الزر الثاني فقط";
       }
       bindFastPress(document.getElementById("wVigStep"), function () { onWarmTap("step"); });
       bindFastPress(document.getElementById("wVigClose"), function () { onWarmTap("close"); });
       function fireWarmPulse() {
         if (vpIdx >= 4) {
-          launchProbeIntro(probeId, "اكتملت الدورة التدريبية (" + vHits + "/4 استجابات مطابقة) دون احتساب في السجل.");
+          launchProbeIntro(probeId, "نتيجة التجربة: " + vHits + " / 4.");
           return;
         }
         vpIdx += 1;
         vWaiting = true;
         if (wRing) wRing.classList.add("is-flashing");
-        if (wMsg) wMsg.textContent = "الومضة التدريبية " + vpIdx + " من 4";
+        if (wMsg) wMsg.textContent = "ومضة " + vpIdx + " / 4";
         scheduleFrameAccurate(function () {
           if (wRing) wRing.classList.remove("is-flashing");
         }, 240);
@@ -849,11 +850,11 @@
 
     if (probeId === "control" && sample) {
       domRefs.stage.innerHTML =
-        '<div class="visual-canvas-wrap"><div class="stim-label">تدريب ومضة 0.8s + قناع تقنيع</div>' +
+        '<div class="visual-canvas-wrap"><div class="stim-label">التقط الشكل</div>' +
         '<div class="visual-svg-box">' + renderVisualStimulusSVG(sample, null) + "</div></div>";
       scheduleFrameAccurate(function () {
         domRefs.stage.innerHTML =
-          '<div class="visual-canvas-wrap"><div class="stim-label">قناع تقنيع بصري</div>' +
+          '<div class="visual-canvas-wrap"><div class="stim-label">...</div>' +
           '<div class="visual-svg-box">' + renderMaskSVG(sample.maskSeed || 777) + "</div></div>";
         scheduleFrameAccurate(function () {
           var gh = "";
@@ -861,7 +862,7 @@
             gh += '<button type="button" class="visual-opt-btn" data-o="' + o + '">' + renderVisualStimulusSVG(sample, o) + "</button>";
           }
           domRefs.stage.innerHTML =
-            '<div class="task-box"><p class="task-question">تدريب: اختر نافذة التناسب المطابقة لما ومض:</p>' +
+            '<div class="task-box"><p class="task-question">الشكل المطابق؟</p>' +
             '<div class="visual-options-grid">' + gh + "</div></div>";
           var vbs = domRefs.stage.querySelectorAll(".visual-opt-btn");
           for (var b = 0; b < vbs.length; b += 1) {
@@ -869,7 +870,7 @@
               var ok = Number(e.currentTarget.getAttribute("data-o")) === Number(sample.correctIndex);
               launchProbeIntro(
                 probeId,
-                "اكتملت المعاينة البصرية غير المحسوبة (" + (ok ? "مطابقة صحيحة" : "تذكّر التركيز على نسب التقسيم") + ")."
+                "نتيجة التجربة: " + (ok ? "مطابقة صحيحة." : "انتبه لنسب التقسيم.")
               );
             });
           }
@@ -878,7 +879,7 @@
       return;
     }
 
-    launchProbeIntro(probeId, "جاهز لبدء القياس الفعلي.");
+    launchProbeIntro(probeId, "جاهز للبدء.");
   }
 
   function dispatchProbeRunner(probeId) {
@@ -907,12 +908,6 @@
         return finishIsolation(results);
       }
       var tr = trials[idx];
-      var modeBadge =
-        tr.taskType === "pure"
-          ? "جولة مرجعية صافية (احتفاظ صامت موازن زمنيا)"
-          : tr.taskType === "math"
-          ? "جولة مزدوجة (حفظ + حساب موقوت)"
-          : "جولة مزدوجة (حفظ + منطق مقلوب)";
       setHeader(meta.title, formatProgressPrefix("Trial " + (idx + 1) + "/" + trials.length));
 
       // Guard transient 4-word presentation against mid-encoding tab backgrounding (capped at 1 fresh replay per trial)
@@ -932,9 +927,7 @@
 
       domRefs.stage.innerHTML =
         '<div class="stimulus-card">' +
-        '<div class="stim-label">' +
-        esc(modeBadge) +
-        " — استعد لحفظ 4 مفردات بالترتيب</div>" +
+        '<div class="stim-label">احفظ 4 كلمات بالترتيب</div>' +
         '<div class="stim-num">+</div>' +
         "</div>";
 
@@ -952,11 +945,9 @@
         }
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">المفردة <span class="ltr-iso">' +
+          '<div class="stim-label"><span class="ltr-iso">' +
           (wIdx + 1) +
-          " / " +
-          tr.words.length +
-          "</span></div>" +
+          " / 4</span></div>" +
           '<div class="stim-word">' +
           esc(tr.words[wIdx]) +
           "</div>" +
@@ -977,7 +968,7 @@
         var holdMs = tr.retentionMs || 4200;
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">احتفاظ صامت موازن زمنيا بدون معالجة...</div>' +
+          '<div class="stim-label">احتفظ بالكلمات...</div>' +
           '<div class="stim-num" style="opacity:0.45;">•</div>' +
           '<div class="tbrs-timer-track"><div id="pureHoldBar" class="tbrs-timer-fill"></div></div>' +
           "</div>";
@@ -1002,12 +993,12 @@
 
         domRefs.stage.innerHTML =
           '<div class="task-box">' +
-          '<div class="stim-label">' +
-          (tr.taskType === "math" ? "معالجة حسابية فورية (موقوتة)" : "معالجة علائقية مقلوبة القطبية (موقوتة)") +
-          "</div>" +
+          '<div class="stim-label">المسألة</div>' +
           '<div class="tbrs-timer-track" aria-hidden="true"><div id="isoTaskTimerBar" class="tbrs-timer-fill"></div></div>' +
           '<p class="task-question">' +
-          esc(tr.taskPrompt) +
+          (tr.taskType === "math"
+            ? '<span class="ltr-iso math-expr">' + esc(tr.taskPrompt) + "</span>"
+            : esc(tr.taskPrompt)) +
           "</p>" +
           '<div class="options-grid">' +
           optsHtml +
@@ -1067,7 +1058,7 @@
               var activeCls = s === chosenWords.length ? "slot-pill is-active" : "slot-pill";
               slotsHtml += '<div class="' + activeCls + '">خانة <span class="ltr-iso">' + (s + 1) + "</span></div>";
             } else if (entry === "__FORGOT__") {
-              slotsHtml += '<div class="slot-pill is-forgotten">تبخرت ؟</div>';
+              slotsHtml += '<div class="slot-pill is-forgotten">؟</div>';
             } else {
               slotsHtml += '<div class="slot-pill is-filled">' + esc(entry) + "</div>";
             }
@@ -1089,7 +1080,7 @@
 
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<p class="task-question">انقر مفردات هذه الجولة فقط بترتيب ظهورها من 1 إلى 4:</p>' +
+            '<p class="task-question">رتّب الكلمات (1 ← 4):</p>' +
             '<div class="recall-slots">' +
             slotsHtml +
             "</div>" +
@@ -1097,7 +1088,7 @@
             keysHtml +
             "</div>" +
             '<div class="arena-utility-row">' +
-            '<button id="btnForgotSlot" type="button" class="btn-forgot">تبخر العنصر ؟</button>' +
+            '<button id="btnForgotSlot" type="button" class="btn-forgot">نسيت ؟</button>' +
             '<button id="btnUndoSlot" type="button" class="btn-undo"' +
             (chosenWords.length === 0 ? " disabled" : "") +
             ">تراجع</button>" +
@@ -1382,14 +1373,12 @@
       var initCapMs = tr.initDeadlineMs || 9500;
       domRefs.stage.innerHTML =
         '<div class="stimulus-card">' +
-        '<div class="stim-label">القيم الابتدائية (' +
-        tr.vars.length +
-        " متغيرات — استرجاع عشوائي الترتيب)</div>" +
+        '<div class="stim-label">البداية</div>' +
         '<div class="tbrs-timer-track"><div id="updInitBar" class="tbrs-timer-fill"></div></div>' +
         '<div class="stim-step-text">' +
         initParts.join(" &nbsp;|&nbsp; ") +
         "</div>" +
-        '<button id="btnBeginSteps" type="button" class="btn-primary">حفظت البداية — اعرض الخطوات (مسافة)</button>' +
+        '<button id="btnBeginSteps" type="button" class="btn-primary">ابدأ (مسافة)</button>' +
         "</div>";
 
       startCountdownBar(document.getElementById("updInitBar"), initCapMs);
@@ -1422,7 +1411,7 @@
 
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">الخطوة <span class="ltr-iso">' +
+          '<div class="stim-label"><span class="ltr-iso">' +
           (sIdx + 1) +
           " / " +
           tr.steps.length +
@@ -1432,7 +1421,7 @@
           esc(stepObj.text) +
           "</div>" +
           renderDots(tr.steps.length, sIdx) +
-          '<button id="btnNextUpdateStep" type="button" class="btn-primary">تم التحديث — التالي (مسافة)</button>' +
+          '<button id="btnNextUpdateStep" type="button" class="btn-primary">التالي (مسافة)</button>' +
           "</div>";
 
         onNextFramePaint(function (paintTs) {
@@ -1501,19 +1490,19 @@
 
         domRefs.stage.innerHTML =
           '<div class="task-box">' +
-          '<div class="stim-label">استرجاع المتغير <span class="ltr-iso">' +
+          '<div class="stim-label"><span class="ltr-iso">' +
           (qIdx + 1) +
           " / " +
           queryList.length +
           "</span></div>" +
-          '<p class="task-question">ما القيمة النهائية للمتغير «' +
+          '<p class="task-question">' +
           esc(varName) +
-          "»؟</p>" +
+          " = ؟</p>" +
           '<div class="keypad-grid is-numpad">' +
           numpadHtml +
           "</div>" +
           '<div class="arena-utility-row">' +
-          '<button id="btnForgotVar" type="button" class="btn-forgot">تبخر الرقم في اللحظة الأخيرة ؟</button>' +
+          '<button id="btnForgotVar" type="button" class="btn-forgot">نسيت الرقم ؟</button>' +
           "</div>" +
           "</div>";
 
@@ -1686,9 +1675,7 @@
 
       domRefs.stage.innerHTML =
         '<div class="stimulus-card">' +
-        '<div class="stim-label">استعد لفرز سلسلة من <span class="ltr-iso">' +
-        tr.sequence.length +
-        "</span> عناصر (الأرقام تصاعديا ثم الكلمات عكسيا)</div>" +
+        '<div class="stim-label">الأرقام تصاعديا · الكلمات عكسيا</div>' +
         '<div class="stim-num">+</div>' +
         "</div>";
 
@@ -1706,7 +1693,7 @@
         // No category pre-cue ("رقم" / "كلمة") — forces bottom-up Left IFS input gating upon reading!
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">العنصر <span class="ltr-iso">' +
+          '<div class="stim-label"><span class="ltr-iso">' +
           (sIdx + 1) +
           " / " +
           tr.sequence.length +
@@ -1770,8 +1757,8 @@
 
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<div class="stim-label">المرحلة 1 من 2 — فرز الأرقام</div>' +
-            '<p class="task-question">اختر الأرقام التي تذكرتها مرتبة تصاعديا من الأصغر إلى الأكبر:</p>' +
+            '<div class="stim-label"><span class="ltr-iso">1 / 2</span></div>' +
+            '<p class="task-question">1) الأرقام: من الأصغر للأكبر</p>' +
             '<div class="recall-slots">' +
             slotsHtml +
             "</div>" +
@@ -1779,7 +1766,7 @@
             padHtml +
             "</div>" +
             '<div class="arena-utility-row">' +
-            '<button id="btnForgotGNum" type="button" class="btn-forgot">تبخر الرقم ؟</button>' +
+            '<button id="btnForgotGNum" type="button" class="btn-forgot">نسيت الرقم ؟</button>' +
             '<button id="btnUndoGNum" type="button" class="btn-undo"' +
             (chosenNums.length === 0 ? " disabled" : "") +
             ">تراجع</button>" +
@@ -1866,8 +1853,8 @@
 
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<div class="stim-label">المرحلة 2 من 2 — عكس الكلمات</div>' +
-            '<p class="task-question">اختر الكلمات التي تذكرتها مرتبة عكسيا من الأخيرة إلى الأولى:</p>' +
+            '<div class="stim-label"><span class="ltr-iso">2 / 2</span></div>' +
+            '<p class="task-question">2) الكلمات: من الأخيرة للأولى</p>' +
             '<div class="recall-slots">' +
             slotsHtml +
             "</div>" +
@@ -1875,7 +1862,7 @@
             padHtml +
             "</div>" +
             '<div class="arena-utility-row">' +
-            '<button id="btnForgotGWord" type="button" class="btn-forgot">تبخرت الكلمة ؟</button>' +
+            '<button id="btnForgotGWord" type="button" class="btn-forgot">نسيت الكلمة ؟</button>' +
             '<button id="btnUndoGWord" type="button" class="btn-undo"' +
             (chosenWords.length === 0 ? " disabled" : "") +
             ">تراجع</button>" +
@@ -2029,17 +2016,17 @@
         var totalP = tr.premises.length;
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">المقدمة الضرورية <span class="ltr-iso">' +
+          '<div class="stim-label"><span class="ltr-iso">' +
           (pIdx + 1) +
           " / " +
           totalP +
-          "</span> (انتبه للطرف الأول والثاني)</div>" +
+          "</span></div>" +
           '<div class="stim-step-text">' +
           esc(tr.premises[pIdx]) +
           "</div>" +
           renderDots(totalP, pIdx) +
           '<button id="btnNextPremise" type="button" class="btn-primary">' +
-          (pIdx < totalP - 1 ? "المقدمة التالية (مسافة)" : "اعرض سؤال الاستنتاج (مسافة)") +
+          (pIdx < totalP - 1 ? "التالي (مسافة)" : "السؤال (مسافة)") +
           "</button>" +
           "</div>";
 
@@ -2085,11 +2072,7 @@
 
         domRefs.stage.innerHTML =
           '<div class="task-box">' +
-          '<div class="stim-label">' +
-          (tr.polarity === "flipped"
-            ? "سلسلة مقلوبة القطبية (" + tr.entityCount + " عناصر وسط 6 بدائل)"
-            : "سلسلة خطية متسقة (3 عناصر وسط 6 بدائل)") +
-          "</div>" +
+          '<div class="stim-label">السؤال</div>' +
           '<p class="task-question">' +
           esc(tr.question) +
           "</p>" +
@@ -2097,7 +2080,7 @@
           optsHtml +
           "</div>" +
           '<div class="arena-utility-row">' +
-          '<button id="btnPointerDecay" type="button" class="btn-forgot">عرفت الموقع المنطقي للعقدة وتبخر اسمها اللفظي</button>' +
+          '<button id="btnPointerDecay" type="button" class="btn-forgot">نسيت الاسم فقط (أعرف موقعه)</button>' +
           "</div>" +
           "</div>";
 
@@ -2154,7 +2137,7 @@
 
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<div class="stim-label">فحص موضوعي لسلامة العقدة المنطقية بمعزل عن الاسم</div>' +
+            '<div class="stim-label">فحص الموقع</div>' +
             '<p class="task-question">' +
             esc(sc.prompt) +
             "</p>" +
@@ -2323,13 +2306,13 @@
       '<div class="vigilance-pad">' +
       '<div class="probe-bar-track" style="max-width:340px;"><div id="vigProgFill" class="probe-bar-fill" style="width:0%"></div></div>' +
       '<div id="vigPulseRing" class="pulse-ring">●</div>' +
-      '<p id="vigStatusMsg" class="vig-status-msg">عدّ الومضات غير الإيقاعية في دورات رباعية (1، 2، 3 ثم أغلق 4)</p>' +
+      '<p id="vigStatusMsg" class="vig-status-msg">ضغطة واحدة لكل ضوء: ثلاث بـ (1–3) ورابعتها بـ (4 فقط)</p>' +
       '<div class="vig-actions">' +
-      '<button id="btnVigStep" type="button" class="vig-btn-step">خطوة 1 أو 2 أو 3 (مسافة)</button>' +
-      '<button id="btnVigClose" type="button" class="vig-btn-close">إغلاق الدورة 4 (Enter)</button>' +
+      '<button id="btnVigStep" type="button" class="vig-btn-step">ومضة 1 أو 2 أو 3 (مسافة)</button>' +
+      '<button id="btnVigClose" type="button" class="vig-btn-close">الومضة 4 فقط (Enter)</button>' +
       "</div>" +
       '<div class="arena-utility-row">' +
-      '<button id="btnVigReset" type="button" class="vig-btn-reset">ضاع العدّاد مني — أعد من 1</button>' +
+      '<button id="btnVigReset" type="button" class="vig-btn-reset">ضاع العدّ — أعد من 1</button>' +
       "</div>" +
       "</div>";
 
@@ -2342,6 +2325,7 @@
     var tappedInCycle = 0;  // Valid conscious user responses since last boundary
     var missedInCycle = 0;  // Unanswered flashes in current cycle (prevents missed-pulse phase cascade!)
     var respondedCurrent = true;
+    var lastBeatAction = "";
     var pulseStartTs = 0;
     var lastValidRespTs = 0;
 
@@ -2369,6 +2353,7 @@
         tappedInCycle = 0;
         missedInCycle = 0;
         respondedCurrent = true;
+        lastBeatAction = "";
         lastValidRespTs = eventTime;
         if (msgEl) msgEl.textContent = "تمت إعادة المزامنة — الومضة القادمة ستكون رقم 1";
         return;
@@ -2381,6 +2366,25 @@
       }
 
       if (respondedCurrent) {
+        if (
+          actionType === "close" &&
+          lastBeatAction === "step" &&
+          tappedInCycle >= cfg.cycleLength
+        ) {
+          if (tappedInCycle % cfg.cycleLength === 0) {
+            autopilotOverruns = Math.max(0, autopilotOverruns - 1);
+          }
+          if (halfPulseScores.length > 0) {
+            halfPulseScores[halfPulseScores.length - 1] = 65;
+          }
+          presentedBeats = 0;
+          tappedInCycle = 0;
+          missedInCycle = 0;
+          lastBeatAction = "close";
+          lastValidRespTs = eventTime;
+          if (msgEl) msgEl.textContent = "تم إغلاق الدورة 4 (ابدأ من 1)";
+          return;
+        }
         // Ignore <220ms multi-touch fat-finger / button-release bounce after a valid response!
         if (lastValidRespTs > 0 && eventTime - lastValidRespTs < bounceGuardMs) {
           return;
@@ -2400,6 +2404,7 @@
       }
 
       respondedCurrent = true;
+      lastBeatAction = actionType;
       lastValidRespTs = eventTime;
       tappedInCycle += 1;
       validRts.push(rt);
@@ -2506,6 +2511,7 @@
       pulseIdx += 1;
       presentedBeats += 1;
       respondedCurrent = false;
+      lastBeatAction = "";
 
       if (fillEl) {
         fillEl.style.width = Math.round((pulseIdx / cfg.totalPulses) * 100) + "%";
@@ -2718,9 +2724,9 @@
 
     function runStackTrial(tr) {
       var frames = [
-        { label: "الطبقة 1 من 3 (الأصل المعلّق)", text: tr.frame1Text, btn: "افتح الفرع الأول (مسافة)" },
-        { label: "الطبقة 2 من 3 (الفرع الأول المعلّق)", text: tr.frame2Text, btn: "افتح الفرع الثاني (مسافة)" },
-        { label: "الطبقة 3 من 3 (القاعدة المباشرة)", text: tr.frame3Text, btn: "احسب وعوّض صعودا (مسافة)" }
+        { label: "1 / 3", text: tr.frame1Text, btn: "التالي (مسافة)" },
+        { label: "2 / 3", text: tr.frame2Text, btn: "التالي (مسافة)" },
+        { label: "3 / 3", text: tr.frame3Text, btn: "احسب الناتج (مسافة)" }
       ];
 
       function showFrame(fIdx) {
@@ -2738,7 +2744,7 @@
           }
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<div class="stim-label">إغلاق المكدس الصاعد (6 بدائل متناظرة)</div>' +
+            '<div class="stim-label">الجواب</div>' +
             '<p class="task-question">' +
             esc(tr.closeText) +
             "</p>" +
@@ -2784,12 +2790,12 @@
         var fr = frames[fIdx];
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">' +
+          '<div class="stim-label"><span class="ltr-iso">' +
           esc(fr.label) +
-          "</div>" +
-          '<div class="stim-step-text">' +
+          "</span></div>" +
+          '<div class="stim-step-text"><span class="ltr-iso math-expr">' +
           esc(fr.text) +
-          "</div>" +
+          "</span></div>" +
           renderDots(3, fIdx) +
           '<button id="btnNextStackFrame" type="button" class="btn-primary">' +
           esc(fr.btn) +
@@ -2821,10 +2827,10 @@
         cleanupActive();
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">مخزن القواعد الأمامي (الخطوة 1 من 3)</div>' +
+          '<div class="stim-label">الشرط (<span class="ltr-iso">1 / 3</span>)</div>' +
           '<div class="stim-step-text">' + esc(tr.ruleText) + "</div>" +
           renderDots(3, 0) +
-          '<button id="btnRuleNext1" type="button" class="btn-primary">حفظت القاعدة الشرطية — التالي (مسافة)</button>' +
+          '<button id="btnRuleNext1" type="button" class="btn-primary">التالي (مسافة)</button>' +
           "</div>";
         var go = function (ev) {
           var curTs = nowMs();
@@ -2843,10 +2849,10 @@
         cleanupActive();
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">المتغير النشط الواحد (الخطوة 2 من 3)</div>' +
+          '<div class="stim-label">العدد (<span class="ltr-iso">2 / 3</span>)</div>' +
           '<div class="stim-step-text">' + esc(tr.calcText) + "</div>" +
           renderDots(3, 1) +
-          '<button id="btnRuleNext2" type="button" class="btn-primary">حسبت العدد — اعرض المقاطعة (مسافة)</button>' +
+          '<button id="btnRuleNext2" type="button" class="btn-primary">التالي (مسافة)</button>' +
           "</div>";
         var go = function (ev) {
           var curTs = nowMs();
@@ -2874,7 +2880,7 @@
         }
         domRefs.stage.innerHTML =
           '<div class="task-box">' +
-          '<div class="stim-label">مقاطعة استرجاعية عابرة (الخطوة 3 من 3)</div>' +
+          '<div class="stim-label">مقاطعة (<span class="ltr-iso">3 / 3</span>)</div>' +
           '<p class="task-question">' + esc(tr.interruptPrompt) + "</p>" +
           '<div class="options-grid">' + iHtml + "</div>" +
           "</div>";
@@ -2913,7 +2919,7 @@
         }
         domRefs.stage.innerHTML =
           '<div class="task-box">' +
-          '<div class="stim-label">العودة لتطبيق القاعدة الشرطية بعد المقاطعة</div>' +
+          '<div class="stim-label">التطبيق</div>' +
           '<p class="task-question">' + esc(tr.applyPrompt) + "</p>" +
           '<div class="options-grid">' + oHtml + "</div>" +
           "</div>";
@@ -2973,16 +2979,14 @@
 
       domRefs.stage.innerHTML =
         '<div class="visual-canvas-wrap">' +
-        '<div class="stim-label">ثبّت بصرك لالتقاط التناسب المسطح الصامت (0.8 ثانية)</div>' +
+        '<div class="stim-label">التقط الشكل</div>' +
         '<div class="visual-svg-box"><span class="stim-num">+</span></div>' +
         "</div>";
 
       scheduleFrameAccurate(function () {
         domRefs.stage.innerHTML =
           '<div class="visual-canvas-wrap">' +
-          '<div class="stim-label">' +
-          (tr.visualSubtype === "window" ? "ومضة نافذة التناسب اللارمزية (Z2×Z2)" : "ومضة المضلع الأملس (Z2×Z2)") +
-          "</div>" +
+          '<div class="stim-label">التقط الشكل</div>' +
           '<div class="visual-svg-box">' +
           renderVisualStimulusSVG(tr, null) +
           "</div>" +
@@ -2992,7 +2996,7 @@
           scheduleFrameAccurate(function () {
             domRefs.stage.innerHTML =
               '<div class="visual-canvas-wrap">' +
-              '<div class="stim-label">قناع تقنيع بصري متعدد الاتجاهات</div>' +
+              '<div class="stim-label">...</div>' +
               '<div class="visual-svg-box">' +
               renderMaskSVG(tr.maskSeed) +
               "</div>" +
@@ -3003,7 +3007,7 @@
                 clearEncodingVisibilityGuard();
                 domRefs.stage.innerHTML =
                   '<div class="visual-canvas-wrap">' +
-                  '<div class="stim-label">احتفاظ بصري صامت (إجمالي فجوة 3.2 ثانية)...</div>' +
+                  '<div class="stim-label">احتفظ بالشكل...</div>' +
                   '<div class="visual-svg-box"></div>' +
                   "</div>";
 
@@ -3022,7 +3026,7 @@
 
                   domRefs.stage.innerHTML =
                     '<div class="task-box">' +
-                    '<p class="task-question">اختر الشكل المطابق تماما في التناسب للشكل الذي ومض:</p>' +
+                    '<p class="task-question">الشكل المطابق؟</p>' +
                     '<div class="visual-options-grid">' +
                     gridHtml +
                     "</div>" +
