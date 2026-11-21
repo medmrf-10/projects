@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+  <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet" />
+  <meta name="referrer" content="no-referrer" />
+  <title>مختبر التتبع العصبي الجراحي — منظومة الذاكرة العاملة والانتباه</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+
+  <style>
+    :where(.topbar-inner) {
+      flex-wrap: wrap;
+    }
+    @media (max-width: 920px) {
+      :where(.topbar-inner > .view-tabs) {
+        order: 3;
+        flex: 1 1 100%;
+        width: 100%;
+        margin: 4px 0 0;
+      }
+    }
+    :where(.backup-actions-row) {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    :where(.history-item-body) {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    :where(.history-item-head) {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 14px;
+    }
+    :where(.history-sublist) {
+      margin: 4px 0 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12h4l2.5-6 4 12 3-8 2.5 2H22" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">مختبر التتبع العصبي الجراحي</h1>
+          <p class="brand-sub">منظومة الذاكرة العاملة والانتباه التنفيذي</p>
+        </div>
+      </div>
+
+      <nav class="view-tabs" role="tablist" aria-label="أقسام المختبر">
+        <button
+          type="button"
+          class="tab-btn is-active"
+          data-view="dashboard"
+          role="tab"
+          aria-selected="true"
+          aria-controls="view-dashboard"
+        >
+          لوحة المناطق المتضررة
+        </button>
+        <button
+          type="button"
+          class="tab-btn"
+          data-view="trends"
+          role="tab"
+          aria-selected="false"
+          aria-controls="view-trends"
+        >
+          المنحنيات والسجل الطولي
+        </button>
+        <button
+          type="button"
+          class="tab-btn"
+          data-view="data"
+          role="tab"
+          aria-selected="false"
+          aria-controls="view-data"
+        >
+          المعايرة والنسخ الاحتياطي
+        </button>
+      </nav>
+
+      <div class="top-actions">
+        <button
+          id="themeToggleBtn"
+          type="button"
+          class="pill-btn"
+          aria-label="تبديل الوضع الليلي والنهاري"
+          title="تبديل الوضع الليلي والنهاري"
+        >
+          الوضع الليلي
+        </button>
+        <button
+          id="topBatteryBtn"
+          type="button"
+          class="pill-btn is-primary"
+        >
+          البطارية السريعة (6)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <!-- القسم الأول: لوحة المناطق المتضررة -->
+    <section id="view-dashboard" class="view-panel" role="tabpanel">
+      <div class="context-bar" aria-label="معايرة الجلسة السريعة">
+        <div class="context-controls">
+          <div class="context-field">
+            <label for="phaseSelect">
+              <span>المرحلة العلاجية</span>
+            </label>
+            <select id="phaseSelect" class="phase-select"></select>
+          </div>
+
+          <div class="context-field">
+            <label for="alertnessInput">
+              <span>مستوى اليقظة الحالي</span>
+              <strong id="alertnessValue" class="ltr-iso">8/10</strong>
+            </label>
+            <input
+              id="alertnessInput"
+              type="range"
+              min="1"
+              max="10"
+              step="1"
+              value="8"
+            />
+          </div>
+
+          <div class="context-field">
+            <label for="sleepInput">
+              <span>جودة نوم الليلة الماضية</span>
+              <strong id="sleepValue" class="ltr-iso">6/10</strong>
+            </label>
+            <input
+              id="sleepInput"
+              type="range"
+              min="1"
+              max="10"
+              step="1"
+              value="6"
+            />
+          </div>
+        </div>
+
+        <button id="launchBatteryBtn" type="button" class="btn-launch-battery">
+          بدء البطارية الجراحية الشاملة — 6 مسبارات
+        </button>
+      </div>
+
+      <!-- شبكة المؤشرات العليا الأربع -->
+      <div id="heroSummaryGrid" class="hero-summary-grid" aria-live="polite">
+        <article class="summary-card">
+          <h2 class="summary-label">1. مؤشر المناطق الخمس المتضررة المركب</h2>
+          <div class="summary-value">36%</div>
+          <div class="summary-sub">خط الأساس: 36% · السقف المرجعي السليم: 85%</div>
+        </article>
+        <article class="summary-card">
+          <h2 class="summary-label">2. مؤشر مرساة التحكم الضابطة</h2>
+          <div class="summary-value">98%</div>
+          <div class="summary-sub">سلامة القواعد ومكدس الاستنتاج والومضة المسطحة: 98%</div>
+        </article>
+        <article class="summary-card">
+          <h2 class="summary-label">3. فجوة التباين العصبي (Spiky Profile Gap)</h2>
+          <div class="summary-value">62%</div>
+          <div class="summary-sub">الهدف السريري: تقليص الفجوة بين المحركات السليمة والمتضررة نحو 0%</div>
+        </article>
+        <article class="summary-card">
+          <h2 class="summary-label">4. إجمالي الفحوص المنفذة وصافي التحسن (+Δ)</h2>
+          <div class="summary-value">0</div>
+          <div class="summary-sub">صافي التحسن المسجل فوق خط الأساس: +0%</div>
+        </article>
+      </div>
+
+      <!-- بطاقة المخطط المقارن الشامل -->
+      <section class="svg-chart-card" aria-labelledby="profileChartHeading">
+        <header class="chart-header">
+          <div>
+            <h2 id="profileChartHeading" class="chart-title">المخطط المقارن الشامل للمسبارات العصبية الستة</h2>
+            <p class="chart-sub">
+              مقارنة جراحية ثنائية الأبعاد بين خط الأساس المرجعي (21 نوفمبر)، والقياس الأحدث، والسقف الوظيفي السليم لكل منطقة
+            </p>
+          </div>
+          <div class="chart-legend" aria-hidden="true">
+            <span class="legend-item">
+              <span class="legend-dot" style="background: var(--accent);"></span>
+              <span>المناطق الخمس المتضررة</span>
+            </span>
+            <span class="legend-item">
+              <span class="legend-dot" style="background: var(--control-accent);"></span>
+              <span>مرساة التحكم الضابطة (98%)</span>
+            </span>
+          </div>
+        </header>
+        <div id="profileBarsContainer" role="img" aria-label="مخطط الأشرطة الجراحي المقارن للمناطق العصبية الست"></div>
+      </section>
+
+      <!-- شبكة بطاقات المسبارات الستة -->
+      <section aria-labelledby="probesSectionHeading">
+        <header class="section-header" style="margin-bottom: 12px;">
+          <div>
+            <h2 id="probesSectionHeading" class="section-title">بطاقات المسبارات العصبية الستة</h2>
+            <p class="section-sub">فحص مستقل لكل منطقة عصبية بمثيرات توليدية متجددة تعزل الأداء الحقيقي مقابل خط الأساس 21 نوفمبر</p>
+          </div>
+        </header>
+        <div id="probesGrid" class="probes-grid"></div>
+      </section>
+    </section>
+
+    <!-- القسم الثاني: المنحنيات والسجل الطولي -->
+    <section id="view-trends" class="view-panel history-layout" role="tabpanel" hidden>
+      <!-- 1. منحنى ردم الفجوة العصبية المركب -->
+      <section class="svg-chart-card" aria-labelledby="compositeTrendHeading">
+        <header class="chart-header">
+          <div>
+            <h2 id="compositeTrendHeading" class="chart-title">منحنى ردم الفجوة العصبية المركب عبر المراحل العلاجية</h2>
+            <p class="chart-sub">
+              مسار صعود المناطق الخمس المتضررة من خط الأساس (36%) نحو السقف السليم (85%) بموازاة مرساة التحكم الضابطة (98%)
+            </p>
+          </div>
+        </header>
+        <div id="compositeTrendContainer" role="img" aria-label="منحنى ردم الفجوة العصبية المركب"></div>
+      </section>
+
+      <!-- 2. منحنى التتبع الطولي لكل منطقة على حدة -->
+      <section class="svg-chart-card" aria-labelledby="probeTrendHeading">
+        <header class="chart-header">
+          <div>
+            <h2 id="probeTrendHeading" class="chart-title">منحنى التتبع الطولي لكل منطقة عصبية على حدة</h2>
+            <p class="chart-sub">اختر أياً من المسبارات الستة لمعاينة منحناه الزمني وتفسيره السريري</p>
+          </div>
+        </header>
+        <div id="trendFilterPills" class="filter-pills" role="group" aria-label="اختيار المسبار العصبي"></div>
+        <div id="probeTrendContainer" role="img" aria-label="منحنى التتبع الطولي للمنطقة المختارة"></div>
+        <div id="probeClinicalInterpretation" class="diagnosis-callout"></div>
+      </section>
+
+      <!-- 3. قائمة السجلات الزمنية التفصيلية -->
+      <section class="card" aria-labelledby="historyHeading">
+        <header class="section-header" style="margin-bottom: 14px;">
+          <div>
+            <h2 id="historyHeading" class="section-title">السجل الزمني التفصيلي للفحوص المنفذة</h2>
+            <p class="section-sub">مرتب زمنياً عكسياً في بطاقات مرقمة تعرض التاريخ والمرحلة العلاجية والدرجة والمقاييس الفرعية الدقيقة</p>
+          </div>
+        </header>
+        <ol id="historyList" class="history-list"></ol>
+      </section>
+    </section>
+
+    <!-- القسم الثالث: المعايرة والنسخ الاحتياطي -->
+    <section id="view-data" class="view-panel" role="tabpanel" hidden>
+      <!-- 1. بطاقة تسجيل المؤشرات السريرية اليومية المرافقة -->
+      <section class="card calib-card" aria-labelledby="dailyClinicalHeading">
+        <header class="section-header" style="margin-bottom: 14px;">
+          <div>
+            <h2 id="dailyClinicalHeading" class="section-title">1. تسجيل المؤشرات السريرية اليومية المرافقة</h2>
+            <p class="section-sub">
+              تُحفظ هذه القراءات ضمن سياق الجلسة لتفسير تذبذب الذاكرة العاملة والانتباه في ضوء التنفس الليلي والحمل اليومي
+            </p>
+          </div>
+        </header>
+
+        <div class="calib-grid">
+          <div class="context-field">
+            <label for="breathingQualityInput">
+              <span>جودة التنفس الليلي وانفتاح المجرى (0–10)</span>
+              <strong id="breathingQualityValue" class="ltr-iso">5/10</strong>
+            </label>
+            <input
+              id="breathingQualityInput"
+              type="range"
+              min="0"
+              max="10"
+              step="1"
+              value="5"
+            />
+          </div>
+
+          <div class="context-field">
+            <label for="slownessDistressInput">
+              <span>نوبات ضيق البطء التنفيذي اليوم (0–15)</span>
+              <strong id="slownessDistressValue" class="ltr-iso">2</strong>
+            </label>
+            <input
+              id="slownessDistressInput"
+              type="range"
+              min="0"
+              max="15"
+              step="1"
+              value="2"
+            />
+          </div>
+
+          <div class="context-field">
+            <label for="dailyLapsesInput">
+              <span>هفوات السهو والتسلسل اليومي (0–15)</span>
+              <strong id="dailyLapsesValue" class="ltr-iso">2</strong>
+            </label>
+            <input
+              id="dailyLapsesInput"
+              type="range"
+              min="0"
+              max="15"
+              step="1"
+              value="2"
+            />
+          </div>
+
+          <div class="context-field">
+            <label for="sessionNotesInput">
+              <span>ملاحظة سياقية مرافقة للجلسة (اختياري)</span>
+            </label>
+            <input
+              id="sessionNotesInput"
+              type="text"
+              maxlength="160"
+              placeholder="مثال: قياس صباحي في بيئة هادئة بعد نوم منتظم"
+            />
+          </div>
+        </div>
+
+        <div class="backup-actions-row">
+          <button id="saveClinicalContextBtn" type="button" class="btn-primary">
+            حفظ المؤشرات اليومية مع سياق الجلسة
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. بطاقة النسخ الاحتياطي والنقل بين الهاتف والحاسوب -->
+      <section class="card backup-card" aria-labelledby="backupHeading">
+        <header class="section-header" style="margin-bottom: 10px;">
+          <div>
+            <h2 id="backupHeading" class="section-title">2. النسخ الاحتياطي والنقل بين الهاتف والحاسوب</h2>
+            <p class="section-sub">
+              جميع السجلات محفوظة محلياً في متصفحك فقط دون أي اتصال شبكي؛ يمكنك نسخ الملخص النصي أو نقل ملف JSON بين أجهزتك
+            </p>
+          </div>
+        </header>
+
+        <div class="backup-actions-row">
+          <button id="copySummaryBtn" type="button" class="btn-primary">
+            نسخ الملخص التشخيصي كنص
+          </button>
+          <button id="exportJsonBtn" type="button" class="btn-ghost">
+            تصدير السجل الكامل JSON
+          </button>
+          <button id="importJsonBtn" type="button" class="btn-ghost">
+            استيراد سجل JSON
+          </button>
+          <input
+            id="importJsonInput"
+            type="file"
+            accept=".json,application/json"
+            hidden
+          />
+          <button id="resetDataBtn" type="button" class="btn-danger">
+            مسح السجلات المحلية
+          </button>
+        </div>
+      </section>
+
+      <!-- 3. بطاقة منهجية القياس المرجعية -->
+      <section class="card" aria-labelledby="methodologyHeading">
+        <header class="section-header" style="margin-bottom: 14px;">
+          <div>
+            <h2 id="methodologyHeading" class="section-title">3. منهجية القياس المرجعية وعزل المناطق الست</h2>
+            <p class="section-sub">
+              تعتمد المسبارات الستة على توليد خوارزمي متجدد في كل محاولة بحيث يستحيل حفظ الأسئلة أو تزييف المنحنى بالتعود
+            </p>
+          </div>
+        </header>
+
+        <ol id="methodologyList" class="probe-steps">
+          <li>
+            <strong>عزل التخزين المؤقت عن معالج التفكير (P1 · DLPFC):</strong>
+            يقيس نسبة بقاء 4 كلمات مجردة غير قابلة للتصوير بعد تنفيذ عملية حسابية أو مقارنة منطقية فورية لعزل المسح الناتج عن المعالجة الجارية.
+          </li>
+          <li>
+            <strong>صمود الرف الجانبي وتحديث المتغيرات (P2 · Frontostriatal / Left IFG):</strong>
+            يتتبع متغيرين ثم 3 متغيرات متغيرة القيم مع تصنيف آلي يفصل أخطاء التصاق القيمة القديمة (التداخل الاستباقي) عن تبخر الرقم في اللحظة الأخيرة.
+          </li>
+          <li>
+            <strong>بوابة الإدخال وعقوبة التناوب اللحظي (P3 · Left IFS / Pre-SMA):</strong>
+            يقارن السلسلة المتكتلة بالسلسلة المتناوبة بين الكلمات والأرقام لاستخراج عقوبة تبديل نمط الترميز اللحظي بدقة كمية.
+          </li>
+          <li>
+            <strong>ربط المؤشرات اللفظية بالعقد المنطقية (P4 · RLPFC Binding):</strong>
+            يعرض قضايا المقارنة جملة فجملة مع إخفاء السابق لقياس ثبات اقتران الاسم اللفظي بالعقدة الفائزة عند انقلاب قطبية المقارنة.
+          </li>
+          <li>
+            <strong>عدّاد التسلسل الدوري ورصد النوم الموضعي (P5 · rAI + RLPFC):</strong>
+            يختبر عدّاد الدورات الرباعي الداخلي تحت الرتابة ويرصد هفوات النوم الموضعي العصبوني فوق 900 مللي ثانية وحوادث ضياع العدّاد.
+          </li>
+          <li>
+            <strong>مرساة التحكم الضابطة للمحركات السليمة (C6 · Control Anchor — 98%):</strong>
+            يفحص مكدس الاستدعاء الهرمي ذا الطبقات الثلاث وومضة التناسب البصري المسطح (0.8 ثانية) كمرجع ضابط يعزل الإرهاق العارض عن الخلل البنيوي.
+          </li>
+        </ol>
+      </section>
+    </section>
+  </main>
+
+  <!-- مسرح الاختبار المعزول خارج main -->
+  <div id="arenaOverlay" class="arena-overlay" hidden>
+    <header class="arena-topbar">
+      <div class="arena-meta">
+        <span id="arenaTitle" class="arena-title"></span>
+        <span id="arenaProgress" class="arena-progress"></span>
+      </div>
+      <button id="arenaAbortBtn" type="button" class="pill-btn">إنهاء والعودة</button>
+    </header>
+    <div class="arena-stage-wrap">
+      <div id="arenaStage"></div>
+    </div>
+  </div>
+
+  <!-- إشعار سريع لطيف -->
+  <div id="toastEl" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="./stimuli.js"></script>
+  <script src="./analytics.js"></script>
+  <script src="./engine.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      window.NeuroLab = window.NeuroLab || {};
+      window.Stimuli = window.Stimuli || window.NeuroLab.Stimuli || {};
+      window.Analytics = window.Analytics || window.NeuroLab.Analytics || {};
+      window.Engine = window.Engine || window.NeuroLab.Engine || {};
+      window.NeuroLab.Stimuli = window.NeuroLab.Stimuli || window.Stimuli;
+      window.NeuroLab.Analytics = window.NeuroLab.Analytics || window.Analytics;
+      window.NeuroLab.Engine = window.NeuroLab.Engine || window.Engine;
+
+      const NOTES_STORAGE_KEY = "neurolab_session_notes_v1";
+      const BASELINE_IMPAIRED_PCT = 36;
+      const TARGET_IMPAIRED_PCT = 85;
+      const CONTROL_ANCHOR_PCT = 98;
+
+      const FALLBACK_PROBES = [
+        {
+          id: "isolation",
+          code: "P1 · ISO",
+          title: "العزل الانتباهي وكبح المشتتات",
+          region: "القشرة الجبهية الظهرية الوحشية (DLPFC)",
+          deficit: "تشتت البؤرة التنفيذية وتداخل المشتتات أثناء الاحتفاظ النشط",
+          baseline: 13,
+          target: 80
+        },
+        {
+          id: "updating",
+          code: "P2 · UPD",
+          title: "تحديث الذاكرة العاملة النشطة",
+          region: "الشبكة الجبهية الجدارية للتحديث الفوري",
+          deficit: "بطء إحلال المدخلات الجديدة وتلاشي العناصر المحدثة",
+          baseline: 44,
+          target: 85
+        },
+        {
+          id: "gating",
+          code: "P3 · GAT",
+          title: "البوابة الحسية الحركية وكبح التداخل",
+          region: "القشرة الحزامية الأمامية والعقد القاعدية",
+          deficit: "نفاذية المثيرات المشتتة وصعوبة استرجاع الخيط بعد المقاطعة",
+          baseline: 18,
+          target: 82
+        },
+        {
+          id: "binding",
+          code: "P4 · BND",
+          title: "الربط السياقي والمكاني والزمني",
+          region: "الحصين الأمامي والربط الجداري السياقي",
+          deficit: "تفكك الاقتران بين المعلومة وموقعها أو ترتيبها التسلسلي",
+          baseline: 50,
+          target: 88
+        },
+        {
+          id: "vigilance",
+          code: "P5 · VIG",
+          title: "التيقظ المستدام واستقرار الإيقاع",
+          region: "شبكة التيقظ الجبهية الجدارية اليمنى",
+          deficit: "تذبذب أزمنة الاستجابة وهفوات السهو العابرة تحت المراقبة",
+          baseline: 56,
+          target: 90
+        },
+        {
+          id: "control",
+          code: "P6 · CTL",
+          title: "مرساة التحكم الضابطة والاستنتاج القاعدي",
+          region: "محركات القواعد ومكدس الاستنتاج والومضة المسطحة",
+          deficit: "مرجع ضبط سليم لتمييز التعافي العصبي الانتقائي عن الإجهاد العام",
+          baseline: 98,
+          target: 90,
+          isControl: true
+        }
+      ];
+
+      const FALLBACK_PHASES = [
+        { id: "baseline", label: "خط الأساس المرجعي (21 نوفمبر)" },
+        { id: "stabilization", label: "الاستقرار الأولي" },
+        { id: "intervention", label: "التدخل الموجه" },
+        { id: "recovery", label: "استعادة الكفاءة" },
+        { id: "consolidation", label: "تثبيت التعافي" },
+        { id: "maintenance", label: "المتابعة المستدامة" }
+      ];
+
+      function toAsciiDigits(val) {
+        return String(val ?? "").replace(/[\u0660-\u0669\u06F0-\u06F9]/g, function (ch) {
+          const code = ch.charCodeAt(0);
+          if (code >= 0x0660 && code <= 0x0669) {
+            return String.fromCharCode(code - 0x0660 + 48);
+          }
+          return String.fromCharCode(code - 0x06F0 + 48);
+        });
+      }
+
+      function escapeHtml(str) {
+        return toAsciiDigits(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function formatPct(num, decimals) {
+        if (num === null || num === undefined || Number.isNaN(Number(num))) {
+          return "—";
+        }
+        const d = typeof decimals === "number" ? decimals : 1;
+        const n = Number(num);
+        const formatted = Number.isInteger(n) ? String(n) : n.toFixed(d).replace(/\.0$/, "");
+        return toAsciiDigits(formatted) + "%";
+      }
+
+      function formatDelta(delta) {
+        if (delta === null || delta === undefined || Number.isNaN(Number(delta))) {
+          return "+0%";
+        }
+        const n = Number(delta);
+        const absText = Number.isInteger(n) ? String(Math.abs(n)) : Math.abs(n).toFixed(1).replace(/\.0$/, "");
+        const sign = n > 0 ? "+" : n < 0 ? "-" : "+";
+        return toAsciiDigits(sign + absText + "%");
+      }
+
+      function formatTimestamp(ts, isoFallback) {
+        if (!ts && isoFallback) return toAsciiDigits(String(isoFallback));
+        if (!ts) return "غير مؤرخ";
+        const d = new Date(ts);
+        if (Number.isNaN(d.getTime())) return toAsciiDigits(String(isoFallback || ts));
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");
+        const min = String(d.getMinutes()).padStart(2, "0");
+        return toAsciiDigits(yyyy + "-" + mm + "-" + dd + " " + hh + ":" + min);
+      }
+
+      function getAnalyticsApi() {
+        return window.Analytics && Object.keys(window.Analytics).length
+          ? window.Analytics
+          : (window.NeuroLab && window.NeuroLab.Analytics) || {};
+      }
+
+      function getStimuliApi() {
+        return window.Stimuli && Object.keys(window.Stimuli).length
+          ? window.Stimuli
+          : (window.NeuroLab && window.NeuroLab.Stimuli) || {};
+      }
+
+      function getEngineApi() {
+        return window.Engine && Object.keys(window.Engine).length
+          ? window.Engine
+          : (window.NeuroLab && window.NeuroLab.Engine) || {};
+      }
+
+      const dom = {
+        html: document.documentElement,
+        themeToggleBtn: document.getElementById("themeToggleBtn"),
+        topBatteryBtn: document.getElementById("topBatteryBtn"),
+        launchBatteryBtn: document.getElementById("launchBatteryBtn"),
+        viewTabs: Array.from(document.querySelectorAll(".view-tabs [data-view]")),
+        views: {
+          dashboard: document.getElementById("view-dashboard"),
+          trends: document.getElementById("view-trends"),
+          data: document.getElementById("view-data")
+        },
+        phaseSelect: document.getElementById("phaseSelect"),
+        alertnessInput: document.getElementById("alertnessInput"),
+        alertnessValue: document.getElementById("alertnessValue"),
+        sleepInput: document.getElementById("sleepInput"),
+        sleepValue: document.getElementById("sleepValue"),
+        heroSummaryGrid: document.getElementById("heroSummaryGrid"),
+        profileBarsContainer: document.getElementById("profileBarsContainer"),
+        probesGrid: document.getElementById("probesGrid"),
+        compositeTrendContainer: document.getElementById("compositeTrendContainer"),
+        trendFilterPills: document.getElementById("trendFilterPills"),
+        probeTrendContainer: document.getElementById("probeTrendContainer"),
+        probeClinicalInterpretation: document.getElementById("probeClinicalInterpretation"),
+        historyList: document.getElementById("historyList"),
+        breathingQualityInput: document.getElementById("breathingQualityInput"),
+        breathingQualityValue: document.getElementById("breathingQualityValue"),
+        slownessDistressInput: document.getElementById("slownessDistressInput"),
+        slownessDistressValue: document.getElementById("slownessDistressValue"),
+        dailyLapsesInput: document.getElementById("dailyLapsesInput"),
+        dailyLapsesValue: document.getElementById("dailyLapsesValue"),
+        sessionNotesInput: document.getElementById("sessionNotesInput"),
+        saveClinicalContextBtn: document.getElementById("saveClinicalContextBtn"),
+        copySummaryBtn: document.getElementById("copySummaryBtn"),
+        exportJsonBtn: document.getElementById("exportJsonBtn"),
+        importJsonBtn: document.getElementById("importJsonBtn"),
+        importJsonInput: document.getElementById("importJsonInput"),
+        resetDataBtn: document.getElementById("resetDataBtn"),
+        methodologyList: document.getElementById("methodologyList"),
+        arenaOverlay: document.getElementById("arenaOverlay"),
+        arenaTitle: document.getElementById("arenaTitle"),
+        arenaProgress: document.getElementById("arenaProgress"),
+        arenaAbortBtn: document.getElementById("arenaAbortBtn"),
+        arenaStage: document.getElementById("arenaStage"),
+        toastEl: document.getElementById("toastEl")
+      };
+
+      const state = {
+        activeView: "dashboard",
+        selectedTrendProbeId: null,
+        toastTimer: null,
+        resetConfirmTimer: null,
+        resetArmed: false
+      };
+
+      function showToast(message) {
+        if (!dom.toastEl) return;
+        dom.toastEl.textContent = toAsciiDigits(message);
+        dom.toastEl.hidden = false;
+        window.clearTimeout(state.toastTimer);
+        state.toastTimer = window.setTimeout(function () {
+          dom.toastEl.hidden = true;
+        }, 3000);
+      }
+
+      function getStimuliProbesRaw() {
+        const S = getStimuliApi();
+        if (Array.isArray(S.PROBES) && S.PROBES.length > 0) return S.PROBES;
+        if (S.PROBES && typeof S.PROBES === "object" && Object.keys(S.PROBES).length > 0) {
+          return Object.keys(S.PROBES).map(function (k) {
+            const item = S.PROBES[k];
+            return item && typeof item === "object" ? Object.assign({ id: k }, item) : { id: k, title: String(item) };
+          });
+        }
+        return FALLBACK_PROBES;
+      }
+
+      function getStimuliPhases() {
+        const S = getStimuliApi();
+        if (Array.isArray(S.PHASES) && S.PHASES.length > 0) return S.PHASES;
+        if (S.PHASES && typeof S.PHASES === "object" && Object.keys(S.PHASES).length > 0) {
+          return Object.keys(S.PHASES).map(function (k) {
+            const val = S.PHASES[k];
+            return val && typeof val === "object" ? Object.assign({ id: k }, val) : { id: k, label: String(val) };
+          });
+        }
+        return FALLBACK_PHASES;
+      }
+
+      function normalizeProbe(raw, index, latestMap) {
+        const id = String(raw.id || raw.probeId || raw.key || raw.code || "probe_" + (index + 1));
+        const info = (latestMap && latestMap[id]) || {};
+        const isControl = Boolean(
+          raw.isControl ||
+          raw.control ||
+          raw.isAnchor ||
+          id === "control" ||
+          raw.category === "control" ||
+          raw.role === "control" ||
+          raw.type === "control"
+        );
+        const baseline = Number(
+          raw.baseline ??
+          raw.baselineScore ??
+          raw.baselinePct ??
+          info.baseline ??
+          (isControl ? CONTROL_ANCHOR_PCT : BASELINE_IMPAIRED_PCT)
+        );
+        const target = Number(
+          raw.target ??
+          raw.norm ??
+          raw.targetScore ??
+          raw.ceiling ??
+          raw.healthyTarget ??
+          info.norm ??
+          (isControl ? 90 : TARGET_IMPAIRED_PCT)
+        );
+        return {
+          raw: raw,
+          index: index + 1,
+          id: id,
+          code: toAsciiDigits(raw.code || raw.shortCode || raw.badge || "P" + (index + 1) + " · " + id.slice(0, 3).toUpperCase()),
+          title: toAsciiDigits(raw.titleAr || raw.labelAr || raw.nameAr || raw.title || raw.name || raw.label || "المسبار " + (index + 1)),
+          region: toAsciiDigits(
+            raw.regionAr ||
+            raw.region ||
+            raw.neuralRegion ||
+            raw.brainRegion ||
+            raw.circuit ||
+            raw.domain ||
+            "الشبكة الجبهية الجدارية التنفيذية"
+          ),
+          deficit: toAsciiDigits(
+            raw.deficitAr ||
+            raw.deficit ||
+            raw.targetDeficit ||
+            raw.impairment ||
+            raw.targetSymptom ||
+            raw.summary ||
+            raw.description ||
+            ""
+          ),
+          clinicalNote: toAsciiDigits(
+            raw.clinicalNote ||
+            info.clinicalNote ||
+            raw.interpretation ||
+            raw.clinicalInterpretation ||
+            raw.rationale ||
+            raw.description ||
+            raw.deficit ||
+            ""
+          ),
+          methodology: toAsciiDigits(raw.methodology || raw.isolationMethod || ""),
+          baseline: baseline,
+          target: target,
+          isControl: isControl
+        };
+      }
+
+      function extractScore(entry) {
+        if (entry === null || entry === undefined) return null;
+        if (typeof entry === "number" && !Number.isNaN(entry)) return entry;
+        if (typeof entry === "object") {
+          if (entry.latest && typeof entry.latest.score === "number") {
+            return entry.latest.score;
+          }
+          const val =
+            entry.score ??
+            entry.normalizedScore ??
+            entry.compositeScore ??
+            entry.pct ??
+            entry.percentage ??
+            entry.value;
+          if (val !== undefined && val !== null && !Number.isNaN(Number(val))) {
+            return Number(val);
+          }
+        }
+        return null;
+      }
+
+      function getLatestMap() {
+        const A = getAnalyticsApi();
+        if (typeof A.getLatestByProbe === "function") {
+          try {
+            const res = A.getLatestByProbe();
+            if (res && typeof res === "object") return res;
+          } catch (_) {
+            return {};
+          }
+        }
+        return {};
+      }
+
+      function getAllHistoryRecords() {
+        const A = getAnalyticsApi();
+        if (typeof A.loadState === "function") {
+          try {
+            const st = A.loadState();
+            if (st && Array.isArray(st.records)) return st.records.slice();
+          } catch (_) {
+            /* fallback below */
+          }
+        }
+        if (typeof A.getHistory === "function") {
+          try {
+            const h = A.getHistory();
+            if (Array.isArray(h)) return h.slice();
+          } catch (_) {}
+        }
+        return [];
+      }
+
+      function initTheme() {
+        const A = getAnalyticsApi();
+        let saved = "light";
+        if (typeof A.getTheme === "function") {
+          try {
+            saved = A.getTheme() || "light";
+          } catch (_) {
+            saved = "light";
+          }
+        }
+        applyTheme(saved === "dark" ? "dark" : "light");
+      }
+
+      function applyTheme(theme) {
+        const next = theme === "dark" ? "dark" : "light";
+        dom.html.setAttribute("data-theme", next);
+        if (dom.themeToggleBtn) {
+          dom.themeToggleBtn.textContent = next === "dark" ? "الوضع النهاري" : "الوضع الليلي";
+        }
+        const A = getAnalyticsApi();
+        if (typeof A.setTheme === "function") {
+          try { A.setTheme(next); } catch (_) {}
+        }
+      }
+
+      function switchView(viewKey) {
+        const normalized = viewKey === "longitudinal" ? "trends" : viewKey;
+        if (!dom.views[normalized]) return;
+        state.activeView = normalized;
+
+        Object.keys(dom.views).forEach(function (key) {
+          const section = dom.views[key];
+          if (!section) return;
+          section.hidden = key !== normalized;
+        });
+
+        dom.viewTabs.forEach(function (btn) {
+          const rawTarget = (btn.getAttribute("data-view") || "").trim();
+          const btnView = rawTarget === "longitudinal" ? "trends" : rawTarget;
+          const isActive = btnView === normalized;
+          btn.classList.toggle("is-active", isActive);
+          btn.classList.toggle("active", isActive);
+          btn.setAttribute("aria-selected", isActive ? "true" : "false");
+        });
+
+        if (normalized === "trends") {
+          renderTrendsView();
+        } else if (normalized === "dashboard") {
+          renderDashboardView();
+        }
+      }
+
+      function loadSavedContext() {
+        const A = getAnalyticsApi();
+        let stored = {};
+        if (typeof A.getContext === "function") {
+          try {
+            stored = Object.assign({}, A.getContext() || {});
+          } catch (_) {
+            stored = {};
+          }
+        }
+        try {
+          const savedNotes = localStorage.getItem(NOTES_STORAGE_KEY);
+          if (savedNotes) stored.notes = savedNotes;
+        } catch (_) {}
+        return stored;
+      }
+
+      function populatePhases() {
+        const phases = getStimuliPhases();
+        if (!dom.phaseSelect) return;
+        dom.phaseSelect.innerHTML = "";
+        phases.forEach(function (phase, idx) {
+          const opt = document.createElement("option");
+          const id = String(phase.id || phase.phase || phase.key || phase.value || "phase_" + (idx + 1));
+          const label = toAsciiDigits(phase.labelAr || phase.titleAr || phase.nameAr || phase.label || phase.title || phase.name || id);
+          opt.value = id;
+          opt.textContent = label;
+          dom.phaseSelect.appendChild(opt);
+        });
+
+        const saved = loadSavedContext();
+        if (saved.phase) {
+          const exists = Array.from(dom.phaseSelect.options).some(function (o) { return o.value === saved.phase; });
+          if (!exists) {
+            const customOpt = document.createElement("option");
+            customOpt.value = saved.phase;
+            customOpt.textContent = toAsciiDigits(saved.phase);
+            dom.phaseSelect.appendChild(customOpt);
+          }
+          dom.phaseSelect.value = saved.phase;
+        }
+      }
+
+      function hydrateContextInputs() {
+        const saved = loadSavedContext();
+        if (saved.phase && dom.phaseSelect) {
+          const exists = Array.from(dom.phaseSelect.options).some(function (o) { return o.value === saved.phase; });
+          if (exists) dom.phaseSelect.value = saved.phase;
+        }
+        if (saved.alertness !== undefined && dom.alertnessInput) {
+          dom.alertnessInput.value = String(Math.max(1, Math.min(10, Number(saved.alertness) || 8)));
+        }
+        if (saved.sleepQuality !== undefined && dom.sleepInput) {
+          dom.sleepInput.value = String(Math.max(1, Math.min(10, Number(saved.sleepQuality) || 6)));
+        }
+        if (saved.nasalPatency !== undefined && dom.breathingQualityInput) {
+          dom.breathingQualityInput.value = String(Math.max(0, Math.min(10, Number(saved.nasalPatency) || 5)));
+        }
+        if (saved.delayAversionEpisodes !== undefined && dom.slownessDistressInput) {
+          dom.slownessDistressInput.value = String(Math.max(0, Number(saved.delayAversionEpisodes) || 0));
+        }
+        if (saved.sequenceLapses !== undefined && dom.dailyLapsesInput) {
+          dom.dailyLapsesInput.value = String(Math.max(0, Number(saved.sequenceLapses) || 0));
+        }
+        if (dom.sessionNotesInput) {
+          dom.sessionNotesInput.value = saved.notes ? String(saved.notes) : "";
+        }
+        syncContextBadges();
+      }
+
+      function syncContextBadges() {
+        if (dom.alertnessValue && dom.alertnessInput) {
+          dom.alertnessValue.textContent = toAsciiDigits(dom.alertnessInput.value + "/10");
+        }
+        if (dom.sleepValue && dom.sleepInput) {
+          dom.sleepValue.textContent = toAsciiDigits(dom.sleepInput.value + "/10");
+        }
+        if (dom.breathingQualityValue && dom.breathingQualityInput) {
+          dom.breathingQualityValue.textContent = toAsciiDigits(dom.breathingQualityInput.value + "/10");
+        }
+        if (dom.slownessDistressValue && dom.slownessDistressInput) {
+          dom.slownessDistressValue.textContent = toAsciiDigits(dom.slownessDistressInput.value);
+        }
+        if (dom.dailyLapsesValue && dom.dailyLapsesInput) {
+          dom.dailyLapsesValue.textContent = toAsciiDigits(dom.dailyLapsesInput.value);
+        }
+      }
+
+      function getCurrentContext() {
+        const phaseId = dom.phaseSelect ? dom.phaseSelect.value : "baseline";
+        const phaseOption = dom.phaseSelect && dom.phaseSelect.selectedOptions[0];
+        const phaseLabel = phaseOption ? toAsciiDigits(phaseOption.textContent) : phaseId;
+        const alertness = Number(dom.alertnessInput ? dom.alertnessInput.value : 8);
+        const sleepQuality = Number(dom.sleepInput ? dom.sleepInput.value : 6);
+        const nasalPatency = Number(dom.breathingQualityInput ? dom.breathingQualityInput.value : 5);
+        const delayAversionEpisodes = Number(dom.slownessDistressInput ? dom.slownessDistressInput.value : 2);
+        const sequenceLapses = Number(dom.dailyLapsesInput ? dom.dailyLapsesInput.value : 2);
+        const notes = dom.sessionNotesInput ? dom.sessionNotesInput.value.trim() : "";
+
+        return {
+          phase: phaseId,
+          phaseId: phaseId,
+          phaseLabel: phaseLabel,
+          alertness: alertness,
+          sleep: sleepQuality,
+          sleepQuality: sleepQuality,
+          nasalPatency: nasalPatency,
+          breathingQuality: nasalPatency,
+          delayAversionEpisodes: delayAversionEpisodes,
+          slownessDistress: delayAversionEpisodes,
+          sequenceLapses: sequenceLapses,
+          dailyLapses: sequenceLapses,
+          notes: notes
+        };
+      }
+
+      function persistContext(showFeedback) {
+        syncContextBadges();
+        const ctx = getCurrentContext();
+        const A = getAnalyticsApi();
+        if (typeof A.updateContext === "function") {
+          try {
+            A.updateContext({
+              phase: ctx.phase,
+              sleepQuality: ctx.sleepQuality,
+              alertness: ctx.alertness,
+              nasalPatency: ctx.nasalPatency,
+              delayAversionEpisodes: ctx.delayAversionEpisodes,
+              sequenceLapses: ctx.sequenceLapses
+            });
+          } catch (_) {}
+        }
+        try {
+          localStorage.setItem(NOTES_STORAGE_KEY, ctx.notes || "");
+        } catch (_) {}
+
+        const E = getEngineApi();
+        if (typeof E.setContext === "function") {
+          try { E.setContext(ctx); } catch (_) {}
+        }
+
+        if (showFeedback) {
+          showToast("تم حفظ المؤشرات السريرية اليومية في سياق الجلسة.");
+        }
+      }
+
+      function renderHeroSummary(probes, latestMap, records) {
+        if (!dom.heroSummaryGrid) return;
+        const A = getAnalyticsApi();
+        const stats = typeof A.getSummaryStats === "function" ? A.getSummaryStats() : null;
+
+        const compositeScore = stats ? stats.compositeDeficitScore : BASELINE_IMPAIRED_PCT;
+        const compositeBase = stats ? stats.compositeDeficitBaseline : BASELINE_IMPAIRED_PCT;
+        const controlScore = stats ? stats.controlScore : CONTROL_ANCHOR_PCT;
+        const spikyGap = stats ? stats.spikyGap : (CONTROL_ANCHOR_PCT - BASELINE_IMPAIRED_PCT);
+        const baselineGap = stats ? stats.baselineSpikyGap : (CONTROL_ANCHOR_PCT - BASELINE_IMPAIRED_PCT);
+        const gapReduction = stats ? stats.gapReduction : 0;
+        const totalTests = stats ? stats.totalTests : records.length;
+        const completedBatteries = stats ? stats.completedBatteries : 0;
+        const deltaFromBase = stats ? stats.deltaFromBaseline : 0;
+        const hasLive = stats ? stats.hasLiveRecords : records.length > 0;
+
+        const impairedVal = formatPct(compositeScore, 1);
+        const impairedSub = hasLive
+          ? "خط الأساس: " + formatPct(compositeBase, 0) + " · السقف المرجعي: " + formatPct(TARGET_IMPAIRED_PCT, 0) + " · الفارق: " + formatDelta(deltaFromBase)
+          : "مرجع الأساس الحالي: " + formatPct(compositeBase, 0) + " · السقف المرجعي السليم: " + formatPct(TARGET_IMPAIRED_PCT, 0);
+
+        const controlInfo = latestMap.control;
+        const controlVal = formatPct(controlScore, 1);
+        const controlSub = controlInfo && controlInfo.latest
+          ? "قياس حي للمرساة الضابطة · المرجع المعياري: 98%"
+          : "سلامة القواعد ومكدس الاستنتاج والومضة المسطحة: 98%";
+
+        const gapVal = formatPct(spikyGap, 1);
+        const gapSub = hasLive
+          ? "تقلصت الفجوة بمقدار " + formatDelta(gapReduction) + " من أصل " + formatPct(baselineGap, 0) + " نحو 0%"
+          : "الهدف السريري: تقليص الفجوة من " + formatPct(baselineGap, 0) + " نحو 0%";
+
+        const runsVal = hasLive
+          ? toAsciiDigits(totalTests + " (" + formatDelta(deltaFromBase) + ")")
+          : toAsciiDigits(String(totalTests));
+        const deltaSub = hasLive
+          ? "بطاريات مكتملة: " + toAsciiDigits(completedBatteries) + " · صافي التحسن المركب: " + formatDelta(deltaFromBase)
+          : "نفّذ أول فحص لبدء تسجيل صافي التحسن (+Δ)";
+
+        function wrapIsoNums(str) {
+          return escapeHtml(str).replace(/([+-]?\d+(?:\.\d+)?%)/g, '<span class="ltr-iso">$1</span>');
+        }
+
+        dom.heroSummaryGrid.innerHTML =
+          '<article class="summary-card">' +
+            '<h2 class="summary-label">1. مؤشر المناطق الخمس المتضررة المركب</h2>' +
+            '<div class="summary-value"><span class="ltr-iso">' + escapeHtml(impairedVal) + '</span></div>' +
+            '<div class="summary-sub">' + wrapIsoNums(impairedSub) + '</div>' +
+          '</article>' +
+          '<article class="summary-card">' +
+            '<h2 class="summary-label">2. مؤشر مرساة التحكم الضابطة</h2>' +
+            '<div class="summary-value"><span class="ltr-iso">' + escapeHtml(controlVal) + '</span></div>' +
+            '<div class="summary-sub">' + wrapIsoNums(controlSub) + '</div>' +
+          '</article>' +
+          '<article class="summary-card">' +
+            '<h2 class="summary-label">3. فجوة التباين العصبي الحالية</h2>' +
+            '<div class="summary-value"><span class="ltr-iso">' + escapeHtml(gapVal) + '</span></div>' +
+            '<div class="summary-sub">' + wrapIsoNums(gapSub) + '</div>' +
+          '</article>' +
+          '<article class="summary-card">' +
+            '<h2 class="summary-label">4. إجمالي الفحوص وصافي التحسن</h2>' +
+            '<div class="summary-value"><span class="ltr-iso">' + escapeHtml(runsVal) + '</span></div>' +
+            '<div class="summary-sub">' + wrapIsoNums(deltaSub) + '</div>' +
+          '</article>';
+      }
+
+      function renderProfileBars() {
+        if (!dom.profileBarsContainer) return;
+        const A = getAnalyticsApi();
+        const rawProbes = getStimuliProbesRaw();
+        if (typeof A.renderProfileBarsSVG === "function") {
+          try {
+            const svg = A.renderProfileBarsSVG(rawProbes);
+            if (typeof svg === "string") {
+              dom.profileBarsContainer.innerHTML = toAsciiDigits(svg);
+              return;
+            }
+          } catch (err) {
+            console.error("renderProfileBarsSVG error:", err);
+          }
+        }
+        dom.profileBarsContainer.innerHTML =
+          '<div class="empty-state">لا توجد بيانات كافية لرسم المخطط المقارن حالياً.</div>';
+      }
+
+      function renderProbesGrid(probes, latestMap) {
+        if (!dom.probesGrid) return;
+        if (!probes.length) {
+          dom.probesGrid.innerHTML = '<div class="empty-state">جاري تجهيز بطاقات المسبارات الستة...</div>';
+          return;
+        }
+
+        dom.probesGrid.innerHTML = probes.map(function (probe) {
+          const latestEntry = latestMap[probe.id];
+          const latestScore = extractScore(latestEntry);
+          const delta = latestScore !== null ? latestScore - probe.baseline : null;
+          const deltaState =
+            delta === null ? "is-neutral" : delta > 0 ? "is-up" : delta < 0 ? "is-down" : "is-neutral";
+          const cardClass = probe.isControl ? "probe-card is-control" : "probe-card";
+          const latestText = latestScore !== null ? formatPct(latestScore, 1) : "لم يُفحص";
+          const deltaText = delta !== null ? formatDelta(delta) : "Δ —";
+          const barWidth = Math.max(0, Math.min(100, latestScore !== null ? latestScore : probe.baseline));
+          const baselinePos = Math.max(0, Math.min(100, probe.baseline));
+          const runCount = latestEntry && typeof latestEntry.count === "number" ? latestEntry.count : 0;
+
+          return (
+            '<article class="' + cardClass + '" data-probe-card="' + escapeHtml(probe.id) + '">' +
+              '<header class="probe-header">' +
+                '<div>' +
+                  '<h3 class="probe-title">' + escapeHtml(probe.index + ". " + probe.title) + '</h3>' +
+                  '<div class="probe-region">' + escapeHtml(probe.region) + '</div>' +
+                '</div>' +
+                '<span class="probe-code">' + escapeHtml(probe.code) + '</span>' +
+              '</header>' +
+              '<p class="probe-deficit">' + escapeHtml(probe.deficit) + '</p>' +
+              '<div class="probe-bar-track" aria-hidden="true">' +
+                '<div class="probe-bar-fill" style="width: ' + toAsciiDigits(barWidth) + '%;"></div>' +
+                '<span class="probe-bar-baseline-tick" style="inset-inline-start: ' + toAsciiDigits(baselinePos) + '%;" title="خط الأساس 21 نوفمبر"></span>' +
+              '</div>' +
+              '<div class="probe-metrics-row">' +
+                '<span class="metric-pill">الأحدث: <strong class="ltr-iso">' + escapeHtml(latestText) + '</strong></span>' +
+                '<span class="metric-pill">خط الأساس 21 نوفمبر: <strong class="ltr-iso">' + escapeHtml(formatPct(probe.baseline, 0)) + '</strong></span>' +
+                '<span class="metric-pill">الهدف السليم: <strong class="ltr-iso">' + escapeHtml(formatPct(probe.target, 0)) + '</strong></span>' +
+                '<span class="delta-pill ' + deltaState + ' ltr-iso">' + escapeHtml(deltaText) + '</span>' +
+              '</div>' +
+              '<footer class="probe-card-footer">' +
+                '<span class="summary-sub">القياسات: <strong class="ltr-iso">' + escapeHtml(runCount) + '</strong></span>' +
+                '<button type="button" class="btn-start-probe" data-probe-id="' + escapeHtml(probe.id) + '">' +
+                  'فحص هذه المنطقة منفردة' +
+                '</button>' +
+              '</footer>' +
+            '</article>'
+          );
+        }).join("");
+      }
+
+      function hydrateMethodologyIfProvided(probes) {
+        if (!dom.methodologyList || !probes.length) return;
+        const hasCustom = probes.every(function (p) { return Boolean(p.methodology); });
+        if (!hasCustom) return;
+        dom.methodologyList.innerHTML = probes.map(function (p) {
+          return (
+            "<li>" +
+              "<strong>" + escapeHtml(p.title) + " (" + escapeHtml(p.region) + "):</strong> " +
+              escapeHtml(p.methodology) +
+            "</li>"
+          );
+        }).join("");
+      }
+
+      function renderCompositeTrend() {
+        if (!dom.compositeTrendContainer) return;
+        const A = getAnalyticsApi();
+        const phases = getStimuliPhases();
+        if (typeof A.renderBatteryCompositeChartSVG === "function") {
+          try {
+            const svg = A.renderBatteryCompositeChartSVG(phases);
+            if (typeof svg === "string") {
+              dom.compositeTrendContainer.innerHTML = toAsciiDigits(svg);
+              return;
+            }
+          } catch (err) {
+            console.error("renderBatteryCompositeChartSVG error:", err);
+          }
+        }
+        dom.compositeTrendContainer.innerHTML =
+          '<div class="empty-state">نفّذ فحصاً واحداً على الأقل لعرض منحنى ردم الفجوة العصبية المركب.</div>';
+      }
+
+      function renderProbeLongitudinalSection(probes) {
+        if (!dom.trendFilterPills || !dom.probeTrendContainer) return;
+        if (!probes.length) return;
+
+        if (!state.selectedTrendProbeId || !probes.some(function (p) { return p.id === state.selectedTrendProbeId; })) {
+          state.selectedTrendProbeId = probes[0].id;
+        }
+
+        dom.trendFilterPills.innerHTML = probes.map(function (p) {
+          const activeClass = p.id === state.selectedTrendProbeId ? "filter-pill is-active" : "filter-pill";
+          return (
+            '<button type="button" class="' + activeClass + '" data-trend-probe="' + escapeHtml(p.id) + '">' +
+              escapeHtml(p.index + ". " + p.title) +
+            '</button>'
+          );
+        }).join("");
+
+        const selected = probes.find(function (p) { return p.id === state.selectedTrendProbeId; }) || probes[0];
+        const A = getAnalyticsApi();
+        let svg = null;
+        if (typeof A.renderLongitudinalChartSVG === "function") {
+          try {
+            svg = A.renderLongitudinalChartSVG(selected.id, getStimuliProbesRaw(), getStimuliPhases());
+          } catch (err) {
+            console.error("renderLongitudinalChartSVG error:", err);
+          }
+        }
+
+        if (typeof svg === "string" && svg.trim()) {
+          dom.probeTrendContainer.innerHTML = toAsciiDigits(svg);
+        } else {
+          dom.probeTrendContainer.innerHTML =
+            '<div class="empty-state">لا توجد سجلات طولية كافية لهذه المنطقة بعد.</div>';
+        }
+
+        if (dom.probeClinicalInterpretation) {
+          const roleNote = selected.isControl
+            ? "مرساة تحكم ضابطة (خط الأساس: " + formatPct(selected.baseline, 0) + " · المعيار السليم: " + formatPct(selected.target, 0) + ")."
+            : "منطقة مستهدفة بالردم الجراحي — خط الأساس (21 نوفمبر): " + formatPct(selected.baseline, 0) + " · السقف المرجعي السليم: " + formatPct(selected.target, 0) + ".";
+          dom.probeClinicalInterpretation.innerHTML =
+            "<strong>التفسير السريري (" + escapeHtml(selected.region) + "):</strong> " +
+            "<span>" + escapeHtml(selected.clinicalNote || selected.deficit) + " " + escapeHtml(roleNote) + "</span>";
+        }
+      }
+
+      function formatSubMetricsPills(record) {
+        const metricsObj = record.submetrics || record.metrics || record.subMetrics || record.details;
+        const pills = [];
+
+        if (typeof record.rtMeanMs === "number" && Number.isFinite(record.rtMeanMs)) {
+          pills.push({ label: "متوسط زمن الاستجابة", val: record.rtMeanMs + " ms" });
+        }
+
+        const METRIC_LABELS = {
+          mathSurvivalPct: { label: "البقاء بعد الحساب", suffix: "%" },
+          logicSurvivalPct: { label: "البقاء بعد المنطق", suffix: "%" },
+          slot1Pct: { label: "صمود الرأس الأول", suffix: "%" },
+          middleSlotsPct: { label: "صمود الوسط (2–3)", suffix: "%" },
+          slot4Pct: { label: "صمود الخانة الرابعة", suffix: "%" },
+          taskAccPct: { label: "دقة المسألة الوسيطة", suffix: "%" },
+          taskMeanRtMs: { label: "زمن المسألة الوسيطة", suffix: " ms" },
+          twoVarPct: { label: "دقة متغيرين", suffix: "%" },
+          threeVarPct: { label: "دقة 3 متغيرات", suffix: "%" },
+          staleErrors: { label: "التصاق القيمة القديمة", suffix: "" },
+          decayErrors: { label: "تبخر الرقم الأخير", suffix: "" },
+          swapErrors: { label: "خلط بين متغيرين", suffix: "" },
+          stepMeanRtMs: { label: "زمن خطوة التحديث", suffix: " ms" },
+          blockedPct: { label: "دقة المتكتل", suffix: "%" },
+          alt4Pct: { label: "تناوب 4 عناصر", suffix: "%" },
+          alt6Pct: { label: "تناوب 6 عناصر", suffix: "%" },
+          alternatingPct: { label: "محصلة التناوب", suffix: "%" },
+          switchingPenalty: { label: "عقوبة التناوب", suffix: "%" },
+          linearAccPct: { label: "دقة الاتجاه الموحد", suffix: "%" },
+          flippedAccPct: { label: "دقة انقلاب القطبية", suffix: "%" },
+          pointerDecayCount: { label: "تبخر الاسم اللفظي", suffix: "" },
+          linearRtMs: { label: "زمن الاتجاه الموحد", suffix: " ms" },
+          flippedRtMs: { label: "زمن انقلاب القطبية", suffix: " ms" },
+          polarityFlipRtCostMs: { label: "كلفة قلب القطبية", suffix: " ms" },
+          cycleCloseAccPct: { label: "دقة إغلاق الدورة 4", suffix: "%" },
+          overallStepAccPct: { label: "دقة الخطوات الكلية", suffix: "%" },
+          localSleepLapses: { label: "هفوات النوم الموضعي", suffix: "" },
+          dmnResets: { label: "ضياع العدّاد (DMN)", suffix: "" },
+          meanRtMs: { label: "متوسط الاستجابة", suffix: " ms" },
+          rtIcvPct: { label: "معامل التذبذب ICV", suffix: "%" },
+          stackAccPct: { label: "مكدس 3 طبقات", suffix: "%" },
+          visual2dAccPct: { label: "ومضة 2D (0.8s)", suffix: "%" },
+          stackRtMs: { label: "زمن حل المكدس", suffix: " ms" },
+          visual2dRtMs: { label: "زمن مطابقة 2D", suffix: " ms" }
+        };
+
+        if (metricsObj && typeof metricsObj === "object") {
+          Object.keys(metricsObj).forEach(function (key) {
+            if (key === "meanRtMs" && typeof record.rtMeanMs === "number") return;
+            const rawVal = metricsObj[key];
+            if (typeof rawVal !== "number" && typeof rawVal !== "string") return;
+            const spec = METRIC_LABELS[key];
+            const numTxt = typeof rawVal === "number"
+              ? (Number.isInteger(rawVal) ? String(rawVal) : rawVal.toFixed(1).replace(/\.0$/, ""))
+              : String(rawVal);
+            const formattedVal = spec && spec.suffix ? numTxt + spec.suffix : numTxt;
+            pills.push({ label: spec ? spec.label : key, val: formattedVal });
+          });
+        }
+
+        if (!pills.length) return "";
+
+        return (
+          '<ol class="history-sublist">' +
+          pills.slice(0, 6).map(function (item, i) {
+            return (
+              '<li class="metric-pill">' +
+                '<span>' + escapeHtml((i + 1) + ". " + item.label) + ':</span> ' +
+                '<strong class="ltr-iso">' + escapeHtml(item.val) + '</strong>' +
+              '</li>'
+            );
+          }).join("") +
+          "</ol>"
+        );
+      }
+
+      function renderHistoryList(probes, records) {
+        if (!dom.historyList) return;
+        if (!records.length) {
+          dom.historyList.innerHTML =
+            '<li class="empty-state">لا توجد فحوص مسجلة بعد. ابدأ البطارية الشاملة أو اختر مسباراً منفرداً من اللوحة الرئيسية.</li>';
+          return;
+        }
+
+        const probeMap = {};
+        probes.forEach(function (p) { probeMap[p.id] = p; });
+
+        const phaseMap = {};
+        getStimuliPhases().forEach(function (ph) {
+          const id = String(ph.id || ph.phase || ph.key || ph.value);
+          phaseMap[id] = toAsciiDigits(ph.labelAr || ph.titleAr || ph.nameAr || ph.label || ph.title || ph.name || id);
+        });
+
+        const sorted = records.slice().sort(function (a, b) {
+          const ta = Number(a.timestamp || 0);
+          const tb = Number(b.timestamp || 0);
+          return tb - ta;
+        });
+
+        dom.historyList.innerHTML = sorted.map(function (rec, idx) {
+          const pid = String(rec.probeId || rec.probe || "");
+          const pInfo = probeMap[pid];
+          const title = pInfo ? pInfo.title : toAsciiDigits(rec.probeTitle || pid || "فحص مسجل");
+          const score = typeof rec.score === "number" ? rec.score : extractScore(rec);
+          const baseline = pInfo ? pInfo.baseline : BASELINE_IMPAIRED_PCT;
+          const delta = typeof rec.deltaFromBaseline === "number"
+            ? rec.deltaFromBaseline
+            : (score !== null ? score - baseline : null);
+          const deltaState = delta === null ? "is-neutral" : delta > 0 ? "is-up" : delta < 0 ? "is-down" : "is-neutral";
+          const phaseKey = String(rec.phase || (rec.context && rec.context.phase) || "baseline");
+          const phaseLabel = phaseMap[phaseKey] || toAsciiDigits(phaseKey);
+          const tsText = formatTimestamp(rec.timestamp, rec.isoDate);
+          const orderNum = sorted.length - idx;
+          const alertness = rec.alertness ?? (rec.context && rec.context.alertness);
+          const sleep = rec.sleepQuality ?? (rec.context && rec.context.sleepQuality);
+          const contextLine =
+            (alertness !== undefined ? " · اليقظة: " + toAsciiDigits(alertness + "/10") : "") +
+            (sleep !== undefined ? " · النوم: " + toAsciiDigits(sleep + "/10") : "") +
+            (rec.notes ? " · ملاحظة: " + toAsciiDigits(rec.notes) : "");
+
+          return (
+            '<li class="history-item">' +
+              '<div class="history-item-body">' +
+                '<div class="history-item-head">' +
+                  '<div class="probe-metrics-row">' +
+                    '<span class="probe-code">#' + escapeHtml(orderNum) + '</span>' +
+                    '<strong>' + escapeHtml(title) + '</strong>' +
+                    '<span class="metric-pill">' + escapeHtml(phaseLabel) + '</span>' +
+                  '</div>' +
+                  '<div class="probe-metrics-row">' +
+                    '<strong class="ltr-iso">' + escapeHtml(formatPct(score, 1)) + '</strong>' +
+                    (delta !== null ? '<span class="delta-pill ' + deltaState + ' ltr-iso">' + escapeHtml(formatDelta(delta)) + '</span>' : '') +
+                  '</div>' +
+                '</div>' +
+                '<div class="summary-sub">التاريخ: <span class="ltr-iso">' + escapeHtml(tsText) + '</span>' + escapeHtml(contextLine) + '</div>' +
+                formatSubMetricsPills(rec) +
+              '</div>' +
+            '</li>'
+          );
+        }).join("");
+      }
+
+      function getNormalizedProbes(latestMap) {
+        const rawList = getStimuliProbesRaw();
+        return rawList.map(function (raw, idx) {
+          return normalizeProbe(raw, idx, latestMap);
+        });
+      }
+
+      function renderDashboardView() {
+        const latestMap = getLatestMap();
+        const probes = getNormalizedProbes(latestMap);
+        const records = getAllHistoryRecords();
+        renderHeroSummary(probes, latestMap, records);
+        renderProfileBars();
+        renderProbesGrid(probes, latestMap);
+        hydrateMethodologyIfProvided(probes);
+      }
+
+      function renderTrendsView() {
+        const latestMap = getLatestMap();
+        const probes = getNormalizedProbes(latestMap);
+        const records = getAllHistoryRecords();
+        renderCompositeTrend();
+        renderProbeLongitudinalSection(probes);
+        renderHistoryList(probes, records);
+      }
+
+      function refreshAllViews() {
+        renderDashboardView();
+        renderTrendsView();
+      }
+
+      function handleSessionUpdate(payload) {
+        const A = getAnalyticsApi();
+        if (payload && typeof payload === "object" && payload.probeId && typeof payload.score === "number") {
+          const existing = getAllHistoryRecords();
+          const payloadTs = Number(payload.timestamp || 0);
+          const alreadySaved = existing.some(function (r) {
+            if (payload.id && r.id === payload.id) return true;
+            const rTs = Number(r.timestamp || 0);
+            return r.probeId === payload.probeId && payloadTs > 0 && Math.abs(rTs - payloadTs) < 1200;
+          });
+          if (!alreadySaved && typeof A.recordProbeResult === "function") {
+            const ctx = getCurrentContext();
+            try {
+              A.recordProbeResult(Object.assign({
+                phase: ctx.phase,
+                sleepQuality: ctx.sleepQuality,
+                alertness: ctx.alertness,
+                notes: ctx.notes
+              }, payload));
+            } catch (_) {}
+          }
+        }
+        refreshAllViews();
+      }
+
+      function launchFullBattery() {
+        persistContext(false);
+        const ctx = getCurrentContext();
+        const E = getEngineApi();
+        const startFn =
+          E.startBattery ||
+          E.runBattery ||
+          E.launchBattery ||
+          E.startFullBattery;
+
+        if (typeof startFn === "function") {
+          const opts = Object.assign({}, ctx, {
+            context: ctx,
+            onSessionUpdate: handleSessionUpdate,
+            onComplete: handleSessionUpdate
+          });
+          startFn.call(E, opts, { onSessionUpdate: handleSessionUpdate, onComplete: handleSessionUpdate, context: ctx });
+        } else {
+          showToast("محرك الاختبار غير محمل بعد.");
+        }
+      }
+
+      function launchSingleProbe(probeId) {
+        if (!probeId) return;
+        persistContext(false);
+        const ctx = getCurrentContext();
+        const E = getEngineApi();
+        const startFn =
+          E.startProbe ||
+          E.runProbe ||
+          E.launchProbe ||
+          E.startSingleProbe;
+
+        if (typeof startFn === "function") {
+          const opts = Object.assign({}, ctx, {
+            context: ctx,
+            onSessionUpdate: handleSessionUpdate,
+            onComplete: handleSessionUpdate
+          });
+          startFn.call(E, probeId, opts, { onSessionUpdate: handleSessionUpdate, onComplete: handleSessionUpdate, context: ctx });
+        } else {
+          showToast("تعذر إطلاق المسبار المطلوب.");
+        }
+      }
+
+      async function copyDiagnosticSummary() {
+        const A = getAnalyticsApi();
+        let text = "";
+        if (typeof A.generatePlainSummaryText === "function") {
+          try {
+            text = A.generatePlainSummaryText();
+          } catch (_) {
+            text = "";
+          }
+        }
+        text = toAsciiDigits(text || "لا توجد سجلات كافية لتوليد الملخص التشخيصي بعد.");
+
+        try {
+          if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            await navigator.clipboard.writeText(text);
+            showToast("تم نسخ الملخص التشخيصي إلى الحافظة.");
+            return;
+          }
+        } catch (_) {
+          /* fallback below */
+        }
+
+        const area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try {
+          document.execCommand("copy");
+          showToast("تم نسخ الملخص التشخيصي إلى الحافظة.");
+        } catch (_) {
+          showToast("تعذر النسخ التلقائي إلى الحافظة.");
+        } finally {
+          document.body.removeChild(area);
+        }
+      }
+
+      function exportFullJson() {
+        const A = getAnalyticsApi();
+        let jsonStr = "";
+        if (typeof A.exportJSON === "function") {
+          try { jsonStr = A.exportJSON(); } catch (_) {}
+        }
+
+        if (!jsonStr) {
+          const fallbackPayload = {
+            exportedAt: new Date().toISOString(),
+            activeContext: getCurrentContext(),
+            records: getAllHistoryRecords()
+          };
+          jsonStr = JSON.stringify(fallbackPayload, null, 2);
+        }
+
+        const blob = new Blob([toAsciiDigits(jsonStr)], { type: "application/json;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const now = new Date();
+        const stamp = toAsciiDigits(
+          now.getFullYear() + "-" +
+          String(now.getMonth() + 1).padStart(2, "0") + "-" +
+          String(now.getDate()).padStart(2, "0")
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "neuro-lab-records-" + stamp + ".json";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast("تم تصدير السجل الكامل بصيغة JSON.");
+      }
+
+      function handleImportJsonFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function () {
+          try {
+            const rawText = String(reader.result || "");
+            const A = getAnalyticsApi();
+            if (typeof A.importJSON === "function") {
+              const res = A.importJSON(rawText);
+              if (res && typeof res === "object" && "ok" in res) {
+                if (!res.ok) {
+                  showToast(res.error || "تعذر استيراد السجل.");
+                  return;
+                }
+                initTheme();
+                populatePhases();
+                hydrateContextInputs();
+                refreshAllViews();
+                showToast("تم استيراد السجل بنجاح (" + toAsciiDigits(res.count || 0) + " عنصر جديد).");
+                return;
+              }
+              if (res !== false) {
+                initTheme();
+                populatePhases();
+                hydrateContextInputs();
+                refreshAllViews();
+                showToast("تم استيراد السجل وتحديث المنحنيات بنجاح.");
+                return;
+              }
+            }
+            showToast("تعذر استيراد الملف في المحرك التحليلي.");
+          } catch (_) {
+            showToast("ملف JSON غير صالح أو تالف.");
+          } finally {
+            if (dom.importJsonInput) dom.importJsonInput.value = "";
+          }
+        };
+        reader.readAsText(file, "utf-8");
+      }
+
+      function handleResetLocalData() {
+        if (!state.resetArmed) {
+          state.resetArmed = true;
+          if (dom.resetDataBtn) {
+            dom.resetDataBtn.textContent = "اضغط مرة ثانية لتأكيد المسح النهائي";
+          }
+          showToast("تنبيه: اضغط مرة ثانية خلال 4 ثوانٍ لتأكيد مسح السجلات المحلية.");
+          window.clearTimeout(state.resetConfirmTimer);
+          state.resetConfirmTimer = window.setTimeout(function () {
+            state.resetArmed = false;
+            if (dom.resetDataBtn) {
+              dom.resetDataBtn.textContent = "مسح السجلات المحلية";
+            }
+          }, 4000);
+          return;
+        }
+
+        window.clearTimeout(state.resetConfirmTimer);
+        state.resetArmed = false;
+        if (dom.resetDataBtn) {
+          dom.resetDataBtn.textContent = "مسح السجلات المحلية";
+        }
+
+        const A = getAnalyticsApi();
+        if (typeof A.clearAllData === "function") {
+          try { A.clearAllData(); } catch (_) {}
+        } else if (typeof A.resetAll === "function") {
+          try { A.resetAll(); } catch (_) {}
+        }
+        try { localStorage.removeItem(NOTES_STORAGE_KEY); } catch (_) {}
+
+        hydrateContextInputs();
+        refreshAllViews();
+        showToast("تم مسح السجلات المحلية وإعادة الضبط.");
+      }
+
+      function bindEngine() {
+        const E = getEngineApi();
+        const config = {
+          arenaOverlay: dom.arenaOverlay,
+          arenaStage: dom.arenaStage,
+          arenaTitle: dom.arenaTitle,
+          arenaProgress: dom.arenaProgress,
+          arenaAbortBtn: dom.arenaAbortBtn,
+          overlay: dom.arenaOverlay,
+          stage: dom.arenaStage,
+          titleEl: dom.arenaTitle,
+          progressEl: dom.arenaProgress,
+          abortBtn: dom.arenaAbortBtn,
+          getContext: getCurrentContext,
+          onSessionUpdate: handleSessionUpdate,
+          onComplete: handleSessionUpdate
+        };
+
+        if (typeof E.init === "function") {
+          try { E.init(config); } catch (err) { console.error("Engine.init error:", err); }
+        } else if (typeof E.configure === "function") {
+          try { E.configure(config); } catch (_) {}
+        }
+
+        if (typeof E.onSessionUpdate === "function") {
+          try { E.onSessionUpdate(handleSessionUpdate); } catch (_) {}
+        } else if ("onSessionUpdate" in E) {
+          try { E.onSessionUpdate = handleSessionUpdate; } catch (_) {}
+        }
+
+        window.addEventListener("lab:session-update", function (ev) {
+          handleSessionUpdate(ev && ev.detail);
+        });
+        window.addEventListener("neurolab:session-update", function (ev) {
+          handleSessionUpdate(ev && ev.detail);
+        });
+        window.addEventListener("onSessionUpdate", function (ev) {
+          handleSessionUpdate(ev && ev.detail);
+        });
+      }
+
+      function bindEvents() {
+        dom.viewTabs.forEach(function (tab) {
+          tab.addEventListener("click", function () {
+            const view = (tab.getAttribute("data-view") || "dashboard").trim();
+            switchView(view);
+          });
+        });
+
+        if (dom.themeToggleBtn) {
+          dom.themeToggleBtn.addEventListener("click", function () {
+            const cur = dom.html.getAttribute("data-theme") === "dark" ? "dark" : "light";
+            const next = cur === "dark" ? "light" : "dark";
+            applyTheme(next);
+            refreshAllViews();
+          });
+        }
+
+        if (dom.launchBatteryBtn) {
+          dom.launchBatteryBtn.addEventListener("click", launchFullBattery);
+        }
+        if (dom.topBatteryBtn) {
+          dom.topBatteryBtn.addEventListener("click", launchFullBattery);
+        }
+
+        [
+          dom.phaseSelect,
+          dom.alertnessInput,
+          dom.sleepInput,
+          dom.breathingQualityInput,
+          dom.slownessDistressInput,
+          dom.dailyLapsesInput
+        ].forEach(function (inputEl) {
+          if (!inputEl) return;
+          inputEl.addEventListener("input", function () { syncContextBadges(); });
+          inputEl.addEventListener("change", function () { persistContext(false); });
+        });
+
+        if (dom.sessionNotesInput) {
+          dom.sessionNotesInput.addEventListener("change", function () { persistContext(false); });
+        }
+
+        if (dom.saveClinicalContextBtn) {
+          dom.saveClinicalContextBtn.addEventListener("click", function () {
+            persistContext(true);
+          });
+        }
+
+        if (dom.probesGrid) {
+          dom.probesGrid.addEventListener("click", function (ev) {
+            const btn = ev.target.closest(".btn-start-probe");
+            if (!btn) return;
+            const probeId = btn.getAttribute("data-probe-id");
+            launchSingleProbe(probeId);
+          });
+        }
+
+        if (dom.trendFilterPills) {
+          dom.trendFilterPills.addEventListener("click", function (ev) {
+            const pill = ev.target.closest("[data-trend-probe]");
+            if (!pill) return;
+            state.selectedTrendProbeId = pill.getAttribute("data-trend-probe");
+            const latestMap = getLatestMap();
+            renderProbeLongitudinalSection(getNormalizedProbes(latestMap));
+          });
+        }
+
+        if (dom.copySummaryBtn) {
+          dom.copySummaryBtn.addEventListener("click", copyDiagnosticSummary);
+        }
+        if (dom.exportJsonBtn) {
+          dom.exportJsonBtn.addEventListener("click", exportFullJson);
+        }
+        if (dom.importJsonBtn && dom.importJsonInput) {
+          dom.importJsonBtn.addEventListener("click", function () {
+            dom.importJsonInput.click();
+          });
+          dom.importJsonInput.addEventListener("change", function () {
+            const file = dom.importJsonInput.files && dom.importJsonInput.files[0];
+            handleImportJsonFile(file);
+          });
+        }
+        if (dom.resetDataBtn) {
+          dom.resetDataBtn.addEventListener("click", handleResetLocalData);
+        }
+
+        if (dom.arenaAbortBtn) {
+          dom.arenaAbortBtn.addEventListener("click", function () {
+            const E = getEngineApi();
+            if (dom.arenaOverlay && !dom.arenaOverlay.hidden) {
+              if (typeof E.abort === "function") {
+                try { E.abort(); } catch (_) {}
+              } else if (typeof E.stop === "function") {
+                try { E.stop(); } catch (_) {}
+              } else {
+                dom.arenaOverlay.hidden = true;
+              }
+            }
+            refreshAllViews();
+          });
+        }
+      }
+
+      function bootstrap() {
+        window.NeuroLab = window.NeuroLab || {};
+        window.Stimuli = window.Stimuli && Object.keys(window.Stimuli).length ? window.Stimuli : (window.NeuroLab.Stimuli || {});
+        window.Analytics = window.Analytics && Object.keys(window.Analytics).length ? window.Analytics : (window.NeuroLab.Analytics || {});
+        window.Engine = window.Engine && Object.keys(window.Engine).length ? window.Engine : (window.NeuroLab.Engine || {});
+
+        initTheme();
+        populatePhases();
+        hydrateContextInputs();
+        bindEngine();
+        bindEvents();
+        refreshAllViews();
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", bootstrap);
+      } else {
+        bootstrap();
+      }
+    })();
+  </script>
+</body>
+</html>
