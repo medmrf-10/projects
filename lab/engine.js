@@ -32,7 +32,10 @@
     currentProbeId: null,
     contextSnapshot: null,
     tabInterruptions: 0,
-    estimatedFrameMs: 16.7
+    estimatedFrameMs: 16.7,
+    encodingGuardActive: false,
+    encodingPausedForVisibility: false,
+    onEncodingResume: null
   };
 
   function getStimuli() {
@@ -208,12 +211,54 @@
     }
   }
 
+  function setEncodingVisibilityGuard(onInterruptedReplay) {
+    sessionState.encodingGuardActive = typeof onInterruptedReplay === "function";
+    sessionState.encodingPausedForVisibility = false;
+    sessionState.onEncodingResume = typeof onInterruptedReplay === "function" ? onInterruptedReplay : null;
+  }
+
+  function clearEncodingVisibilityGuard() {
+    sessionState.encodingGuardActive = false;
+    sessionState.encodingPausedForVisibility = false;
+    sessionState.onEncodingResume = null;
+  }
+
   function bindVisibilityGuard() {
     unbindVisibilityGuard();
     if (typeof document === "undefined") return;
     activeVisHandler = function () {
-      if (document.visibilityState === "hidden" && domRefs.overlay && !domRefs.overlay.hidden) {
+      if (!domRefs.overlay || domRefs.overlay.hidden) return;
+      if (document.visibilityState === "hidden") {
         sessionState.tabInterruptions += 1;
+        // If tab was hidden mid-flash during transient stimulus encoding, halt unseen flash immediately
+        if (sessionState.encodingGuardActive && sessionState.onEncodingResume) {
+          var resumeCb = sessionState.onEncodingResume;
+          cleanupActive();
+          sessionState.encodingPausedForVisibility = true;
+          sessionState.onEncodingResume = resumeCb;
+          if (domRefs.stage) {
+            domRefs.stage.innerHTML =
+              '<div class="stimulus-card">' +
+              '<div class="warmup-feedback is-warning">توقف العرض العابر مؤقتا بسبب مغادرة التبويب؛ ستُعاد الجولة بمثير جديد فور العودة لضمان سلامة الإدراك البصري.</div>' +
+              '<button id="btnResumeEncodingNow" type="button" class="btn-primary">استئناف الجولة بمثير جديد</button>' +
+              "</div>";
+            var rBtn = document.getElementById("btnResumeEncodingNow");
+            if (rBtn) {
+              rBtn.addEventListener("click", function () {
+                if (!sessionState.onEncodingResume) return;
+                var fn = sessionState.onEncodingResume;
+                clearEncodingVisibilityGuard();
+                fn();
+              });
+            }
+          }
+        }
+      } else if (document.visibilityState === "visible" && sessionState.encodingPausedForVisibility && sessionState.onEncodingResume) {
+        var autoFn = sessionState.onEncodingResume;
+        clearEncodingVisibilityGuard();
+        scheduleTimer(function () {
+          autoFn();
+        }, 320);
       }
     };
     document.addEventListener("visibilitychange", activeVisHandler);
@@ -228,6 +273,7 @@
 
   function cleanupActive() {
     runToken += 1;
+    clearEncodingVisibilityGuard();
     for (var i = 0; i < activeTimers.length; i += 1) {
       clearTimeout(activeTimers[i]);
     }
@@ -311,6 +357,56 @@
     return sorted.length % 2 === 1
       ? Math.round(sorted[m])
       : Math.round((sorted[m - 1] + sorted[m]) / 2);
+  }
+
+  // Order-preserving Longest Common Subsequence length (Lewandowsky et al., 2010):
+  // Prevents rank-shift zeroing when an early item evaporates while later items are recalled in exact relative order
+  function computeOrderedLCS(recalledArr, expectedArr) {
+    var m = recalledArr.length;
+    var n = expectedArr.length;
+    if (m === 0 || n === 0) return 0;
+    var dp = [];
+    for (var i = 0; i <= m; i += 1) {
+      var row = [];
+      for (var j = 0; j <= n; j += 1) row.push(0);
+      dp.push(row);
+    }
+    for (var r = 1; r <= m; r += 1) {
+      for (var c = 1; c <= n; c += 1) {
+        if (recalledArr[r - 1] === expectedArr[c - 1]) {
+          dp[r][c] = dp[r - 1][c - 1] + 1;
+        } else {
+          dp[r][c] = Math.max(dp[r - 1][c], dp[r][c - 1]);
+        }
+      }
+    }
+    return dp[m][n];
+  }
+
+  // High-Threshold Guess-Corrected Ordered Stream Recall (Macmillan & Creelman, 2005):
+  // Honest "__FORGOT__" clicks incur 0 penalty (2/3 ordered = 66.7%), whereas blind foil guessing averages ~0%!
+  function scoreOrderedStreamRecall(chosenSlots, expectedOrdered, totalPoolSize) {
+    var k = expectedOrdered.length;
+    if (k === 0) return { pct: 100, orderedHits: 0, intrusions: 0 };
+    var recalled = [];
+    var intrusions = 0;
+    for (var i = 0; i < chosenSlots.length; i += 1) {
+      var v = chosenSlots[i];
+      if (!v || v === "__FORGOT__") continue;
+      recalled.push(v);
+      if (expectedOrdered.indexOf(v) === -1) {
+        intrusions += 1;
+      }
+    }
+    var orderedHits = computeOrderedLCS(recalled, expectedOrdered);
+    var foilCount = Math.max(1, totalPoolSize - k);
+    var guessPenalty = (k / foilCount) * intrusions;
+    var netHits = Math.max(0, Math.min(k, orderedHits - guessPenalty));
+    return {
+      pct: Math.round((netHits / k) * 100),
+      orderedHits: orderedHits,
+      intrusions: intrusions
+    };
   }
 
   function computeSplitHalf(trialScoresPct) {
@@ -498,9 +594,10 @@
   }
 
   /* =========================================================================
-     UNSCORED INTERACTIVE PRACTICE WARMUP (Eliminates Task-Novelty Confound)
+     UNSCORED INTERACTIVE PRACTICE WARMUP (Full Hands-On Across All 6 Probes)
      ========================================================================= */
   function runInteractiveWarmup(probeId) {
+    cleanupActive();
     var S = getStimuli();
     var meta = findProbeMeta(probeId);
     var sample = typeof S.generateWarmupTrial === "function" ? S.generateWarmupTrial(probeId) : null;
@@ -508,8 +605,9 @@
 
     if (probeId === "isolation" && sample) {
       var wIdx = 0;
-      function showW() {
-        if (wIdx >= sample.words.length) {
+      var wLen = sample.words.length;
+      function showWarmIsoWord() {
+        if (wIdx >= wLen) {
           var optsH = sample.taskOptions.map(function (o) {
             return '<button type="button" class="opt-btn" data-v="' + esc(o) + '"><span class="ltr-iso">' + esc(o) + "</span></button>";
           }).join("");
@@ -521,79 +619,266 @@
           var bs = domRefs.stage.querySelectorAll(".opt-btn");
           for (var b = 0; b < bs.length; b += 1) {
             bs[b].addEventListener("click", function (ev) {
-              var ok = ev.currentTarget.getAttribute("data-v") === sample.taskAnswer;
-              launchProbeIntro(
-                probeId,
-                "اكتملت الجولة التدريبية بنجاح: الكلمات بالترتيب كانت (" +
-                  sample.words.join(" ← ") +
-                  ") وجواب المسألة (" +
-                  sample.taskAnswer +
-                  " — " +
-                  (ok ? "إجابة صحيحة" : "تنبه لدقة الحساب في القياس الفعلي") +
-                  "). لن تحسب هذه التجربة ضمن درجاتك."
-              );
+              var mathOk = ev.currentTarget.getAttribute("data-v") === sample.taskAnswer;
+              showWarmIsoRecall(mathOk);
             });
           }
           return;
         }
         domRefs.stage.innerHTML =
-          '<div class="stimulus-card"><div class="stim-label">تدريب: احفظ بترتيب الظهور (' +
-          (wIdx + 1) +
-          "/3)</div><div class=\"stim-word\">" +
+          '<div class="stimulus-card"><div class="stim-label">تدريب: احفظ بترتيب الظهور (<span class="ltr-iso">' +
+          (wIdx + 1) + "/" + wLen +
+          '</span>)</div><div class="stim-word">' +
           esc(sample.words[wIdx]) +
           "</div></div>";
         wIdx += 1;
-        scheduleFrameAccurate(showW, 880);
+        scheduleFrameAccurate(showWarmIsoWord, 860);
       }
-      showW();
+
+      function showWarmIsoRecall(mathOk) {
+        var picks = [];
+        function drawPad() {
+          var sl = "";
+          for (var i = 0; i < wLen; i += 1) {
+            var v = picks[i];
+            sl += '<div class="slot-pill' + (v ? " is-filled" : i === picks.length ? " is-active" : "") + '">' +
+              (v ? (v === "__FORGOT__" ? "؟" : esc(v)) : "خانة " + (i + 1)) + "</div>";
+          }
+          var kh = sample.distractorPool.map(function (w) {
+            return '<button type="button" class="key-btn" data-w="' + esc(w) + '"' + (picks.indexOf(w) !== -1 ? " disabled" : "") + ">" + esc(w) + "</button>";
+          }).join("");
+          domRefs.stage.innerHTML =
+            '<div class="task-box"><div class="stim-label">تدريب لوحة الاسترجاع المرتب</div>' +
+            '<div class="recall-slots">' + sl + '</div><div class="keypad-grid">' + kh + "</div>" +
+            '<div class="arena-utility-row"><button id="wIsoForgot" type="button" class="btn-forgot">تبخر العنصر ؟</button></div></div>';
+          var kbs = domRefs.stage.querySelectorAll(".key-btn");
+          for (var k = 0; k < kbs.length; k += 1) {
+            kbs[k].addEventListener("click", function (e) { addPick(e.currentTarget.getAttribute("data-w")); });
+          }
+          document.getElementById("wIsoForgot").addEventListener("click", function () { addPick("__FORGOT__"); });
+        }
+        function addPick(v) {
+          picks.push(v);
+          if (picks.length >= wLen) {
+            var hits = 0;
+            for (var c = 0; c < wLen; c += 1) if (picks[c] === sample.words[c]) hits += 1;
+            launchProbeIntro(
+              probeId,
+              "اكتملت الجولة التدريبية (غير محسوبة): استرجعت " + hits + "/" + wLen +
+              " بالترتيب (" + sample.words.join(" ← ") + ")، والمسألة " + (mathOk ? "صحيحة" : "جوابها " + sample.taskAnswer) + "."
+            );
+          } else {
+            drawPad();
+          }
+        }
+        drawPad();
+      }
+      showWarmIsoWord();
+      return;
+    }
+
+    if (probeId === "updating" && sample) {
+      var uStep = -1;
+      function renderWarmUpd() {
+        cleanupActive();
+        if (uStep === -1) {
+          var initTxt = sample.vars.map(function (vn) {
+            return esc(vn) + ': <span class="ltr-iso">' + sample.initial[vn] + "</span>";
+          }).join(" &nbsp;|&nbsp; ");
+          domRefs.stage.innerHTML =
+            '<div class="stimulus-card"><div class="stim-label">تدريب غير محسوب — القيم الابتدائية</div>' +
+            '<div class="stim-step-text">' + initTxt + "</div>" +
+            '<button id="wUpdGo" type="button" class="btn-primary">حفظت البداية — اعرض الخطوات</button></div>';
+          document.getElementById("wUpdGo").addEventListener("click", function () { uStep = 0; renderWarmUpd(); });
+          return;
+        }
+        if (uStep < sample.steps.length) {
+          domRefs.stage.innerHTML =
+            '<div class="stimulus-card"><div class="stim-label">تدريب التحديث (<span class="ltr-iso">' +
+            (uStep + 1) + "/" + sample.steps.length + '</span>)</div>' +
+            '<div class="stim-step-text">' + esc(sample.steps[uStep].text) + "</div>" +
+            '<button id="wUpdStep" type="button" class="btn-primary">تم التحديث — التالي</button></div>';
+          document.getElementById("wUpdStep").addEventListener("click", function () { uStep += 1; renderWarmUpd(); });
+          return;
+        }
+        var targetV = sample.queryOrder[0];
+        var np = "";
+        for (var d = 1; d <= 9; d += 1) np += '<button type="button" class="key-btn" data-d="' + d + '">' + d + "</button>";
+        domRefs.stage.innerHTML =
+          '<div class="task-box"><div class="stim-label">تدريب لوحة الأرقام</div>' +
+          '<p class="task-question">ما القيمة النهائية للمتغير «' + esc(targetV) + '»؟</p>' +
+          '<div class="keypad-grid is-numpad">' + np + "</div></div>";
+        var nbs = domRefs.stage.querySelectorAll(".key-btn");
+        for (var n = 0; n < nbs.length; n += 1) {
+          nbs[n].addEventListener("click", function (ev) {
+            var got = Number(ev.currentTarget.getAttribute("data-d"));
+            var ans = sample.final[targetV];
+            launchProbeIntro(
+              probeId,
+              "اكتمل التدريب غير المحسوب: القيمة النهائية لـ «" + targetV + "» كانت " + ans +
+              (got === ans ? " (إجابة صحيحة)." : " (اخترت " + got + ").")
+            );
+          });
+        }
+      }
+      renderWarmUpd();
       return;
     }
 
     if (probeId === "gating" && sample) {
       var gIdx = 0;
-      function showG() {
+      var wNums = [];
+      function showWarmGate() {
         if (gIdx >= sample.sequence.length) {
-          launchProbeIntro(
-            probeId,
-            "اكتملت المعاينة التدريبية: السلسلة كانت (غرض ← 7 ← عذر ← 3)، فيكون المخرج الأول للأرقام تصاعديا (3 ثم 7) والمخرج الثاني للكلمات عكسيا (عذر ثم غرض). اضغط ابدأ القياس الفعلي."
-          );
+          renderWarmGateNums();
           return;
         }
         var it = sample.sequence[gIdx];
         domRefs.stage.innerHTML =
-          '<div class="stimulus-card"><div class="stim-label">تدريب بوابة التناوب — العنصر ' +
-          (gIdx + 1) +
-          '/4</div><div class="stim-token">' +
-          esc(it.value) +
-          "</div></div>";
+          '<div class="stimulus-card"><div class="stim-label">تدريب بوابة التناوب — العنصر <span class="ltr-iso">' +
+          (gIdx + 1) + '/4</span></div><div class="stim-token">' + esc(it.value) + "</div></div>";
         gIdx += 1;
-        scheduleFrameAccurate(showG, 920);
+        scheduleFrameAccurate(showWarmGate, 900);
       }
-      showG();
+      function renderWarmGateNums() {
+        var np = "";
+        for (var n = 1; n <= 9; n += 1) {
+          var dis = wNums.indexOf(String(n)) !== -1 ? " disabled" : "";
+          np += '<button type="button" class="key-btn" data-n="' + n + '"' + dis + ">" + n + "</button>";
+        }
+        domRefs.stage.innerHTML =
+          '<div class="task-box"><div class="stim-label">تدريب المرحلة 1 من 2 — الأرقام تصاعديا</div>' +
+          '<p class="task-question">اختر الرقمين مرتبين من الأصغر إلى الأكبر (' + wNums.length + '/2):</p>' +
+          '<div class="keypad-grid is-numpad">' + np + "</div></div>";
+        var nbs = domRefs.stage.querySelectorAll(".key-btn");
+        for (var b = 0; b < nbs.length; b += 1) {
+          nbs[b].addEventListener("click", function (e) {
+            wNums.push(e.currentTarget.getAttribute("data-n"));
+            if (wNums.length >= 2) {
+              launchProbeIntro(
+                probeId,
+                "اكتمل التدريب غير المحسوب: الأرقام تصاعديا (3 ثم 7) وتليها في القياس الفعلي الكلمات عكسيا (عذر ثم غرض)."
+              );
+            } else {
+              renderWarmGateNums();
+            }
+          });
+        }
+      }
+      showWarmGate();
       return;
     }
 
-    if (probeId === "vigilance") {
+    if (probeId === "binding" && sample) {
+      var bpIdx = 0;
+      function showWarmPremise() {
+        cleanupActive();
+        if (bpIdx < sample.premises.length) {
+          domRefs.stage.innerHTML =
+            '<div class="stimulus-card"><div class="stim-label">تدريب الاستنتاج — المقدمة <span class="ltr-iso">' +
+            (bpIdx + 1) + "/" + sample.premises.length + '</span></div>' +
+            '<div class="stim-step-text">' + esc(sample.premises[bpIdx]) + "</div>" +
+            '<button id="wBndNext" type="button" class="btn-primary">التالي</button></div>';
+          document.getElementById("wBndNext").addEventListener("click", function () { bpIdx += 1; showWarmPremise(); });
+          return;
+        }
+        var oh = sample.entities.map(function (ent) {
+          return '<button type="button" class="opt-btn" data-e="' + esc(ent) + '">' + esc(ent) + "</button>";
+        }).join("");
+        domRefs.stage.innerHTML =
+          '<div class="task-box"><div class="stim-label">تدريب الاسترجاع وسط 6 بدائل</div>' +
+          '<p class="task-question">' + esc(sample.question) + "</p>" +
+          '<div class="options-grid">' + oh + "</div></div>";
+        var obs = domRefs.stage.querySelectorAll(".opt-btn");
+        for (var k = 0; k < obs.length; k += 1) {
+          obs[k].addEventListener("click", function (e) {
+            var ch = e.currentTarget.getAttribute("data-e");
+            launchProbeIntro(
+              probeId,
+              "اكتمل التدريب غير المحسوب: الجواب الصحيح «" + sample.answer + "» (" +
+              sample.structuralCheck.answer + ") — " + (ch === sample.answer ? "إصابة دقيقة." : "اخترت «" + ch + "».")
+            );
+          });
+        }
+      }
+      showWarmPremise();
+      return;
+    }
+
+    if (probeId === "vigilance" && sample) {
+      var vpIdx = 0;
+      var vHits = 0;
+      var vWaiting = false;
       domRefs.stage.innerHTML =
-        '<div class="stimulus-card">' +
-        '<div class="stim-label">معاينة العدّاد الرباعي</div>' +
-        '<div class="pulse-ring is-flashing">●</div>' +
-        '<p class="stim-step-text">عند الومضات 1 و2 و3 تضغط (خطوة / مسافة)، وعند الومضة 4 تضغط (إغلاق الدورة 4 / Enter) ثم تبدأ الدورة التالية من 1.</p>' +
-        '<button id="btnEndWarmVig" type="button" class="btn-primary">واضح — عد لبدء القياس الفعلي</button>' +
-        "</div>";
-      document.getElementById("btnEndWarmVig").addEventListener("click", function () {
-        launchProbeIntro(probeId, "تمت معاينة إيقاع الاستجابة؛ تذكّر عدم الضغط قبل رؤية الومضة الضوئية.");
-      });
+        '<div class="vigilance-pad">' +
+        '<div class="stim-label">تدريب تفاعلي لدورة رباعية واحدة (4 ومضات غير محسوبة)</div>' +
+        '<div id="wVigRing" class="pulse-ring">●</div>' +
+        '<p id="wVigMsg" class="vig-status-msg">انتظر الومضة الأولى...</p>' +
+        '<div class="vig-actions">' +
+        '<button id="wVigStep" type="button" class="vig-btn-step">خطوة 1 أو 2 أو 3</button>' +
+        '<button id="wVigClose" type="button" class="vig-btn-close">إغلاق الدورة 4</button>' +
+        "</div></div>";
+      var wRing = document.getElementById("wVigRing");
+      var wMsg = document.getElementById("wVigMsg");
+      function onWarmTap(kind) {
+        if (!vWaiting) return;
+        vWaiting = false;
+        var ok = (vpIdx < 4 && kind === "step") || (vpIdx === 4 && kind === "close");
+        if (ok) vHits += 1;
+        if (wMsg) wMsg.textContent = ok ? "استجابة متطابقة للومضة " + vpIdx : "تنبه: الومضة 4 فقط تُغلق بزر إغلاق الدورة";
+      }
+      bindFastPress(document.getElementById("wVigStep"), function () { onWarmTap("step"); });
+      bindFastPress(document.getElementById("wVigClose"), function () { onWarmTap("close"); });
+      function fireWarmPulse() {
+        if (vpIdx >= 4) {
+          launchProbeIntro(probeId, "اكتملت الدورة التدريبية (" + vHits + "/4 استجابات مطابقة) دون احتساب في السجل.");
+          return;
+        }
+        vpIdx += 1;
+        vWaiting = true;
+        if (wRing) wRing.classList.add("is-flashing");
+        if (wMsg) wMsg.textContent = "الومضة التدريبية " + vpIdx + " من 4";
+        scheduleFrameAccurate(function () {
+          if (wRing) wRing.classList.remove("is-flashing");
+        }, 240);
+        scheduleFrameAccurate(fireWarmPulse, sample.intervalsMs[vpIdx - 1] || 1500);
+      }
+      scheduleFrameAccurate(fireWarmPulse, 700);
       return;
     }
 
-    // Concise interactive walkthrough for updating / binding / control
-    var summaryNotes = {
-      updating: "تذكّر في القياس الفعلي: حدّث قيمة المتغير المذكور في كل خطوة وأبقِ بقية المتغيرات حاضرة؛ سيُسأل عنها بترتيب عشوائي.",
-      binding: "تذكّر في القياس الفعلي: كل مقدمة ضرورية ولا توجد جملة مكررة زائدة؛ اربط كل اسم بموقعه واختره من بين 6 بدائل.",
-      control: "تذكّر في القياس الفعلي: ستمر بـ 3 جولات مكدس وقاعدة شرطية تليها 3 ومضات بصرية سريعة (0.8 ثانية) يتبعها قناع بصري."
-    };
-    launchProbeIntro(probeId, summaryNotes[probeId] || "جاهز لبدء القياس الفعلي.");
+    if (probeId === "control" && sample) {
+      domRefs.stage.innerHTML =
+        '<div class="visual-canvas-wrap"><div class="stim-label">تدريب ومضة 0.8s + قناع تقنيع</div>' +
+        '<div class="visual-svg-box">' + renderVisualStimulusSVG(sample, null) + "</div></div>";
+      scheduleFrameAccurate(function () {
+        domRefs.stage.innerHTML =
+          '<div class="visual-canvas-wrap"><div class="stim-label">قناع تقنيع بصري</div>' +
+          '<div class="visual-svg-box">' + renderMaskSVG(sample.maskSeed || 777) + "</div></div>";
+        scheduleFrameAccurate(function () {
+          var gh = "";
+          for (var o = 0; o < 4; o += 1) {
+            gh += '<button type="button" class="visual-opt-btn" data-o="' + o + '">' + renderVisualStimulusSVG(sample, o) + "</button>";
+          }
+          domRefs.stage.innerHTML =
+            '<div class="task-box"><p class="task-question">تدريب: اختر نافذة التناسب المطابقة لما ومض:</p>' +
+            '<div class="visual-options-grid">' + gh + "</div></div>";
+          var vbs = domRefs.stage.querySelectorAll(".visual-opt-btn");
+          for (var b = 0; b < vbs.length; b += 1) {
+            vbs[b].addEventListener("click", function (e) {
+              var ok = Number(e.currentTarget.getAttribute("data-o")) === Number(sample.correctIndex);
+              launchProbeIntro(
+                probeId,
+                "اكتملت المعاينة البصرية غير المحسوبة (" + (ok ? "مطابقة صحيحة" : "تذكّر التركيز على نسب التقسيم") + ")."
+              );
+            });
+          }
+        }, 500);
+      }, 800);
+      return;
+    }
+
+    launchProbeIntro(probeId, "جاهز لبدء القياس الفعلي.");
   }
 
   function dispatchProbeRunner(probeId) {
@@ -606,14 +891,15 @@
   }
 
   /* =========================================================================
-     PROBE 1: ISOLATION (TBRS Pure vs Loaded Complex Span & Wipeout)
+     PROBE 1: ISOLATION (6-Trial Counterbalanced TBRS + PI Lures & Wipeout)
      ========================================================================= */
   function runIsolationProbe() {
     var S = getStimuli();
-    var trials = S.generateIsolationTrials(5);
+    var trials = S.generateIsolationTrials(6);
     var meta = findProbeMeta("isolation");
     var results = [];
     var idx = 0;
+    var replayCounts = {};
 
     function nextTrial() {
       cleanupActive();
@@ -623,11 +909,26 @@
       var tr = trials[idx];
       var modeBadge =
         tr.taskType === "pure"
-          ? "جولة مرجعية صافية (بدون معالجة)"
+          ? "جولة مرجعية صافية (احتفاظ صامت موازن زمنيا)"
           : tr.taskType === "math"
           ? "جولة مزدوجة (حفظ + حساب موقوت)"
           : "جولة مزدوجة (حفظ + منطق مقلوب)";
       setHeader(meta.title, formatProgressPrefix("Trial " + (idx + 1) + "/" + trials.length));
+
+      // Guard transient 4-word presentation against mid-encoding tab backgrounding (capped at 1 fresh replay per trial)
+      if ((replayCounts[idx] || 0) < 1) {
+        setEncodingVisibilityGuard(function () {
+          replayCounts[idx] = (replayCounts[idx] || 0) + 1;
+          var freshSet = S.generateIsolationTrials(trials.length);
+          for (var f = 0; f < freshSet.length; f += 1) {
+            if (freshSet[f].taskType === tr.taskType) {
+              trials[idx] = freshSet[f];
+              break;
+            }
+          }
+          nextTrial();
+        });
+      }
 
       domRefs.stage.innerHTML =
         '<div class="stimulus-card">' +
@@ -643,6 +944,7 @@
 
       function presentWord(wIdx) {
         if (wIdx >= tr.words.length) {
+          clearEncodingVisibilityGuard();
           if (tr.taskType === "pure") {
             return showSilentMaintenance();
           }
@@ -672,21 +974,21 @@
       }
 
       function showSilentMaintenance() {
-        var holdMs = tr.retentionMs || 2200;
+        var holdMs = tr.retentionMs || 4200;
         domRefs.stage.innerHTML =
           '<div class="stimulus-card">' +
-          '<div class="stim-label">احتفاظ صامت بدون معالجة حسابية...</div>' +
+          '<div class="stim-label">احتفاظ صامت موازن زمنيا بدون معالجة...</div>' +
           '<div class="stim-num" style="opacity:0.45;">•</div>' +
           '<div class="tbrs-timer-track"><div id="pureHoldBar" class="tbrs-timer-fill"></div></div>' +
           "</div>";
         startCountdownBar(document.getElementById("pureHoldBar"), holdMs);
         scheduleFrameAccurate(function () {
-          showSerialRecall(true, 0, false);
+          showSerialRecall(true, 0, false, 0);
         }, holdMs);
       }
 
       function showProcessingTask() {
-        var deadlineMs = tr.deadlineMs || (tr.taskType === "math" ? 10500 : 14500);
+        var deadlineMs = tr.deadlineMs || (tr.taskType === "math" ? 8800 : 12500);
         var optsHtml = "";
         for (var o = 0; o < tr.taskOptions.length; o += 1) {
           var isNum = /^\d+$/.test(tr.taskOptions[o]);
@@ -726,7 +1028,7 @@
           cleanupActive();
           var taskRtMs = Math.max(0, Math.round((eventTs || nowMs()) - tOnset));
           var taskCorrect = !isTimeout && String(chosenVal) === String(tr.taskAnswer);
-          showSerialRecall(taskCorrect, taskRtMs, Boolean(isTimeout));
+          showSerialRecall(taskCorrect, taskRtMs, Boolean(isTimeout), deadlineMs);
         };
 
         // Enforce TBRS cognitive-load deadline so covert rehearsal before answering is impossible
@@ -753,7 +1055,7 @@
         });
       }
 
-      function showSerialRecall(taskCorrect, taskRtMs, taskTimedOut) {
+      function showSerialRecall(taskCorrect, taskRtMs, taskTimedOut, deadlineMs) {
         var chosenWords = [];
         var tRecallStart = nowMs();
 
@@ -787,7 +1089,7 @@
 
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<p class="task-question">انقر المفردات الأربع بترتيب ظهورها الأصلي من الخانة 1 إلى 4:</p>' +
+            '<p class="task-question">انقر مفردات هذه الجولة فقط بترتيب ظهورها من 1 إلى 4:</p>' +
             '<div class="recall-slots">' +
             slotsHtml +
             "</div>" +
@@ -833,7 +1135,10 @@
             var strictHits = 0;
             var itemSurvived = 0;
             var transpositions = 0;
-            var wipeouts = 0;
+            var omissions = 0;
+            var intrusions = 0;
+            var piIntrusions = 0;
+            var piList = Array.isArray(tr.priorLures) ? tr.priorLures : [];
 
             for (var c = 0; c < 4; c += 1) {
               var picked = chosenWords[c];
@@ -841,25 +1146,38 @@
                 slotHits[c] = 1;
                 strictHits += 1;
                 itemSurvived += 1;
-              } else if (picked !== "__FORGOT__" && tr.words.indexOf(picked) !== -1) {
+              } else if (picked === "__FORGOT__") {
+                omissions += 1;
+              } else if (tr.words.indexOf(picked) !== -1) {
                 itemSurvived += 1;
                 transpositions += 1;
               } else {
-                wipeouts += 1;
+                intrusions += 1;
+                if (piList.indexOf(picked) !== -1) {
+                  piIntrusions += 1;
+                }
               }
             }
+
+            var nonForgotRecalled = chosenWords.filter(function (x) { return x !== "__FORGOT__"; });
+            var relativeOrderHits = computeOrderedLCS(nonForgotRecalled, tr.words);
 
             results.push({
               taskType: tr.taskType,
               taskCorrect: taskCorrect,
               taskTimedOut: taskTimedOut,
-              fastGuess: tr.taskType !== "pure" && !taskCorrect && taskRtMs > 0 && taskRtMs < 450,
+              fastGuess: tr.taskType !== "pure" && !taskCorrect && taskRtMs > 0 && taskRtMs < 550,
               taskRtMs: taskRtMs,
+              deadlineMs: deadlineMs || 0,
               recallRtMs: Math.round(nowMs() - tRecallStart),
               hits: strictHits,
+              relativeOrderHits: relativeOrderHits,
               itemSurvived: itemSurvived,
               transpositions: transpositions,
-              wipeouts: wipeouts,
+              omissions: omissions,
+              intrusions: intrusions,
+              piIntrusions: piIntrusions,
+              wipeouts: omissions + intrusions,
               slotHits: slotHits
             });
             idx += 1;
@@ -878,11 +1196,11 @@
 
   function finishIsolation(results) {
     var pureHits = 0, pureTotal = 0;
-    var mathHits = 0, mathTotal = 0, logicHits = 0, logicTotal = 0;
+    var gatedMathSum = 0, mathTotal = 0, gatedLogicSum = 0, logicTotal = 0;
     var weightedLoadedSum = 0, loadedSlotsTotal = 0;
     var s1 = 0, smid = 0, s4 = 0, loadedCount = 0;
-    var taskAccCount = 0, transpositionsTotal = 0, wipeoutsTotal = 0;
-    var loadedRts = [], correctTaskRts = [], loadedTrialScores = [];
+    var taskAccCount = 0, transpositionsTotal = 0, wipeoutsTotal = 0, piIntrusionsTotal = 0;
+    var loadedRts = [], correctTaskRts = [], loadedTrialScores = [], clRatios = [];
 
     for (var p = 0; p < results.length; p += 1) {
       if (results[p].taskType !== "pure") {
@@ -903,12 +1221,15 @@
 
       loadedSlotsTotal += 4;
       loadedRts.push(r.taskRtMs);
+      if (r.deadlineMs > 0) {
+        clRatios.push(Math.min(100, Math.round((r.taskRtMs / r.deadlineMs) * 100)));
+      }
       if (r.taskCorrect) {
         correctTaskRts.push(r.taskRtMs);
       }
 
       // Conway et al. (2005) conditional dual-task engagement gate:
-      // Blocks storage inflation via fast-guessing (<550ms), timeout, or neglecting processing (<75% criterion)
+      // Applied consistently across finalScore, mathSurvivalPct, logicSurvivalPct, and processingWipeoutPct!
       var engagementWeight = 1.0;
       if (!r.taskCorrect) {
         if (r.fastGuess || r.taskTimedOut || (r.taskRtMs > 0 && r.taskRtMs < 550)) {
@@ -919,57 +1240,63 @@
           engagementWeight = 0.25 * (taskAccPct / 75);
         }
       }
-      weightedLoadedSum += r.hits * engagementWeight;
-      loadedTrialScores.push(Math.round(((r.hits * engagementWeight) / 4) * 100));
+      var weightedHits = r.hits * engagementWeight;
+      weightedLoadedSum += weightedHits;
+      loadedTrialScores.push(Math.round((weightedHits / 4) * 100));
 
-      s1 += r.slotHits[0];
-      smid += r.slotHits[1] + r.slotHits[2];
-      s4 += r.slotHits[3];
+      s1 += r.slotHits[0] * engagementWeight;
+      smid += (r.slotHits[1] + r.slotHits[2]) * engagementWeight;
+      s4 += r.slotHits[3] * engagementWeight;
       transpositionsTotal += r.transpositions;
       wipeoutsTotal += r.wipeouts;
+      piIntrusionsTotal += r.piIntrusions || 0;
 
       if (r.taskType === "math") {
-        mathHits += r.hits;
+        gatedMathSum += weightedHits;
         mathTotal += 4;
       } else {
-        logicHits += r.hits;
+        gatedLogicSum += weightedHits;
         logicTotal += 4;
       }
     }
 
     var pureSpanPct = pureTotal > 0 ? Math.round((pureHits / pureTotal) * 100) : 100;
-    var rawLoadedRecallPct = loadedSlotsTotal > 0 ? Math.round(((mathHits + logicHits) / loadedSlotsTotal) * 100) : 0;
     var gatedRecallPct = loadedSlotsTotal > 0 ? Math.round((weightedLoadedSum / loadedSlotsTotal) * 100) : 0;
     var finalScore = Math.max(0, Math.min(100, gatedRecallPct));
 
-    var processingWipeoutPct = Math.max(0, pureSpanPct - rawLoadedRecallPct);
-    var mathSurvivalPct = mathTotal > 0 ? Math.round((mathHits / mathTotal) * 100) : 0;
-    var logicSurvivalPct = logicTotal > 0 ? Math.round((logicHits / logicTotal) * 100) : 0;
+    var processingWipeoutPct = Math.max(0, pureSpanPct - finalScore);
+    var mathSurvivalPct = mathTotal > 0 ? Math.round((gatedMathSum / mathTotal) * 100) : 0;
+    var logicSurvivalPct = logicTotal > 0 ? Math.round((gatedLogicSum / logicTotal) * 100) : 0;
     var slot1Pct = Math.round((s1 / denomLoaded) * 100);
     var middleSlotsPct = Math.round((smid / (denomLoaded * 2)) * 100);
     var slot4Pct = Math.round((s4 / denomLoaded) * 100);
     var meanRt = mean(loadedRts);
+    var cognitiveLoadPct = mean(clRatios);
     var lisasMs = computeLisasSafe(correctTaskRts, loadedRts, 1 - taskAccPct / 100);
     var splitHalfPct = computeSplitHalf(loadedTrialScores);
 
     var tradeoffNote = taskAccPct < 75
-      ? " [تنبيه Conway et al. (2005): دقة المعالجة الفاصلة (" + taskAccPct + "%) دون معيار الصلاحية 75% فطُبّق خصم مقايضة التسميع]."
+      ? " [تنبيه Conway et al. (2005): دقة المعالجة الفاصلة (" + taskAccPct + "%) دون معيار الصلاحية 75% فطُبّق تصحيح مقايضة التسميع على البقاء]."
       : "";
 
     var diag =
-      "السعة المجردة الصافية بلا معالجة بلغت " +
+      "السعة المجردة الصافية الموازنة زمنيا بلغت " +
       pureSpanPct +
-      "%، ثم هبط البقاء إلى " +
+      "%، ثم سجل البقاء الفعال " +
       mathSurvivalPct +
       "% بعد الحساب و" +
       logicSurvivalPct +
       "% بعد المنطق المقلوب (صافي المسح بالمعالجة: " +
       processingWipeoutPct +
-      "%)؛ سُجلت " +
+      "% تحت حمل TBRS قدره " +
+      cognitiveLoadPct +
+      "%)؛ رُصدت " +
       wipeoutsTotal +
-      " حالات انمساح تام مقابل " +
+      " حالات مسح/إقحام (منها " +
+      piIntrusionsTotal +
+      " تداخلات من الجولة السابقة) مقابل " +
       transpositionsTotal +
-      " أخطاء إبدال ترتيب." +
+      " إبدال ترتيب." +
       tradeoffNote;
 
     completeProbe(
@@ -986,17 +1313,19 @@
         slot4Pct: slot4Pct,
         transpositionCount: transpositionsTotal,
         wipeoutCount: wipeoutsTotal,
+        piIntrusionCount: piIntrusionsTotal,
+        cognitiveLoadPct: cognitiveLoadPct,
         taskAccPct: taskAccPct,
         taskMeanRtMs: meanRt,
         lisasMs: lisasMs,
         splitHalfPct: splitHalfPct
       },
       [
-        { label: "السعة الصافية (ضابط)", val: pureSpanPct + "%" },
+        { label: "السعة الصافية الموازنة", val: pureSpanPct + "%" },
         { label: "صافي المسح بالمعالجة", val: processingWipeoutPct + "%" },
         { label: "البقاء بعد الحساب", val: mathSurvivalPct + "%" },
         { label: "البقاء بعد المنطق", val: logicSurvivalPct + "%" },
-        { label: "إبدال الترتيب مقابل المسح", val: transpositionsTotal + " / " + wipeoutsTotal },
+        { label: "إبدال الترتيب / تداخل سابق", val: transpositionsTotal + " / " + piIntrusionsTotal },
         { label: "دقة المسألة الفاصلة", val: taskAccPct + "%" }
       ],
       diag
@@ -1011,12 +1340,15 @@
     var trials = S.generateUpdatingTrials(5);
     var meta = findProbeMeta("updating");
     var idx = 0;
+    var lastTrustedStepTs = 0;
 
     var stats = {
       twoCorrect: 0,
       twoTotal: 0,
       threeCorrect: 0,
       threeTotal: 0,
+      semanticCorrect: 0,
+      semanticTotal: 0,
       inFocusCorrect: 0,
       inFocusTotal: 0,
       peripheralCorrect: 0,
@@ -1063,18 +1395,19 @@
       startCountdownBar(document.getElementById("updInitBar"), initCapMs);
 
       var stepStarted = false;
-      var goSteps = function () {
+      var goSteps = function (ev) {
         if (stepStarted) return;
+        if (ev && ev.isTrusted) lastTrustedStepTs = nowMs();
         stepStarted = true;
         cleanupActive();
         showStep(0);
       };
       document.getElementById("btnBeginSteps").addEventListener("click", goSteps);
-      scheduleTimer(goSteps, initCapMs);
+      scheduleTimer(function () { goSteps(null); }, initCapMs);
       bindKeyHandler(function (ev) {
         if (ev.key === " " || ev.key === "Enter") {
           ev.preventDefault();
-          goSteps();
+          goSteps(ev);
         }
       });
 
@@ -1108,31 +1441,41 @@
         });
 
         var doneStep = false;
-        var advance = function (pressTs) {
+        var advance = function (pressTs, isTimeout, rawEv) {
           if (doneStep) return;
+          var curTs = pressTs || nowMs();
+          // Guard against accidental <160ms hardware double-tap skip-through while preserving programmatic .click()
+          if (rawEv && rawEv.isTrusted && curTs - lastTrustedStepTs < 160) return;
+          if (rawEv && rawEv.isTrusted) lastTrustedStepTs = curTs;
+
           doneStep = true;
           cleanupActive();
-          var rt = Math.max(120, Math.round((pressTs || nowMs()) - tStep));
-          stats.allStepRts.push(rt);
-          if (stepObj.transition === "repeat") {
-            stats.repeatStepRts.push(rt);
-          } else if (stepObj.transition === "switch") {
-            stats.switchStepRts.push(rt);
+          var rt = Math.max(120, Math.round(curTs - tStep));
+          if (!isTimeout) {
+            stats.allStepRts.push(rt);
+            // Exclude timed-out 8500ms ceilings and <220ms accidental skips from Garavan/Oberauer Focus-Switch Cost
+            if (rt >= 220 || !(rawEv && rawEv.isTrusted)) {
+              if (stepObj.transition === "repeat") {
+                stats.repeatStepRts.push(rt);
+              } else if (stepObj.transition === "switch") {
+                stats.switchStepRts.push(rt);
+              }
+            }
           }
           showStep(sIdx + 1);
         };
 
-        bindFastPress(document.getElementById("btnNextUpdateStep"), function (_ev, pressTs) {
-          advance(pressTs);
+        bindFastPress(document.getElementById("btnNextUpdateStep"), function (ev, pressTs) {
+          advance(pressTs, false, ev);
         });
         scheduleTimer(function () {
-          advance(nowMs());
+          advance(nowMs(), true, null);
         }, stepCapMs);
 
         bindKeyHandler(function (ev) {
           if (ev.key === " " || ev.key === "Enter") {
             ev.preventDefault();
-            advance(nowMs());
+            advance(nowMs(), false, ev);
           }
         });
       }
@@ -1180,6 +1523,7 @@
           var isTwo = tr.vars.length === 2;
           if (isTwo) stats.twoTotal += 1;
           else stats.threeTotal += 1;
+          if (tr.isSemantic || tr.units) stats.semanticTotal += 1;
 
           if (isInFocus) stats.inFocusTotal += 1;
           else stats.peripheralTotal += 1;
@@ -1192,6 +1536,7 @@
               trialHits += 1;
               if (isTwo) stats.twoCorrect += 1;
               else stats.threeCorrect += 1;
+              if (tr.isSemantic || tr.units) stats.semanticCorrect += 1;
               if (isInFocus) stats.inFocusCorrect += 1;
               else stats.peripheralCorrect += 1;
             } else {
@@ -1240,6 +1585,7 @@
     var score = totalVars > 0 ? Math.round((totalCorrect / totalVars) * 100) : 0;
     var twoVarPct = stats.twoTotal > 0 ? Math.round((stats.twoCorrect / stats.twoTotal) * 100) : 0;
     var threeVarPct = stats.threeTotal > 0 ? Math.round((stats.threeCorrect / stats.threeTotal) * 100) : 0;
+    var semanticAccPct = stats.semanticTotal > 0 ? Math.round((stats.semanticCorrect / stats.semanticTotal) * 100) : threeVarPct;
     var inFocusAccPct = stats.inFocusTotal > 0 ? Math.round((stats.inFocusCorrect / stats.inFocusTotal) * 100) : 0;
     var peripheralAccPct = stats.peripheralTotal > 0 ? Math.round((stats.peripheralCorrect / stats.peripheralTotal) * 100) : 0;
 
@@ -1258,13 +1604,17 @@
       inFocusAccPct +
       "% مقابل " +
       peripheralAccPct +
-      "% في الرف الجانبي (Lag ≥ 1)؛ رُصدت " +
+      "% في الرف الجانبي (Lag ≥ 1، والمسميات الدلالية " +
+      semanticAccPct +
+      "%)؛ رُصدت " +
       stats.staleErrors +
       " أخطاء التصاق بالقيمة القديمة و" +
       stats.decayErrors +
       " حالات تبخر و" +
       stats.swapErrors +
-      " حالات خلط، بكلفة تبديل بؤرة " +
+      " حالات خلط و" +
+      stats.calcErrors +
+      " زلات حسابية معزولة، بكلفة تبديل بؤرة " +
       (focusSwitchCostMs >= 0 ? "+" : "") +
       focusSwitchCostMs +
       " ms.";
@@ -1278,9 +1628,11 @@
         peripheralAccPct: peripheralAccPct,
         twoVarPct: twoVarPct,
         threeVarPct: threeVarPct,
+        semanticAccPct: semanticAccPct,
         staleErrors: stats.staleErrors,
         decayErrors: stats.decayErrors,
         swapErrors: stats.swapErrors,
+        calcErrors: stats.calcErrors,
         focusSwitchCostMs: focusSwitchCostMs,
         stepMeanRtMs: meanStepRt,
         lisasMs: lisasMs,
@@ -1299,15 +1651,16 @@
   }
 
   /* =========================================================================
-     PROBE 3: GATING (Counterbalanced Uncued Input-Gating & Switch Cost)
+     PROBE 3: GATING (6-Trial ABBA Counterbalanced + LCS Guess-Corrected)
      ========================================================================= */
   function runGatingProbe() {
     var S = getStimuli();
-    var trials = S.generateGatingTrials(5);
+    var trials = S.generateGatingTrials(6);
     var meta = findProbeMeta("gating");
     var idx = 0;
     var trialScores = [];
     var itemAssemblyRts = [];
+    var replayCounts = {};
 
     function nextTrial() {
       cleanupActive();
@@ -1316,6 +1669,20 @@
       }
       var tr = trials[idx];
       setHeader(meta.title, formatProgressPrefix("Trial " + (idx + 1) + "/" + trials.length));
+
+      if ((replayCounts[idx] || 0) < 1) {
+        setEncodingVisibilityGuard(function () {
+          replayCounts[idx] = (replayCounts[idx] || 0) + 1;
+          var freshG = S.generateGatingTrials(trials.length);
+          for (var f = 0; f < freshG.length; f += 1) {
+            if (freshG[f].mode === tr.mode && freshG[f].pairCount === tr.pairCount) {
+              trials[idx] = freshG[f];
+              break;
+            }
+          }
+          nextTrial();
+        });
+      }
 
       domRefs.stage.innerHTML =
         '<div class="stimulus-card">' +
@@ -1331,6 +1698,7 @@
 
       function showItem(sIdx) {
         if (sIdx >= tr.sequence.length) {
+          clearEncodingVisibilityGuard();
           return askNumbersPhase();
         }
         var item = tr.sequence[sIdx];
@@ -1403,7 +1771,7 @@
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
             '<div class="stim-label">المرحلة 1 من 2 — فرز الأرقام</div>' +
-            '<p class="task-question">اختر الأرقام وحدها مرتبة تصاعديا من الأصغر إلى الأكبر:</p>' +
+            '<p class="task-question">اختر الأرقام التي تذكرتها مرتبة تصاعديا من الأصغر إلى الأكبر:</p>' +
             '<div class="recall-slots">' +
             slotsHtml +
             "</div>" +
@@ -1499,7 +1867,7 @@
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
             '<div class="stim-label">المرحلة 2 من 2 — عكس الكلمات</div>' +
-            '<p class="task-question">اختر الكلمات وحدها مرتبة عكسيا من الأخيرة إلى الأولى:</p>' +
+            '<p class="task-question">اختر الكلمات التي تذكرتها مرتبة عكسيا من الأخيرة إلى الأولى:</p>' +
             '<div class="recall-slots">' +
             slotsHtml +
             "</div>" +
@@ -1539,19 +1907,16 @@
           lastChoiceTs = now;
           chosenWords.push(w);
           if (chosenWords.length === needW) {
-            var numHits = 0;
-            var wordHits = 0;
-            for (var a = 0; a < needW; a += 1) {
-              if (chosenNums[a] === tr.expectedNumbersAsc[a]) numHits += 1;
-              if (chosenWords[a] === tr.expectedWordsRev[a]) wordHits += 1;
-            }
-            var pct = Math.round(((numHits + wordHits) / (needW * 2)) * 100);
+            // Score via order-preserving LCS + High-Threshold Intrusion Correction (eliminates rank-shift zeroing!)
+            var numEval = scoreOrderedStreamRecall(chosenNums, tr.expectedNumbersAsc, 9);
+            var wordEval = scoreOrderedStreamRecall(chosenWords, tr.expectedWordsRev, tr.wordPool.length || 12);
+            var pct = Math.round((numEval.pct + wordEval.pct) / 2);
             trialScores.push({
               mode: tr.mode,
               pairs: tr.pairCount,
               pct: pct,
-              numPct: Math.round((numHits / needW) * 100),
-              wordPct: Math.round((wordHits / needW) * 100)
+              numPct: numEval.pct,
+              wordPct: wordEval.pct
             });
             idx += 1;
             scheduleTimer(nextTrial, 220);
@@ -1589,19 +1954,19 @@
     var alt6Pct = mean(alt6Arr);
     var numStreamAltPct = mean(altNumArr);
     var wordStreamAltPct = mean(altWordArr);
-    var alternatingPct = Math.round(0.25 * alt4Pct + 0.75 * alt6Pct);
+    var alternatingPct = Math.round(0.30 * alt4Pct + 0.70 * alt6Pct);
     var switchingPenalty = Math.max(0, Math.round(blockedPct - alt6Pct));
     var meanAssemblyRtMs = mean(itemAssemblyRts);
     var splitHalfPct = computeSplitHalf(allAltScores);
 
     var diag =
-      "الفرز المتكتل المتوازن سجل " +
+      "الفرز المتكتل المتناظر (ABBA) سجل " +
       blockedPct +
       "% مقابل " +
       alt6Pct +
-      "% عند تناوب 6 عناصر (عقوبة التناوب الطرحية: " +
+      "% عند تناوب 6 عناصر (عقوبة التناوب الطرحية الصافية: " +
       switchingPenalty +
-      "%)؛ تحت التناوب صمد مسار الأرقام بنسبة " +
+      "%)؛ تحت التناوب صمد مسار الأرقام المرتب بنسبة " +
       numStreamAltPct +
       "% ومسار عكس الكلمات بنسبة " +
       wordStreamAltPct +
@@ -1634,7 +1999,7 @@
   }
 
   /* =========================================================================
-     PROBE 4: BINDING (Non-Redundant 6-Foil Matrix + 2-Step Node Verification)
+     PROBE 4: BINDING (Non-Redundant 6-Foil Matrix + Syntactic Slot Verification)
      ========================================================================= */
   function runBindingProbe() {
     var S = getStimuli();
@@ -1642,6 +2007,7 @@
     var meta = findProbeMeta("binding");
     var idx = 0;
     var records = [];
+    var lastTrustedPremiseTs = 0;
 
     function nextTrial() {
       cleanupActive();
@@ -1667,7 +2033,7 @@
           (pIdx + 1) +
           " / " +
           totalP +
-          "</span> (لا توجد جمل مكررة)</div>" +
+          "</span> (انتبه للطرف الأول والثاني)</div>" +
           '<div class="stim-step-text">' +
           esc(tr.premises[pIdx]) +
           "</div>" +
@@ -1682,20 +2048,24 @@
         });
 
         var advanced = false;
-        var adv = function (pressTs) {
+        var adv = function (pressTs, rawEv) {
           if (advanced) return;
+          var curTs = pressTs || nowMs();
+          if (rawEv && rawEv.isTrusted && curTs - lastTrustedPremiseTs < 160) return;
+          if (rawEv && rawEv.isTrusted) lastTrustedPremiseTs = curTs;
+
           advanced = true;
           unbindKeyHandler();
-          premiseRts.push(Math.max(120, Math.round((pressTs || nowMs()) - t0)));
+          premiseRts.push(Math.max(120, Math.round(curTs - t0)));
           showPremise(pIdx + 1);
         };
-        bindFastPress(document.getElementById("btnNextPremise"), function (_ev, pressTs) {
-          adv(pressTs);
+        bindFastPress(document.getElementById("btnNextPremise"), function (ev, pressTs) {
+          adv(pressTs, ev);
         });
         bindKeyHandler(function (ev) {
           if (ev.key === " " || ev.key === "Enter") {
             ev.preventDefault();
-            adv(nowMs());
+            adv(nowMs(), ev);
           }
         });
       }
@@ -1968,9 +2338,12 @@
     var fillEl = document.getElementById("vigProgFill");
 
     var pulseIdx = 0;
-    var beatsSinceBoundary = 0; // Endogenous cycle tracker (resynchronizes on user boundary closure!)
+    var presentedBeats = 0; // Flashes presented since last boundary
+    var tappedInCycle = 0;  // Valid conscious user responses since last boundary
+    var missedInCycle = 0;  // Unanswered flashes in current cycle (prevents missed-pulse phase cascade!)
     var respondedCurrent = true;
     var pulseStartTs = 0;
+    var lastValidRespTs = 0;
 
     var validRts = [];
     var half1Rts = [];
@@ -1985,14 +2358,18 @@
     var missedPulses = 0;
     var falseStarts = 0;
     var dmnResets = 0;
+    var bounceGuardMs = cfg.bounceGuardMs || 220;
 
     function handleAction(actionType, pressTs) {
       var eventTime = pressTs || nowMs();
 
       if (actionType === "reset") {
         dmnResets += 1;
-        beatsSinceBoundary = 0;
+        presentedBeats = 0;
+        tappedInCycle = 0;
+        missedInCycle = 0;
         respondedCurrent = true;
+        lastValidRespTs = eventTime;
         if (msgEl) msgEl.textContent = "تمت إعادة المزامنة — الومضة القادمة ستكون رقم 1";
         return;
       }
@@ -2004,7 +2381,10 @@
       }
 
       if (respondedCurrent) {
-        // Extra press between pulses = anticipatory false start
+        // Ignore <220ms multi-touch fat-finger / button-release bounce after a valid response!
+        if (lastValidRespTs > 0 && eventTime - lastValidRespTs < bounceGuardMs) {
+          return;
+        }
         falseStarts += 1;
         if (msgEl) msgEl.textContent = "انتبه: لا تضغط قبل ظهور الومضة الضوئية";
         return;
@@ -2020,6 +2400,8 @@
       }
 
       respondedCurrent = true;
+      lastValidRespTs = eventTime;
+      tappedInCycle += 1;
       validRts.push(rt);
       if (pulseIdx <= Math.floor(cfg.totalPulses / 2)) {
         half1Rts.push(rt);
@@ -2033,22 +2415,25 @@
 
       var pulseHit = 0;
       if (actionType === "close") {
-        if (beatsSinceBoundary === cfg.cycleLength) {
-          exactCycles += 1;
+        // Exact boundary if 4 conscious taps OR (4 presented flashes when a motor tap timed out mid-cycle)
+        var isExactConscious4 = tappedInCycle === cfg.cycleLength;
+        var isMotorTimeout4 = missedInCycle > 0 && presentedBeats === cfg.cycleLength;
+        if (isExactConscious4 || isMotorTimeout4) {
+          exactCycles = Math.min(Math.floor(cfg.totalPulses / cfg.cycleLength), exactCycles + 1);
           stepOrCloseCorrect += 1;
           pulseHit = 100;
-        } else if (beatsSinceBoundary < cfg.cycleLength) {
+        } else if (tappedInCycle < cfg.cycleLength && presentedBeats < cfg.cycleLength) {
           prematureClosures += 1;
         } else {
-          // Late recovery closure after overrun: resynchronize without double-counting exact cycle
           pulseHit = 50;
         }
         // Crucial endogenous resynchronization: closing a cycle resets user's internal accumulator to 0!
-        beatsSinceBoundary = 0;
+        presentedBeats = 0;
+        tappedInCycle = 0;
+        missedInCycle = 0;
       } else {
-        // actionType === "step"
-        if (beatsSinceBoundary > 0 && beatsSinceBoundary % cfg.cycleLength === 0) {
-          // Beat 4 (or 8) passed with "step" instead of "close": DLS Autopilot Overrun!
+        // actionType === "step": DLS Autopilot Overrun occurs when user taps "step" 4+ times without closing!
+        if (tappedInCycle >= cfg.cycleLength && tappedInCycle % cfg.cycleLength === 0) {
           autopilotOverruns += 1;
         } else {
           stepOrCloseCorrect += 1;
@@ -2089,6 +2474,7 @@
     function fireNextPulse() {
       if (pulseIdx > 0 && !respondedCurrent) {
         missedPulses += 1;
+        missedInCycle += 1;
         localSleepLapses += 1;
         halfPulseScores.push(0);
       }
@@ -2118,7 +2504,7 @@
           : cfg.baseIntervalMs + Math.floor((Math.random() * 2 - 1) * cfg.jitterMs);
 
       pulseIdx += 1;
-      beatsSinceBoundary += 1;
+      presentedBeats += 1;
       respondedCurrent = false;
 
       if (fillEl) {
@@ -2175,13 +2561,15 @@
       st.autopilotOverruns +
       " حالات تجاوز على الطيار الآلي و" +
       st.prematureClosures +
-      " إغلاقات مبكرة؛ الذيل الأسي للشرود والنوم الموضعي (Tau) بلغ " +
+      " إغلاقات مبكرة؛ الذيل الأسي للشرود والنوم الموضعي (MAP-MLE Tau) بلغ " +
       exG.tauMs +
       " ms مقابل سرعة قاعدية (Mu) " +
       exG.muMs +
       " ms، وهفوات النوم الموضعي " +
       st.localSleepLapses +
-      ".";
+      " (منها " +
+      st.missedPulses +
+      " ومضات فائتة).";
 
     completeProbe(
       "vigilance",
@@ -2192,7 +2580,8 @@
         overallStepAccPct: overallAcc,
         autopilotOverruns: st.autopilotOverruns,
         prematureClosures: st.prematureClosures,
-        localSleepLapses: st.localSleepLapses,
+        localSleepLapses: localSleepLapsesCount(st),
+        missedPulses: st.missedPulses,
         dmnResets: st.dmnResets,
         falseStarts: st.falseStarts,
         meanRtMs: exG.meanMs,
@@ -2214,8 +2603,12 @@
     );
   }
 
+  function localSleepLapsesCount(st) {
+    return typeof st.localSleepLapses === "number" ? st.localSleepLapses : 0;
+  }
+
   /* =========================================================================
-     PROBE 6: CONTROL ANCHOR (Stack + Rule-Interrupt + 2D Visual Cache)
+     PROBE 6: CONTROL ANCHOR (Stack + Rule-Interrupt + Z2xZ2 2D Visual Cache)
      ========================================================================= */
   function renderPolygonSVG(points) {
     return (
@@ -2303,6 +2696,8 @@
     var ruleHits = 0, ruleTotal = 0;
     var visHits = 0, visTotal = 0;
     var stackRts = [], visRts = [], trialScores = [];
+    var visReplayCounts = {};
+    var lastTrustedFrameTs = 0;
 
     function nextTrial() {
       cleanupActive();
@@ -2343,7 +2738,7 @@
           }
           domRefs.stage.innerHTML =
             '<div class="task-box">' +
-            '<div class="stim-label">إغلاق المكدس الصاعد (6 بدائل)</div>' +
+            '<div class="stim-label">إغلاق المكدس الصاعد (6 بدائل متناظرة)</div>' +
             '<p class="task-question">' +
             esc(tr.closeText) +
             "</p>" +
@@ -2401,7 +2796,10 @@
           "</button>" +
           "</div>";
 
-        var adv = function () {
+        var adv = function (ev) {
+          var curTs = nowMs();
+          if (ev && ev.isTrusted && curTs - lastTrustedFrameTs < 160) return;
+          if (ev && ev.isTrusted) lastTrustedFrameTs = curTs;
           unbindKeyHandler();
           showFrame(fIdx + 1);
         };
@@ -2409,7 +2807,7 @@
         bindKeyHandler(function (ev) {
           if (ev.key === " " || ev.key === "Enter") {
             ev.preventDefault();
-            adv();
+            adv(ev);
           }
         });
       }
@@ -2428,10 +2826,16 @@
           renderDots(3, 0) +
           '<button id="btnRuleNext1" type="button" class="btn-primary">حفظت القاعدة الشرطية — التالي (مسافة)</button>' +
           "</div>";
-        var go = function () { unbindKeyHandler(); stepAccum(); };
+        var go = function (ev) {
+          var curTs = nowMs();
+          if (ev && ev.isTrusted && curTs - lastTrustedFrameTs < 160) return;
+          if (ev && ev.isTrusted) lastTrustedFrameTs = curTs;
+          unbindKeyHandler();
+          stepAccum();
+        };
         document.getElementById("btnRuleNext1").addEventListener("click", go);
         bindKeyHandler(function (ev) {
-          if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); go(); }
+          if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); go(ev); }
         });
       }
 
@@ -2444,10 +2848,16 @@
           renderDots(3, 1) +
           '<button id="btnRuleNext2" type="button" class="btn-primary">حسبت العدد — اعرض المقاطعة (مسافة)</button>' +
           "</div>";
-        var go = function () { unbindKeyHandler(); stepInterrupt(); };
+        var go = function (ev) {
+          var curTs = nowMs();
+          if (ev && ev.isTrusted && curTs - lastTrustedFrameTs < 160) return;
+          if (ev && ev.isTrusted) lastTrustedFrameTs = curTs;
+          unbindKeyHandler();
+          stepInterrupt();
+        };
         document.getElementById("btnRuleNext2").addEventListener("click", go);
         bindKeyHandler(function (ev) {
-          if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); go(); }
+          if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); go(ev); }
         });
       }
 
@@ -2545,6 +2955,22 @@
     }
 
     function runVisualTrial(tr) {
+      // Guard the transient 800ms visual flash against tab backgrounding:
+      // If tab hides during fixation/flash/mask, regenerate a fresh Z2xZ2 visual trial on return!
+      if ((visReplayCounts[idx] || 0) < 2) {
+        setEncodingVisibilityGuard(function () {
+          visReplayCounts[idx] = (visReplayCounts[idx] || 0) + 1;
+          var freshCtrl = S.generateControlTrials();
+          for (var f = 0; f < freshCtrl.length; f += 1) {
+            if (freshCtrl[f].kind === "visual2d" && freshCtrl[f].visualSubtype === tr.visualSubtype) {
+              trials[idx] = freshCtrl[f];
+              break;
+            }
+          }
+          nextTrial();
+        });
+      }
+
       domRefs.stage.innerHTML =
         '<div class="visual-canvas-wrap">' +
         '<div class="stim-label">ثبّت بصرك لالتقاط التناسب المسطح الصامت (0.8 ثانية)</div>' +
@@ -2555,7 +2981,7 @@
         domRefs.stage.innerHTML =
           '<div class="visual-canvas-wrap">' +
           '<div class="stim-label">' +
-          (tr.visualSubtype === "window" ? "ومضة نافذة التناسب اللارمزية" : "ومضة المضلع الأملس") +
+          (tr.visualSubtype === "window" ? "ومضة نافذة التناسب اللارمزية (Z2×Z2)" : "ومضة المضلع الأملس (Z2×Z2)") +
           "</div>" +
           '<div class="visual-svg-box">' +
           renderVisualStimulusSVG(tr, null) +
@@ -2574,9 +3000,10 @@
 
             onNextFramePaint(function () {
               scheduleFrameAccurate(function () {
+                clearEncodingVisibilityGuard();
                 domRefs.stage.innerHTML =
                   '<div class="visual-canvas-wrap">' +
-                  '<div class="stim-label">احتفاظ بصري صامت (2.2 ثانية)...</div>' +
+                  '<div class="stim-label">احتفاظ بصري صامت (إجمالي فجوة 3.2 ثانية)...</div>' +
                   '<div class="visual-svg-box"></div>' +
                   "</div>";
 
@@ -2660,7 +3087,7 @@
     var diag =
       "مكدس الاستدعاء والقاعدة الشرطية تحت المقاطعة سجلا " +
       stackAccPct +
-      "%، والمخزن البصري الصامت (0.8s مع تقنيع متعدد الاتجاهات) سجل " +
+      "%، والمخزن البصري الصامت (0.8s + فجوة 3.2s بتناظر Z2×Z2) سجل " +
       visual2dAccPct +
       "%؛ " +
       (score >= 82
@@ -2682,7 +3109,7 @@
       [
         { label: "المكدس والقاعدة الشرطية", val: stackAccPct + "%" },
         { label: "صمود القاعدة بعد المقاطعة", val: ruleInterruptAccPct + "%" },
-        { label: "المخزن البصري 2D (0.8s)", val: visual2dAccPct + "%" },
+        { label: "المخزن البصري 2D (3.2s)", val: visual2dAccPct + "%" },
         { label: "زمن حل المكدس والشرط", val: stackRtMs + " ms" },
         { label: "زمن مطابقة التناسب 2D", val: visual2dRtMs + " ms" },
         { label: "اتساق الجلسة النصفي", val: splitHalfPct + "%" }
@@ -2722,6 +3149,8 @@
           sleepQuality: ctx.sleepQuality,
           alertness: ctx.alertness,
           nasalPatency: ctx.nasalPatency,
+          delayAversionEpisodes: ctx.delayAversionEpisodes,
+          sequenceLapses: ctx.sequenceLapses,
           notes: ctx.notes || ""
         });
       } catch (err) {

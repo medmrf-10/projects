@@ -2235,6 +2235,8 @@ textarea:focus,
 
 .delta-pill {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   align-items: center;
   gap: 6px;
   padding: 5px 12px;

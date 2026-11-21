@@ -411,27 +411,27 @@
         <ol id="methodologyList" class="probe-steps">
           <li>
             <strong>عزل التخزين المؤقت عن معالج التفكير (P1 · DLPFC — TBRS &amp; Conway et al., 2005):</strong>
-            يقارن داخل الجلسة الواحدة بين سعة 4 مفردات مجردة منخفضة التصويرية بدون معالجة وبين بقائها بعد حساب أو استنتاج موقوت، مع فصل المسح الحقيقي عن أخطاء إبدال الترتيب.
+            يوازن موضع جولتي السعة الصافية مقابل 4 جولات معالجة موقوتة مع زرع مفردات من الجولة السابقة لمنع الحل بالألفة وفصل الحذف عن الإقحام وإبدال الترتيب.
           </li>
           <li>
             <strong>صمود الرف الجانبي وتحديث المتغيرات (P2 · Frontostriatal — Oberauer, 2002 &amp; Garavan, 1998):</strong>
-            يفصل دقة بؤرة الانتباه اللحظية (Lag 0) عن الرف الجانبي (Lag ≥ 1) ويقيس كلفة تبديل البؤرة بالمللي ثانية مع فصل متعامد للتداخل الاستباقي والتبخر.
+            يوازن موقع تكرار البؤرة وتبديلها، ويفصل بفارق عددي (≥2) بين القيم القديمة وزلات الحساب (±1) وخلط المتغيرات.
           </li>
           <li>
             <strong>بوابة الإدخال وعقوبة التناوب اللحظي (P3 · Left IFS / Pre-SMA — Chatham et al., 2014):</strong>
-            يوازن اتجاه البدء بين الكلمات والأرقام بلا تلميح فئوي مسبق لتحييد أثر الحداثة واستخراج عقوبة التناوب الطرحية الصافية.
+            يطبق تصميم ABBA المتناظر بلا تلميح فئوي مسبق، ويصحح الاسترجاع المرتب بالتتالي الجزئي (LCS) مع خصم التخمين.
           </li>
           <li>
             <strong>ربط المؤشرات اللفظية بالعقد المنطقية (P4 · RLPFC — Waltz et al., 1999 &amp; Clark, 1969):</strong>
-            يختبر سلاسل مقارنة خالية من المقدمات الفائضة وسط 6 بدائل دلالية متجانسة لمنع الحل بالحذف، مع تحقق بنيوي موضوعي من العقدة عند تبخر الاسم.
+            يختبر سلاسل معشّاة الترتيب خالية من المقدمات الفائضة وسط 6 بدائل، ويحسم تبخر الاسم بفحص الطرف النحوي الدقيق داخل كل مقدمة.
           </li>
           <li>
-            <strong>عدّاد التسلسل الدوري ورصد النوم الموضعي (P5 · rAI + RLPFC — Desrochers et al., 2015 &amp; Ex-Gaussian Tau):</strong>
-            يستخدم 36 ومضة غير إيقاعية متوازنة النصفين ويحسب الذيل الأسي للشرود والنوم الموضعي (Tau) ويعيد مزامنة الدورة ذاتيا لمنع خطأ الطور التراكمي.
+            <strong>عدّاد التسلسل الدوري ورصد النوم الموضعي (P5 · rAI + RLPFC — Desrochers et al., 2015 &amp; MAP-MLE Tau):</strong>
+            يستخدم 36 ومضة غير إيقاعية متوازنة النصفين ويقدر الذيل الأسي للشرود بأرجحية MAP-MLE مع عزل الارتداد الحركي والومضات الفائتة.
           </li>
           <li>
             <strong>مرساة التحكم الضابطة للمحركات السليمة (C6 · Control Anchor — 98%):</strong>
-            يجمع 6 جولات تشمل مكدس 3 طبقات وقاعدة شرطية تحت المقاطعة و3 ومضات تناسب بصري صامت بقناع تقنيع متعدد الاتجاهات كضابط منهجي للتفكيك المزدوج.
+            يجمع 6 جولات تشمل المكدس والقاعدة الشرطية تحت المقاطعة و3 ومضات تناسب بصري (0.8s + فجوة 3.2s) بتناظر زُمري تام (Z2×Z2).
           </li>
         </ol>
       </section>
@@ -1268,9 +1268,12 @@
             const sign = ps.delta > 0 ? "+" : "";
             return ps.phaseLabel + " (" + ps.count + " بطارية): متوسط " + ps.meanComposite + "% [" + sign + ps.delta + "%، RCI " + (ps.rci > 0 ? "+" : "") + ps.rci + "]";
           }).join(" — ");
+          const empNote = typeof audit.empiricalBaselineSem === "number"
+            ? " · خطأ القياس التجريبي الذاتي لخط الأساس (SD): ±" + audit.empiricalBaselineSem + "%"
+            : "";
           items.push({
             title: "4. الحصيلة المرجحة بدقة حجم العينة لكل مرحلة علاجية",
-            body: phText
+            body: phText + empNote
           });
         }
 
@@ -1301,16 +1304,20 @@
           middleSlotsPct: { label: "صمود الوسط (2–3)", suffix: "%" },
           slot4Pct: { label: "صمود الخانة الرابعة", suffix: "%" },
           transpositionCount: { label: "أخطاء إبدال الترتيب", suffix: "" },
-          wipeoutCount: { label: "انمساح العنصر", suffix: "" },
+          wipeoutCount: { label: "انمساح/إقحام العنصر", suffix: "" },
+          piIntrusionCount: { label: "تداخل من جولة سابقة", suffix: "" },
+          cognitiveLoadPct: { label: "حمل المعالجة TBRS", suffix: "%" },
           taskAccPct: { label: "دقة المسألة الوسيطة", suffix: "%" },
           taskMeanRtMs: { label: "زمن المسألة الوسيطة", suffix: " ms" },
           inFocusAccPct: { label: "دقة البؤرة النشطة", suffix: "%" },
           peripheralAccPct: { label: "صمود الرف الجانبي", suffix: "%" },
           twoVarPct: { label: "دقة متغيرين", suffix: "%" },
           threeVarPct: { label: "دقة 3 متغيرات", suffix: "%" },
+          semanticAccPct: { label: "دقة المسميات الدلالية", suffix: "%" },
           staleErrors: { label: "التصاق القيمة القديمة", suffix: "" },
           decayErrors: { label: "تبخر الرقم الأخير", suffix: "" },
           swapErrors: { label: "خلط بين متغيرين", suffix: "" },
+          calcErrors: { label: "زلات حسابية معزولة", suffix: "" },
           focusSwitchCostMs: { label: "كلفة تبديل البؤرة", suffix: " ms" },
           stepMeanRtMs: { label: "زمن خطوة التحديث", suffix: " ms" },
           blockedPct: { label: "دقة المتكتل المتوازن", suffix: "%" },
@@ -1335,6 +1342,7 @@
           autopilotOverruns: { label: "تجاوز الطيار الآلي", suffix: "" },
           prematureClosures: { label: "إغلاق دورة مبكر", suffix: "" },
           localSleepLapses: { label: "هفوات النوم الموضعي", suffix: "" },
+          missedPulses: { label: "ومضات فائتة", suffix: "" },
           dmnResets: { label: "ضياع العدّاد (DMN)", suffix: "" },
           falseStarts: { label: "استجابات استباقية", suffix: "" },
           meanRtMs: { label: "متوسط الاستجابة", suffix: " ms" },
@@ -1344,11 +1352,11 @@
           vigilanceDecrementMs: { label: "تدهور اليقظة عبر الوقت", suffix: " ms" },
           stackAccPct: { label: "المكدس والشرط", suffix: "%" },
           ruleInterruptAccPct: { label: "القاعدة بعد المقاطعة", suffix: "%" },
-          visual2dAccPct: { label: "ومضة 2D (0.8s)", suffix: "%" },
+          visual2dAccPct: { label: "ومضة 2D (3.2s)", suffix: "%" },
           stackRtMs: { label: "زمن حل المكدس", suffix: " ms" },
           visual2dRtMs: { label: "زمن مطابقة 2D", suffix: " ms" },
           lisasMs: { label: "كفاءة السرعة والدقة LISAS", suffix: " ms" },
-          splitHalfPct: { label: "الاتساق النصفي", suffix: "%" },
+          splitHalfPct: { label: "الاتساق الداخلي", suffix: "%" },
           tabInterruptions: { label: "انقطاع النافذة", suffix: "" }
         };
 

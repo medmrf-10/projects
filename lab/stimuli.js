@@ -55,16 +55,16 @@
       normScore: 80,
       sem: 8.5,
       sDiff: 12.0,
-      durationSec: 105,
+      durationSec: 115,
       isControl: false,
       clinicalNote:
-        "يطبق نموذج تقاسم الموارد الموقوت (TBRS — Barrouillet et al., 2007) ومعيار السعة المركبة (Conway et al., 2005): يقارن داخل الجلسة الواحدة بين سعة الحفظ المجرد الصافي بدون معالجة وبين البقاء بعد حساب أو استنتاج موقوت، مع فصل المسح الحقيقي عن إبدال الترتيب.",
+        "يطبق نموذج تقاسم الموارد الموقوت (TBRS — Barrouillet et al., 2007) ومعيار السعة المركبة (Conway et al., 2005): يوازن موضع جولتي السعة الصافية مقابل 4 جولات معالجة موقوتة مع تمويهات تداخل استباقي من الجولة السابقة لمنع التعرف السطحي بالألفة.",
       methodology:
-        "يعرض جولة مرجعية صافية (4 مفردات مجردة منخفضة التصويرية متباعدة الجذور والمخارج يتبعها احتفاظ صامت) ثم 4 جولات مزدوجة الحمل بسقف زمني معاير للمعالجة (مسألتان حسابيتان من 6 خيارات ومسألتان علائقيتان مقلوبتا القطبية) مع بوابة تحقق من دقة المعالجة وفصل أخطاء المسح عن إبدال المواقع.",
+        "يعرض 6 جولات متوازنة الترتيب (جولتان مرجعيتان صافيتان باحتفاظ صامت موازن زمنيا + جولتا حساب بشبكة خيارات عديمة التسريب + جولتا منطق مقلوب القطبية من 6 بدائل) مع زرع مفردتين من الجولة السابقة داخل لوحة الاسترجاع لمنع الحل بالألفة وفصل الحذف عن الإقحام وإبدال الترتيب.",
       instructions: [
-        "هيكل المخرجات المعلن مسبقا: في كل جولة ستحفظ 4 مفردات مجردة بترتيبها، ثم تنفذ مهمة فاصلة واحدة، ثم تسترجع المفردات الأربع بالترتيب من الخانة 1 إلى 4.",
-        "في الجولة الأولى الضابطة تحتفظ بالمفردات الأربع خلال صمت وجيز بلا حساب، وفي الجولات الأربع التالية تحل مسألة حسابية أو علائقية ضمن شريط الوقت المعاير دون إهمال صحة المسألة.",
-        "في لوحة الاسترجاع انقر المفردات الأربع بترتيب ظهورها الأصلي، أو اضغط زر (تبخر العنصر) لأي خانة انمحت من الذهن."
+        "هيكل المخرجات المعلن مسبقا: في كل جولة ستحفظ 4 مفردات مجردة بترتيبها، ثم تمر بوقفة صامتة ضابطة أو مسألة فاصلة موقوتة، ثم تسترجع المفردات الأربع بالترتيب من 1 إلى 4.",
+        "في جولات المعالجة حل المسألة الحسابية أو العلائقية بدقة ضمن شريط الوقت المعاير؛ التسرع العشوائي أو إهمال المسألة يخصم من صلاحية الحفظ.",
+        "في لوحة الاسترجاع انتبه لوجود مفردات خادعة من الجولة السابقة؛ انقر مفردات الجولة الحالية فقط بترتيبها أو اضغط (تبخر العنصر) لأي خانة منسية."
       ],
       example:
         "مثال الهيكل: الحفظ (شرط ← غرض ← حكم ← عذر) ← المعالجة الفاصلة (7 × 4 - 9 = 19) ← الاسترجاع المرتب (1: شرط، 2: غرض، 3: حكم، 4: عذر)."
@@ -86,12 +86,12 @@
       normScore: 85,
       sem: 9.0,
       sDiff: 12.7,
-      durationSec: 120,
+      durationSec: 125,
       isControl: false,
       clinicalNote:
-        "يطبق النموذج متمركز الدوائر للذاكرة العاملة (Oberauer, 2002) وكلفة تبديل البؤرة (Garavan, 1998): يعزل دقة المتغير النشط في البؤرة (Lag 0) عن صمود الرف الجانبي (Lag ≥ 1)، مع فصل متعامد رياضي بين التصاق القيمة القديمة وخلط المتغيرات والتبخر.",
+        "يطبق النموذج متمركز الدوائر للذاكرة العاملة (Oberauer, 2002) وكلفة تبديل البؤرة (Garavan, 1998): يوازن موقع تكرار البؤرة وتبديلها عبر خطوات الجولة، ويفصل متعامدا وبفارق لا يقل عن 2 بين القيم القديمة وزلات الحساب (±1) وخلط المتغيرات.",
       methodology:
-        "ينفذ 5 جولات محكومة (جولتان بمتغيرين، وجولتان بثلاثة متغيرات مجردة، وجولة دلالية ثلاثية سريعة التفكك) بجدول تحديث عشوائي يدمج تكرار البؤرة وتبديلها لقياس كلفة التبديل بالمللي ثانية، وترتيب سؤال عشوائي يمنع تحيز الاسترجاع الثابت.",
+        "ينفذ 5 جولات محكومة بفروق تحديث (≥2) تمنع تداخل زلات الحساب (±1) مع القيم القديمة، مع موازنة موضعية تامة بين خطوات تكرار البؤرة وتبديلها لعزل كلفة التبديل الصافية بالمللي ثانية.",
       instructions: [
         "هيكل المخرجات المعلن مسبقا: تُعرض القيم الابتدائية لجميع المتغيرات (من 1 إلى 9)، ثم تتوالى خطوات جمع أو طرح، وفي النهاية يُسأل عن القيمة النهائية لكل متغير بترتيب عشوائي.",
         "عند كل خطوة حدّث قيمة المتغير المذكور فقط في ذهنك وأبقِ المتغيرات الأخرى محفوظة في الرف الجانبي، ثم انتقل للخطوة التالية قبل انتهاء شريط الوقت.",
@@ -117,16 +117,16 @@
       normScore: 82,
       sem: 8.2,
       sDiff: 11.6,
-      durationSec: 110,
+      durationSec: 120,
       isControl: false,
       clinicalNote:
-        "يطبق نموذج بوابة الإدخال الجبهية المخططية (Chatham, Frank, & Badre, 2014؛ Kessler & Oberauer, 2014): يوازن اتجاه البدء (كلمات أولا مقابل أرقام أولا) لتحييد أثر الحداثة، ويستخرج عقوبة التناوب الطرحية الصافية.",
+        "يطبق نموذج بوابة الإدخال الجبهية المخططية (Chatham, Frank, & Badre, 2014؛ Kessler & Oberauer, 2014): يوازن الجولات وفق تصميم ABBA المتناظر لتحييد أثر التدريب والإجهاد والحداثة، ويصحح الاسترجاع المرتب بالتتالي الجزئي (LCS) مع خصم التخمين.",
       methodology:
-        "يعرض 5 جولات متوازنة الاتجاه بلا تلميح فئوي مسبق (جولتان متكتلتان من 6 عناصر باتجاهين متعاكسين، وجولة تناوب رباعية، وجولتا تناوب سداسيتان باتجاهين متعاكسين) مع أرقام خالية من المتتاليات الحسابية، ثم يفصل زمن التخطيط ودقة مسار الأرقام عن مسار الكلمات.",
+        "يعرض 6 جولات بتصميم ABBA متكافئ الموضع والاتجاه بلا تلميح فئوي مسبق (جولتا تناوب رباعيتان + جولتان متكتلتان سداسيتان + جولتا تناوب سداسيتان) مع تصحيح الترتيب التصاعدي والعكسي ضد إزاحة الخانات وتصحيح الإقحام العشوائي.",
       instructions: [
         "هيكل المخرجات المعلن مسبقا (لا يبقى أي عنصر بلا دور): ستشاهد سلسلة تضم أرقاما وكلمات مجردة، ثم تخرج الأرقام كلها في المرحلة الأولى مرتبة تصاعديا، وتخرج الكلمات كلها في المرحلة الثانية مرتبة عكسيا.",
         "تظهر العناصر في مركز الشاشة واحدا تلو الآخر دون إعلان مسبق عن فئة العنصر القادم حتى تُختبر سرعة بوابة الفرز اللحظية.",
-        "في المرحلة 1 انقر الأرقام من الأصغر إلى الأكبر، وفي المرحلة 2 انقر الكلمات من الأخيرة إلى الأولى، أو اضغط زر التبخر للخانة المفقودة."
+        "في المرحلة 1 انقر الأرقام التي تذكرتها من الأصغر إلى الأكبر، وفي المرحلة 2 انقر الكلمات من الأخيرة إلى الأولى، واستخدم زر التبخر بدلا من التخمين العشوائي."
       ],
       example:
         "مثال الهيكل: العرض (شرط ← 8 ← قصد ← 3) ← المخرج الأول للأرقام تصاعديا (3 ثم 8) ← المخرج الثاني للكلمات عكسيا (قصد ثم شرط)."
@@ -151,16 +151,16 @@
       durationSec: 105,
       isControl: false,
       clinicalNote:
-        "يطبق نماذج التكامل العلائقي في القطب الجبهي (Waltz et al., 1999؛ Halford et al., 1998) وانقلاب القطبية المعجمية (Clark, 1969): يحذف أي مقدمة زائدة تتيح الحل المختزل، ويختبر الاسترجاع من مصفوفة سداسية من نفس الحقل الدلالي مع تحقق بنيوي موضوعي من العقدة.",
+        "يطبق نماذج التكامل العلائقي في القطب الجبهي (Waltz et al., 1999؛ Halford et al., 1998) وانقلاب القطبية المعجمية (Clark, 1969): يحذف المقدمات الفائضة ويعشّي ترتيب الجمل ويحسم تبخر الاسم بفحص الموقع النحوي الدقيق (الطرف الأول مقابل الثاني في كل مقدمة).",
       methodology:
-        "ينفذ 6 سلاسل استنتاجية خالية من المقدمات الفائضة (سلسلتان خطيتان موحدتا القطبية، وسلسلتان ثلاثيتان مقلوبتا القطبية غير متسلسلتين، وسلسلتان رباعيتان من 3 مقدمات مقلوبة القطبية) مع 6 خيارات متجانسة دلاليا لمنع الحل بالحذف، وفحص تحقق بنيوي فوري عند الإبلاغ عن تبخر الاسم.",
+        "ينفذ 6 سلاسل استنتاجية معشّاة الترتيب خالية من المقدمات الفائضة وسط 6 بدائل متجانسة دلاليا، مع فحص بنيوي رباعي أو سداسي يحدد الطرف النحوي الدقيق للعقدة الفائزة داخل المقدمات لعزل تبخر الاسم عن أخطاء قلب القطبية.",
       instructions: [
         "هيكل المخرجات المعلن مسبقا: ستقرأ مقدمات مقارنة متتالية ضرورية جميعا للحل (تختفي كل جملة عند الانتقال)، ثم تُسأل عن صاحب رتبة محددة (الأعلى أو الأدنى أو الأوسط).",
-        "اربط في ذهنك كل اسم بموقعه على محور الترتيب حتى لو انقلبت صيغة المقارنة بين الجمل (مثل أضخم وأصغر).",
-        "اختر الاسم الصحيح من بين 6 مسميات من نفس المجال، وإن عرفت موقع العقدة المنطقي وتبخر اسمها اضغط زر (تبخر الاسم) وأجب عن سؤال التحقق البنيوي."
+        "انتبه لترتيب طرفي كل جملة (الطرف الأول المذكور في بدايتها مقابل الطرف الثاني في آخرها) واربط كل اسم بموقعه على محور الترتيب.",
+        "اختر الاسم الصحيح من بين 6 مسميات من نفس المجال، وإن عرفت موقع العقدة المنطقي وتبخر اسمها اضغط (تبخر الاسم) وحدد موقعها النحوي الدقيق في المقدمات."
       ],
       example:
-        "مثال الهيكل: (الفقه أصغر من التفسير) ← (الفقه أضخم من النحو) [لا توجد جملة ثالثة مكررة] ← الأصغر حجما من بين الكتب الستة هو: كتاب النحو."
+        "مثال الهيكل: (الفقه أصغر من التفسير) ← (الفقه أضخم من النحو) [لا توجد جملة ثالثة مكررة] ← الأصغر حجما هو: كتاب النحو (الطرف الثاني في المقدمة 2)."
     },
     {
       id: "vigilance",
@@ -182,11 +182,11 @@
       durationSec: 64,
       isControl: false,
       clinicalNote:
-        "يدمج تتبع التسلسل القطبي بدون قرائن (Desrochers, Chatham, & Badre, 2015) مع المعيار الذهبي لليقظة الحركية (Basner & Dinges, 2011) وتفكيك التوزيع الأسي الغاوسي (Leth-Steensen et al., 2000): يحسب معامل الذيل الأسي للشرود (Tau) وتدهور الوقت ويعيد مزامنة الدورة ذاتيا لمنع تراكم خطأ الطور.",
+        "يدمج تتبع التسلسل القطبي بدون قرائن (Desrochers, Chatham, & Badre, 2015) مع المعيار الذهبي لليقظة الحركية (Basner & Dinges, 2011) وتقدير الأرجحية العظمى المنظم للتوزيع الأسي الغاوسي (MAP-MLE Ex-Gaussian Tau) مع عزل الارتداد الحركي عن الاستباق.",
       methodology:
-        "يعرض 36 ومضة ضوئية (9 دورات رباعية) بفواصل غير إيقاعية متوازنة النصفين (1350–2250 مللي ثانية) لمنع المزامنة الحركية الآلية، مع التقاط لحظة اللمس الأولى (pointerdown) وعزل الاستجابات الاستباقية (<120ms) وتفكيك أخطاء تخطي الدورة على الطيار الآلي عن الإغلاق المبكر.",
+        "يعرض 36 ومضة ضوئية (9 دورات رباعية) بفواصل غير إيقاعية متوازنة النصفين (1350–2250 مللي ثانية)، ويفصل بين الومضات الفائتة بنوم موضعي وبين تجاوز الطيار الآلي على العدّاد الواعي، مع تقدير MAP-MLE لمعامل Tau.",
       instructions: [
-        "هيكل المخرجات المعلن مسبقا: ستومض الحلقة الضوئية بفواصل زمنية غير إيقاعية؛ عدّ الومضات ذهنيا في دورات رباعية متكررة (1، 2، 3، 4 ثم تبدأ دورة جديدة من 1).",
+        "هيكل المخرجات المعلن مسبقا: ستومض الحلقة الضوئية بفواصل زمنية غير إيقاعية؛ عدّ الومضات التي تستجيب لها ذهنيا في دورات رباعية متكررة (1، 2، 3، 4 ثم تبدأ دورة جديدة من 1).",
         "اضغط فورا عند رؤية الومضة زر (خطوة 1 أو 2 أو 3) للومضات الثلاث الأولى، واضغط زر (إغلاق الدورة 4) عند الومضة الرابعة فقط لإعلان تمام الدورة.",
         "لا تضغط قبل ظهور الومضة؛ وإن شرد ذهنك وضاع الرقم اضغط (ضاع العدّاد — أعد من 1) لتبدأ الومضة القادمة من 1."
       ],
@@ -210,42 +210,42 @@
       normScore: 90,
       sem: 5.8,
       sDiff: 8.2,
-      durationSec: 90,
+      durationSec: 95,
       isControl: true,
       clinicalNote:
-        "يطبق مبدأ التفكيك العصبي المزدوج (Shallice, 1988؛ Badre & D'Esposito, 2009؛ Luck & Vogel, 1997): يختبر 6 مهام سليمة مرجعيا (مكدس 3 طبقات، وقاعدة شرطية تقاطعها مسألة استرجاعية، و3 ومضات تناسب بصري صامت بغطاء تقنيع متعدد الاتجاهات) لفصل التحسن الانتقائي عن اليقظة العامة.",
+        "يطبق مبدأ التفكيك العصبي المزدوج (Shallice, 1988؛ Badre & D'Esposito, 2009؛ Luck & Vogel, 1997): يختبر 6 مهام سليمة مرجعيا بتناظر زُمري تام (Z2×Z2) يمنع استخلاص النموذج الأوسط بصريا أو حسابيا وبفجوة احتفاظ 3.2 ثانية مطابقة للمرجع السريري.",
       methodology:
-        "يجمع 6 جولات عالية الدقة: جولتا مكدس هرمي من 3 طبقات بـ 6 خيارات، وجولة صمود قاعدة شرطية (IF-ELSE) مع متغير واحد ومقاطعة معجمية، و3 جولات للمخزن البصري الصامت (0.8 ثانية ومضة متزامنة الإطار + 0.4 ثانية قناع هندسي كثيف يلغي الأثر الشبكي + 2.2 ثانية احتفاظ صامت) تشمل المضلعات الملساء ونوافذ التناسب اللارمزية.",
+        "يجمع 6 جولات متناظرة البدائل: جولتا مكدس هرمي من 3 طبقات، وجولة قاعدة شرطية (IF-ELSE) تحت المقاطعة، و3 جولات للمخزن البصري الصامت (0.8 ثانية ومضة + 0.4 ثانية قناع متعدد الاتجاهات + 2.8 ثانية صمت = 3.2 ثانية احتفاظ) بتصميم Z2×Z2 متكافئ الزوايا.",
       instructions: [
         "هيكل المخرجات المعلن مسبقا: يتكون هذا المسبار الضابط من 3 جولات قواعد ومكدس استنتاجي تليها 3 جولات التقاط بصري مسطح.",
         "في جولات المكدس والقاعدة الشرطية افتح الطبقات أو احفظ الشرط مع المتغير الواحد، وأجب عن المقاطعة العابرة إن ظهرت، ثم اختر النتيجة النهائية.",
-        "في الجولات البصرية ثبّت نظرك على (+) والتقط التناسب الهندسي للشكل خلال ومضة 0.8 ثانية، ثم بعد القناع والصمت اختر المطابق الدقيق من 4 أشكال."
+        "في الجولات البصرية ثبّت نظرك على (+) والتقط التناسب الهندسي للشكل خلال ومضة 0.8 ثانية، ثم بعد القناع وفجوة 3.2 ثانية اختر المطابق الدقيق من 4 أشكال."
       ],
       example:
-        "مثال القاعدة والمكدس: شرط (الزوجي × 2 والفردي - 1) مع مجموع (6) ← مقاطعة (الشهر قبل نوفمبر: أكتوبر) ← تطبيق الشرط على 6: الجواب 12."
+        "مثال القاعدة والمكدس: شرط (الزوجي × 2 والفردي + 6) مع مجموع (10) ← مقاطعة (الشهر قبل نوفمبر: أكتوبر) ← تطبيق الشرط على 10: الجواب 20."
     }
   ];
 
-  // 136 strictly non-imageable, unambiguous abstract Arabic epistemic/logical/normative nouns
-  // Purged of concrete homographs (no قلب، سلم، رسم، عقد، ملك، فرع، طرد، عين، باب، سهم، إلخ)
+  // 136 strictly non-imageable, unambiguous 3-to-5-letter abstract Arabic epistemic/logical/normative nouns
+  // Purged of ALL 2-letter foil leaks AND ALL unvoweled concrete homographs (no مبنى، بطل، علم، مهر، ركن، قيد، مدار، فصل، أثر، رهن، إلخ)
   var ABSTRACT_WORDS = [
     "شرط", "قصد", "عذر", "نفي", "سبب", "حكم", "أجل", "أصل",
-    "قيد", "وعد", "غرض", "كسب", "خطأ", "أثر", "وصف", "عهد",
-    "ظن", "شك", "حزم", "صبر", "رشد", "عدل", "فضل", "علم",
-    "فهم", "رأي", "عزم", "نصح", "إذن", "منع", "دفع", "جزم",
-    "فرض", "ندب", "حظر", "عفو", "صفح", "لوم", "عتب", "مدح",
-    "ذم", "صدق", "بطل", "ربح", "خسر", "قرض", "مهر", "إرث",
-    "نذر", "حلف", "فسخ", "رهن", "ضمان", "كفل", "صلح", "قياس",
-    "علة", "مانع", "ركن", "واجب", "مباح", "لازم", "متعد", "مطلق",
-    "مقيد", "عام", "خاص", "مجمل", "مبين", "ظاهر", "نسخ", "توقف",
-    "سبر", "عكس", "نقض", "فرق", "حصر", "فصل", "نوع", "ذات",
-    "شأن", "سمت", "نهج", "مسلك", "مذهب", "مقصد", "مناط", "مدار",
-    "مآل", "مغزى", "مبنى", "معنى", "جدوى", "قرينة", "أمارة", "شبهة",
-    "حجة", "برهان", "قضية", "رتبة", "مهلة", "نسبة", "غاية", "حكمة",
-    "لزوم", "تعليل", "مفهوم", "منطوق", "تخصيص", "تعميم", "إحالة", "رجحان",
-    "تعارض", "ترجيح", "تحقيق", "تنقيح", "ماهية", "كلية", "جزئية", "ضرورة",
-    "إمكان", "ثبوت", "عدم", "حدوث", "بقاء", "زوال", "صحة", "فساد",
-    "نفوذ", "وجوب", "حرمة", "كراهة", "رخصة", "عزيمة", "أداء", "تواتر"
+    "وعد", "غرض", "كسب", "خطأ", "وصف", "عهد", "حزم", "صبر",
+    "رشد", "عدل", "فضل", "فهم", "رأي", "عزم", "نصح", "إذن",
+    "منع", "دفع", "جزم", "فرض", "ندب", "حظر", "عفو", "صفح",
+    "لوم", "عتب", "مدح", "صدق", "ربح", "خسر", "إرث", "نذر",
+    "حلف", "فسخ", "ضمان", "صلح", "قياس", "علة", "مانع", "واجب",
+    "مباح", "لازم", "متعد", "مطلق", "مقيد", "مجمل", "مبين", "نسخ",
+    "توقف", "سبر", "نقض", "فرق", "حصر", "شأن", "نهج", "مسلك",
+    "مذهب", "مقصد", "مناط", "مآل", "مغزى", "معنى", "جدوى", "قرينة",
+    "أمارة", "شبهة", "حجة", "برهان", "قضية", "رتبة", "مهلة", "نسبة",
+    "غاية", "حكمة", "لزوم", "تعليل", "مفهوم", "منطوق", "تخصيص", "تعميم",
+    "إحالة", "رجحان", "تعارض", "ترجيح", "تحقيق", "تنقيح", "ماهية", "كلية",
+    "جزئية", "ضرورة", "إمكان", "ثبوت", "عدم", "حدوث", "بقاء", "زوال",
+    "فساد", "نفوذ", "وجوب", "حرمة", "كراهة", "رخصة", "عزيمة", "أداء",
+    "تواتر", "يقين", "بداهة", "سببية", "إباحة", "تلازم", "تناف", "اطراد",
+    "مقتضى", "مؤدى", "دلالة", "فحوى", "مرجح", "مقتض", "مسوغ", "ذريعة",
+    "بطلان", "تقرير", "تأويل", "تبيين", "إجمال", "إطلاق", "تقييد", "إثبات"
   ];
 
   // 16 domain-coherent sets, each containing 6 distinct entities from the exact same semantic field
@@ -452,9 +452,10 @@
     return shared >= 2;
   }
 
-  function pickDistinctWords(count, excludeSet, strictPhonological) {
+  function pickDistinctWords(count, excludeSet, strictPhonological, avoidRootList) {
     var used = excludeSet || {};
     var enforceRootDisjoint = strictPhonological !== false;
+    var rootGuardList = Array.isArray(avoidRootList) ? avoidRootList.slice() : [];
     var usedFirst = {};
     var usedLast = {};
     var pool = shuffle(ABSTRACT_WORDS);
@@ -463,22 +464,20 @@
     for (var i = 0; i < pool.length && picked.length < count; i += 1) {
       var w = pool[i];
       if (used[w]) continue;
-      // Tight articulatory duration control for targets (3..5 letters)
-      if (enforceRootDisjoint && (w.length < 3 || w.length > 5)) continue;
+      if (w.length < 3 || w.length > 5) continue;
       var first = normalizeArabicChar(w.charAt(0));
       var last = normalizeArabicChar(w.charAt(w.length - 1));
-      if (usedFirst[first] || usedLast[last]) continue;
+      if (enforceRootDisjoint && (usedFirst[first] || usedLast[last])) continue;
 
-      if (enforceRootDisjoint) {
-        var rootClash = false;
-        for (var p = 0; p < picked.length; p += 1) {
-          if (sharesTwoConsonants(w, picked[p])) {
-            rootClash = true;
-            break;
-          }
+      var rootClash = false;
+      var checkAgainst = enforceRootDisjoint ? rootGuardList.concat(picked) : rootGuardList;
+      for (var p = 0; p < checkAgainst.length; p += 1) {
+        if (sharesTwoConsonants(w, checkAgainst[p])) {
+          rootClash = true;
+          break;
         }
-        if (rootClash) continue;
       }
+      if (rootClash) continue;
 
       used[w] = true;
       usedFirst[first] = true;
@@ -486,7 +485,24 @@
       picked.push(w);
     }
 
-    // Relax phonological constraint only if large distractor pool requested
+    // Fallback pass keeping strict root-disjointness against target words first
+    if (picked.length < count) {
+      for (var m = 0; m < pool.length && picked.length < count; m += 1) {
+        var wMid = pool[m];
+        if (used[wMid] || wMid.length < 3 || wMid.length > 5) continue;
+        var clashTarget = false;
+        for (var q = 0; q < rootGuardList.length; q += 1) {
+          if (sharesTwoConsonants(wMid, rootGuardList[q])) {
+            clashTarget = true;
+            break;
+          }
+        }
+        if (clashTarget) continue;
+        used[wMid] = true;
+        picked.push(wMid);
+      }
+    }
+
     if (picked.length < count) {
       for (var k = 0; k < pool.length && picked.length < count; k += 1) {
         var w2 = pool[k];
@@ -499,57 +515,72 @@
     return picked;
   }
 
+  // Translation-invariant 3-doublet numeric option lattice (Haladyna et al., 2002):
+  // Places answer at a strictly uniform doublet k* in {0,1,2} and intra-doublet slot j* in {0,1}
+  // Guarantees: (a) 3 odd + 3 even options, (b) adjacent +/-1 slip lure ALWAYS present,
+  // (c) ZERO rank/spacing/cluster/parity leak (blind zero-prompt guessing = exact 1/6 = 16.67%!).
+  function buildZeroLeakNumericOptions(answer, optionCount, asStrings) {
+    var numOpts = typeof optionCount === "number" && optionCount === 4 ? 4 : 6;
+    var ans = Math.round(Number(answer) || 20);
+    var bigStep = Math.random() < 0.5 ? 4 : 6; // even spacing preserves parity symmetry across doublets
+    var numDoublets = numOpts / 2; // 3 doublets for 6 options, 2 doublets for 4 options
+    var maxBackSpan = (numDoublets - 1) * bigStep + 1;
+
+    // If ans > maxBackSpan + 1 (true for all answers >= 15), uniform kStar never hits <= 1!
+    var validK = [];
+    for (var k = 0; k < numDoublets; k += 1) {
+      for (var j = 0; j <= 1; j += 1) {
+        var b0Cand = ans - k * bigStep - j;
+        if (b0Cand >= 2) {
+          validK.push({ b0: b0Cand });
+        }
+      }
+    }
+    var chosenAnchor = validK.length > 0
+      ? validK[randInt(0, validK.length - 1)]
+      : { b0: Math.max(2, ans - 1) };
+
+    var b0 = chosenAnchor.b0;
+    var vals = [];
+    for (var d = 0; d < numDoublets; d += 1) {
+      var base = b0 + d * bigStep;
+      vals.push(base);
+      vals.push(base + 1);
+    }
+    if (vals.indexOf(ans) === -1) {
+      vals[0] = ans;
+    }
+    var mixed = shuffle(vals);
+    return asStrings ? mixed.map(String) : mixed;
+  }
+
   function buildMathProblem(optionCount) {
-    var numOpts = typeof optionCount === "number" && optionCount >= 4 ? optionCount : 6;
-    var a = randInt(4, 9);
-    var b = randInt(3, 8);
-    var prod = a * b;
-    var addMode = Math.random() < 0.45;
-    var c = addMode ? randInt(5, 14) : randInt(5, Math.min(16, prod - 6));
+    var numOpts = typeof optionCount === "number" && optionCount === 4 ? 4 : 6;
+    var a = randInt(5, 9);
+    var b = randInt(4, 8);
+    var prod = a * b; // 20..72
+    var addMode = Math.random() < 0.5;
+    // Keep answer >= 16 so 3-doublet lattice never hits lower boundary
+    var maxSub = Math.min(14, prod - 16);
+    var c = addMode ? randInt(5, 13) : randInt(4, Math.max(4, maxSub));
     var answer = addMode ? prod + c : prod - c;
     var prompt = addMode
       ? "اضرب " + a + " في " + b + " ثم أضف إلى الناتج " + c
       : "اضرب " + a + " في " + b + " ثم اطرح من الناتج " + c;
 
-    // Diagnostically meaningful distractors: intermediate product, wrong sign, off-by-1/2, operand slip
-    var candidates = [
-      prod,
-      addMode ? Math.max(3, prod - c) : prod + c,
-      answer + 1,
-      answer - 1,
-      answer + 2,
-      answer - 2,
-      (a - 1) * b + (addMode ? c : -c),
-      a * (b + 1) + (addMode ? c : -c),
-      answer + 4,
-      answer - 3
-    ];
-    var distractors = [];
-    for (var i = 0; i < candidates.length && distractors.length < numOpts - 1; i += 1) {
-      var val = candidates[i];
-      if (val > 2 && val !== answer && distractors.indexOf(val) === -1) {
-        distractors.push(val);
-      }
-    }
-    while (distractors.length < numOpts - 1) {
-      var extra = answer + randInt(-8, 9);
-      if (extra > 2 && extra !== answer && distractors.indexOf(extra) === -1) {
-        distractors.push(extra);
-      }
-    }
-
-    var options = shuffle([String(answer)].concat(distractors.map(String)));
+    var options = buildZeroLeakNumericOptions(answer, numOpts, true);
     return {
       prompt: prompt,
       options: options,
       answer: String(answer),
-      deadlineMs: 10500
+      deadlineMs: 8800
     };
   }
 
   function buildQuickLogicProblem(triad) {
-    // Non-redundant 2-premise inverted-polarity transitive problem (zero redundant 3rd inequality!)
-    var ordered = shuffle(triad.items).slice(0, 3); // ordered[0] < ordered[1] < ordered[2]
+    // Non-redundant 2-premise inverted-polarity transitive problem with all 6 domain options (16.7% chance)
+    var shuffledDomain = shuffle(triad.items);
+    var ordered = shuffledDomain.slice(0, 3); // ordered[0] < ordered[1] < ordered[2]
     var minItem = ordered[0];
     var midItem = ordered[1];
     var maxItem = ordered[2];
@@ -579,112 +610,146 @@
       " — " +
       (askMin ? triad.askMin : triad.askMax);
 
-    // 4 options (3 presented + 1 domain foil so guessing is 25% instead of 33%)
-    var foil = triad.items.filter(function (x) {
-      return ordered.indexOf(x) === -1;
-    })[0];
-    var opts = foil ? ordered.concat([foil]) : ordered.slice();
-
     return {
       prompt: prompt,
-      options: shuffle(opts),
+      options: shuffle(shuffledDomain.slice()),
       answer: askMin ? minItem : maxItem,
-      deadlineMs: 14500
+      deadlineMs: 12500
+    };
+  }
+
+  function buildSingleIsolationTrial(trialIndex, taskType, sessionUsedWords, priorTrialWords, triad) {
+    var targetWords = pickDistinctWords(4, sessionUsedWords, true, priorTrialWords || []);
+    var localExclude = Object.assign({}, sessionUsedWords);
+    for (var w = 0; w < targetWords.length; w += 1) {
+      localExclude[targetWords[w]] = true;
+    }
+
+    // Inject up to 2 Proactive-Interference lures from the immediately preceding trial (Keppel & Underwood, 1962)
+    // Abolishes passive perirhinal familiarity ("I saw this word recently") so ONLY active DLPFC trial binding works
+    var piLures = [];
+    if (Array.isArray(priorTrialWords) && priorTrialWords.length >= 2) {
+      var candPi = shuffle(priorTrialWords);
+      for (var p = 0; p < candPi.length && piLures.length < 2; p += 1) {
+        var lw = candPi[p];
+        if (targetWords.indexOf(lw) === -1) {
+          piLures.push(lw);
+          localExclude[lw] = true;
+        }
+      }
+    }
+
+    var neededFresh = 12 - targetWords.length - piLures.length;
+    var freshFoils = pickDistinctWords(neededFresh, localExclude, false, targetWords);
+    var pool = shuffle(targetWords.concat(piLures).concat(freshFoils));
+
+    if (taskType === "pure") {
+      return {
+        trialIndex: trialIndex,
+        words: targetWords,
+        priorLures: piLures,
+        distractorPool: pool,
+        taskType: "pure",
+        retentionMs: 4200, // Duration-matched to loaded processing RT to isolate executive interference from passive time
+        wordExposureMs: 900,
+        wordIsiMs: 180,
+        taskPrompt: "",
+        taskOptions: [],
+        taskAnswer: "",
+        deadlineMs: 0
+      };
+    }
+
+    var task = taskType === "math"
+      ? buildMathProblem(6)
+      : buildQuickLogicProblem(triad || BINDING_TRIADS[trialIndex % BINDING_TRIADS.length]);
+
+    return {
+      trialIndex: trialIndex,
+      words: targetWords,
+      priorLures: piLures,
+      distractorPool: pool,
+      taskType: taskType,
+      retentionMs: 0,
+      wordExposureMs: 900,
+      wordIsiMs: 180,
+      taskPrompt: task.prompt,
+      taskOptions: task.options,
+      taskAnswer: task.answer,
+      deadlineMs: task.deadlineMs
     };
   }
 
   function generateIsolationTrials(count) {
-    // Default: 5 trials = 1 pure unloaded calibration trial + 4 loaded trials (2 math + 2 logic)
-    var total = typeof count === "number" && count > 0 ? count : 5;
+    // Default: 6 counterbalanced trials = 2 Pure Unloaded + 2 Math + 2 Inverted-Logic
+    // Counterbalances pure vs loaded serial positions so proactive interference & fatigue cancel out
+    var total = typeof count === "number" && count > 0 ? count : 6;
     var sessionUsedWords = {};
     var shuffledTriads = shuffle(BINDING_TRIADS);
     var trials = [];
 
+    var scheduleTypes;
+    if (total === 6) {
+      scheduleTypes = Math.random() < 0.5
+        ? ["pure", "math", "logic", "pure", "logic", "math"]
+        : ["math", "pure", "logic", "math", "pure", "logic"];
+    } else if (total === 5) {
+      scheduleTypes = Math.random() < 0.5
+        ? ["pure", "math", "logic", "math", "logic"]
+        : ["math", "logic", "pure", "math", "logic"];
+    } else {
+      scheduleTypes = [];
+      for (var k = 0; k < total; k += 1) {
+        scheduleTypes.push(k % 2 === 0 ? "math" : "logic");
+      }
+    }
+
+    var prevWords = [];
+    var logicCounter = 0;
     for (var t = 0; t < total; t += 1) {
-      var targetWords = pickDistinctWords(4, sessionUsedWords, true);
-      var localSet = {};
-      for (var w = 0; w < targetWords.length; w += 1) {
-        localSet[targetWords[w]] = true;
-      }
-      var extraDistractors = pickDistinctWords(8, Object.assign({}, sessionUsedWords, localSet), false);
-      var pool = shuffle(targetWords.concat(extraDistractors));
-
-      // If count >= 5, trial 0 is pure immediate reference; remaining alternate math & logic
-      var isPure = total >= 5 && t === 0;
-      if (isPure) {
-        trials.push({
-          trialIndex: t,
-          words: targetWords,
-          distractorPool: pool,
-          taskType: "pure",
-          retentionMs: 2200,
-          wordExposureMs: 900,
-          wordIsiMs: 180,
-          taskPrompt: "",
-          taskOptions: [],
-          taskAnswer: "",
-          deadlineMs: 0
-        });
-      } else {
-        var loadedIdx = total >= 5 ? t - 1 : t;
-        var isMath = loadedIdx % 2 === 0;
-        var task = isMath
-          ? buildMathProblem(6)
-          : buildQuickLogicProblem(shuffledTriads[loadedIdx % shuffledTriads.length]);
-
-        trials.push({
-          trialIndex: t,
-          words: targetWords,
-          distractorPool: pool,
-          taskType: isMath ? "math" : "logic",
-          retentionMs: 0,
-          wordExposureMs: 900,
-          wordIsiMs: 180,
-          taskPrompt: task.prompt,
-          taskOptions: task.options,
-          taskAnswer: task.answer,
-          deadlineMs: task.deadlineMs
-        });
-      }
+      var tType = scheduleTypes[t];
+      var triad = shuffledTriads[logicCounter % shuffledTriads.length];
+      if (tType === "logic") logicCounter += 1;
+      var tr = buildSingleIsolationTrial(t, tType, sessionUsedWords, prevWords, triad);
+      trials.push(tr);
+      prevWords = tr.words.slice();
     }
     return trials;
   }
 
-  function buildRandomUpdatingSchedule(vars, stepCount) {
-    // Generates randomized variable update schedules with guaranteed coverage,
-    // peripheral lag >= 1, and controlled Focus-Repeat vs Focus-Switch transitions
-    for (var tries = 0; tries < 80; tries += 1) {
-      var sched = [];
-      if (vars.length === 2 && stepCount === 4) {
-        var perm2 = shuffle(vars);
-        var templates2 = [
-          [perm2[0], perm2[1], perm2[1], perm2[0]], // switch, repeat, switch
-          [perm2[0], perm2[0], perm2[1], perm2[0]], // repeat, switch, switch
-          [perm2[0], perm2[1], perm2[0], perm2[1]]  // pure alternating switch
-        ];
-        sched = templates2[randInt(0, templates2.length - 1)].slice();
-      } else {
-        var perm3 = shuffle(vars);
-        var templates3 = [
-          [perm3[0], perm3[1], perm3[1], perm3[2], perm3[0]], // includes 1 repeat + 3 switches, perm3[1] & perm3[2] peripheral at end
-          [perm3[0], perm3[1], perm3[2], perm3[0], perm3[1]], // 4 switches, perm3[0] & perm3[1] updated twice
-          [perm3[0], perm3[0], perm3[1], perm3[2], perm3[1]], // 1 repeat + 3 switches, perm3[0] long lag
-          [perm3[0], perm3[1], perm3[2], perm3[2], perm3[0]]  // 1 repeat + 3 switches
-        ];
-        sched = templates3[randInt(0, templates3.length - 1)].slice();
-        while (sched.length < stepCount) {
-          sched.push(perm3[sched.length % perm3.length]);
-        }
-      }
-      if (sched.length === stepCount) return sched;
+  function buildRandomUpdatingSchedule(vars, stepCount, parityHint) {
+    // Serial-position-balanced Focus-Repeat vs Focus-Switch schedules:
+    // Every trial contains BOTH Focus-Repeats and Focus-Switches with matched mean step index
+    var perm = shuffle(vars);
+    if (vars.length === 2 && stepCount === 5) {
+      // Template 0: repeat at steps (2,4) mean=3.0, switch at (1,3) mean=2.0
+      // Template 1: repeat at steps (1,3) mean=2.0, switch at (2,4) mean=3.0 -> Exact 2.5 vs 2.5 balance!
+      var useAlt2 = typeof parityHint === "number" ? parityHint % 2 === 1 : Math.random() < 0.5;
+      return useAlt2
+        ? [perm[0], perm[0], perm[1], perm[1], perm[0]]
+        : [perm[0], perm[1], perm[1], perm[0], perm[0]];
     }
-    return vars.length === 2
-      ? [vars[0], vars[1], vars[1], vars[0]]
-      : [vars[0], vars[1], vars[2], vars[0], vars[1]];
+    if (vars.length === 2 && stepCount === 3) {
+      return [perm[0], perm[1], perm[1]];
+    }
+    if (vars.length === 3 && stepCount === 6) {
+      // Template 0: repeat at (2,5) mean=3.5, switch at (1,3,4) mean=2.67
+      // Template 1: repeat at (1,4) mean=2.5, switch at (2,3,5) mean=3.33 -> Exact 3.0 vs 3.0 balance!
+      var useAlt3 = typeof parityHint === "number" ? parityHint % 2 === 1 : Math.random() < 0.5;
+      return useAlt3
+        ? [perm[0], perm[0], perm[1], perm[2], perm[2], perm[1]]
+        : [perm[0], perm[1], perm[1], perm[2], perm[0], perm[0]];
+    }
+
+    var out = [];
+    for (var i = 0; i < stepCount; i += 1) {
+      out.push(perm[i % perm.length]);
+    }
+    return out;
   }
 
   function buildConstrainedUpdatingTrial(trialIndex, vars, stepCount, semanticUnits) {
-    for (var attempt = 0; attempt < 500; attempt += 1) {
+    for (var attempt = 0; attempt < 900; attempt += 1) {
       var digits = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
       var initial = {};
       var current = {};
@@ -699,9 +764,11 @@
         lastStepUpdated[v] = -1;
       }
 
-      var schedule = buildRandomUpdatingSchedule(vars, stepCount);
+      var schedule = buildRandomUpdatingSchedule(vars, stepCount, trialIndex + attempt);
       var steps = [];
       var ok = true;
+      // Enforce |delta| >= 2 AND |final - stale| >= 2 on first 750 attempts (proven 100% feasible!)
+      var enforceArithmeticMargin = attempt < 750;
 
       for (var s = 0; s < stepCount; s += 1) {
         var targetVar = schedule[s];
@@ -709,10 +776,19 @@
         var oldVal = current[targetVar];
         var candidates = [];
 
+        var futureUpdates = false;
+        for (var f = s + 1; f < stepCount; f += 1) {
+          if (schedule[f] === targetVar) {
+            futureUpdates = true;
+            break;
+          }
+        }
+
         for (var nextVal = 1; nextVal <= 9; nextVal += 1) {
           if (nextVal === oldVal) continue;
           var deltaCheck = Math.abs(nextVal - oldVal);
-          if (deltaCheck < 1 || deltaCheck > 5) continue;
+          var minDelta = enforceArithmeticMargin ? 2 : 1;
+          if (deltaCheck < minDelta || deltaCheck > 5) continue;
 
           var collision = false;
           for (var u = 0; u < vars.length; u += 1) {
@@ -723,15 +799,20 @@
           }
           if (collision) continue;
 
-          var futureUpdates = false;
-          for (var f = s + 1; f < stepCount; f += 1) {
-            if (schedule[f] === targetVar) {
-              futureUpdates = true;
-              break;
+          if (!futureUpdates) {
+            if (nextVal === initial[targetVar]) continue;
+            if (historyByVar[targetVar].indexOf(nextVal) !== -1) continue;
+            if (enforceArithmeticMargin) {
+              var nearStale = Math.abs(nextVal - oldVal) <= 1;
+              for (var hs = 0; hs < historyByVar[targetVar].length; hs += 1) {
+                if (Math.abs(nextVal - historyByVar[targetVar][hs]) <= 1) {
+                  nearStale = true;
+                  break;
+                }
+              }
+              if (nearStale) continue;
             }
           }
-          if (!futureUpdates && nextVal === initial[targetVar]) continue;
-          if (!futureUpdates && historyByVar[targetVar].indexOf(nextVal) !== -1) continue;
 
           candidates.push(nextVal);
         }
@@ -779,36 +860,42 @@
 
       if (!ok) continue;
 
-      // Validate distinct finals AND orthogonal stale-vs-swap sets (whenever attempt < 380)
       var seenFinal = {};
       var validFinal = true;
       for (var m = 0; m < vars.length; m += 1) {
         var vn = vars[m];
         var fv = current[vn];
-        if (fv < 1 || fv > 9 || seenFinal[fv] || fv === initial[vn]) {
+        if (fv < 1 || fv > 9 || seenFinal[fv] || fv === initial[vn] || historyByVar[vn].indexOf(fv) !== -1) {
           validFinal = false;
           break;
+        }
+        if (enforceArithmeticMargin) {
+          for (var hIdx = 0; hIdx < historyByVar[vn].length; hIdx += 1) {
+            if (Math.abs(fv - historyByVar[vn][hIdx]) <= 1) {
+              validFinal = false;
+              break;
+            }
+          }
+          if (!validFinal) break;
         }
         seenFinal[fv] = true;
       }
       if (!validFinal) continue;
 
-      if (attempt < 380) {
-        var orthogonal = true;
-        for (var a = 0; a < vars.length; a += 1) {
-          var vA = vars[a];
-          var staleSet = historyByVar[vA];
-          for (var b = 0; b < vars.length; b += 1) {
-            if (a === b) continue;
-            if (staleSet.indexOf(current[vars[b]]) !== -1) {
-              orthogonal = false;
-              break;
-            }
+      var orthogonal = true;
+      for (var a = 0; a < vars.length; a += 1) {
+        var vA = vars[a];
+        var staleSet = historyByVar[vA];
+        for (var b = 0; b < vars.length; b += 1) {
+          if (a === b) continue;
+          if (staleSet.indexOf(current[vars[b]]) !== -1) {
+            orthogonal = false;
+            break;
           }
-          if (!orthogonal) break;
         }
-        if (!orthogonal) continue;
+        if (!orthogonal) break;
       }
+      if (!orthogonal) continue;
 
       // Compute focus lag per variable: 0 = in Focus of Attention on final step; >=1 = Peripheral Shelf
       var lagByVar = {};
@@ -837,6 +924,7 @@
         inFocusVar: inFocusVar,
         lagByVar: lagByVar,
         units: semanticUnits || null,
+        isSemantic: Boolean(semanticUnits),
         stepDeadlineMs: 8500,
         initDeadlineMs: 9500,
         initial: initial,
@@ -846,40 +934,91 @@
       };
     }
 
-    // Safe orthogonal fallback
+    // Dynamic arity-preserving orthogonal fallback (respects exact vars.length and semanticUnits!)
+    if (vars.length === 3) {
+      var v0 = vars[0], v1 = vars[1], v2 = vars[2];
+      var fmt3 = function (vn, opSym, dVal) {
+        if (semanticUnits && semanticUnits[vn]) {
+          return (opSym === "+" ? "زاد " : "نقص ") + vn + " بمقدار " + dVal + " " + semanticUnits[vn];
+        }
+        return (opSym === "+" ? "أضف " + dVal + " إلى " : "اطرح " + dVal + " من ") + vn;
+      };
+      var init3 = {}, fin3 = {}, hist3 = {}, lag3 = {};
+      init3[v0] = 4; init3[v1] = 7; init3[v2] = 1;
+      fin3[v0] = 2; fin3[v1] = 5; fin3[v2] = 8;
+      hist3[v0] = [4, 9]; hist3[v1] = [7, 3]; hist3[v2] = [1, 4];
+      lag3[v0] = 0; lag3[v1] = 2; lag3[v2] = 1;
+      var s3 = [];
+      var snapA = {}; snapA[v0] = 9; snapA[v1] = 7; snapA[v2] = 1;
+      var snapB = {}; snapB[v0] = 9; snapB[v1] = 3; snapB[v2] = 1;
+      var snapC = {}; snapC[v0] = 9; snapC[v1] = 5; snapC[v2] = 1;
+      var snapD = {}; snapD[v0] = 9; snapD[v1] = 5; snapD[v2] = 4;
+      var snapE = {}; snapE[v0] = 9; snapE[v1] = 5; snapE[v2] = 8;
+      var snapF = {}; snapF[v0] = 2; snapF[v1] = 5; snapF[v2] = 8;
+      s3.push({ stepIndex: 0, varName: v0, transition: "first", op: "+", delta: 5, prevVal: 4, newVal: 9, text: fmt3(v0, "+", 5), snapshot: snapA });
+      s3.push({ stepIndex: 1, varName: v1, transition: "switch", op: "-", delta: 4, prevVal: 7, newVal: 3, text: fmt3(v1, "-", 4), snapshot: snapB });
+      s3.push({ stepIndex: 2, varName: v1, transition: "repeat", op: "+", delta: 2, prevVal: 3, newVal: 5, text: fmt3(v1, "+", 2), snapshot: snapC });
+      s3.push({ stepIndex: 3, varName: v2, transition: "switch", op: "+", delta: 3, prevVal: 1, newVal: 4, text: fmt3(v2, "+", 3), snapshot: snapD });
+      s3.push({ stepIndex: 4, varName: v2, transition: "repeat", op: "+", delta: 4, prevVal: 4, newVal: 8, text: fmt3(v2, "+", 4), snapshot: snapE });
+      s3.push({ stepIndex: 5, varName: v0, transition: "switch", op: "-", delta: 7, prevVal: 9, newVal: 2, text: fmt3(v0, "-", 7), snapshot: snapF });
+      return {
+        trialIndex: trialIndex,
+        vars: vars.slice(),
+        queryOrder: [v1, v2, v0],
+        inFocusVar: v0,
+        lagByVar: lag3,
+        units: semanticUnits || null,
+        isSemantic: Boolean(semanticUnits),
+        stepDeadlineMs: 8500,
+        initDeadlineMs: 9500,
+        initial: init3,
+        steps: s3,
+        final: fin3,
+        historyByVar: hist3
+      };
+    }
+
+    var va = vars[0] || "ألف", vb = vars[1] || "باء";
+    var init2 = {}, fin2 = {}, hist2 = {}, lag2 = {};
+    init2[va] = 4; init2[vb] = 1;
+    fin2[va] = 2; fin2[vb] = 8;
+    hist2[va] = [4, 7, 5]; hist2[vb] = [1, 5];
+    lag2[va] = 1; lag2[vb] = 0;
     return {
       trialIndex: trialIndex,
-      vars: ["ألف", "باء"],
-      queryOrder: ["ألف", "باء"],
-      inFocusVar: "باء",
-      lagByVar: { "ألف": 1, "باء": 0 },
-      units: null,
+      vars: [va, vb],
+      queryOrder: [va, vb],
+      inFocusVar: vb,
+      lagByVar: lag2,
+      units: semanticUnits || null,
+      isSemantic: Boolean(semanticUnits),
       stepDeadlineMs: 8500,
       initDeadlineMs: 9500,
-      initial: { "ألف": 5, "باء": 2 },
+      initial: init2,
       steps: [
-        { stepIndex: 0, varName: "ألف", transition: "first", op: "+", delta: 3, prevVal: 5, newVal: 8, text: "أضف 3 إلى ألف", snapshot: { "ألف": 8, "باء": 2 } },
-        { stepIndex: 1, varName: "باء", transition: "switch", op: "+", delta: 5, prevVal: 2, newVal: 7, text: "أضف 5 إلى باء", snapshot: { "ألف": 8, "باء": 7 } },
-        { stepIndex: 2, varName: "ألف", transition: "switch", op: "-", delta: 2, prevVal: 8, newVal: 6, text: "اطرح 2 من ألف", snapshot: { "ألف": 6, "باء": 7 } },
-        { stepIndex: 3, varName: "باء", transition: "switch", op: "-", delta: 3, prevVal: 7, newVal: 4, text: "اطرح 3 من باء", snapshot: { "ألف": 6, "باء": 4 } }
+        { stepIndex: 0, varName: va, transition: "first", op: "+", delta: 3, prevVal: 4, newVal: 7, text: "أضف 3 إلى " + va, snapshot: { "ألف": 7, "باء": 1 } },
+        { stepIndex: 1, varName: va, transition: "repeat", op: "-", delta: 2, prevVal: 7, newVal: 5, text: "اطرح 2 من " + va, snapshot: { "ألف": 5, "باء": 1 } },
+        { stepIndex: 2, varName: vb, transition: "switch", op: "+", delta: 4, prevVal: 1, newVal: 5, text: "أضف 4 إلى " + vb, snapshot: { "ألف": 5, "باء": 5 } },
+        { stepIndex: 3, varName: va, transition: "switch", op: "-", delta: 3, prevVal: 5, newVal: 2, text: "اطرح 3 من " + va, snapshot: { "ألف": 2, "باء": 5 } },
+        { stepIndex: 4, varName: vb, transition: "switch", op: "+", delta: 3, prevVal: 5, newVal: 8, text: "أضف 3 إلى " + vb, snapshot: { "ألف": 2, "باء": 8 } }
       ],
-      final: { "ألف": 6, "باء": 4 },
-      historyByVar: { "ألف": [5, 8], "باء": [2, 7] }
+      final: fin2,
+      historyByVar: hist2
     };
   }
 
   function generateUpdatingTrials(count) {
-    // Default: 5 trials (13 variable queries) for higher psychometric reliability
+    // 5 trials (13 variable queries) with balanced Focus-Repeat vs Focus-Switch serial positions
     var total = typeof count === "number" && count > 0 ? count : 5;
     var specs = [
-      { vars: ["ألف", "باء"], steps: 4, units: null },
-      { vars: ["ألف", "باء"], steps: 4, units: null },
-      { vars: ["ألف", "باء", "جيم"], steps: 5, units: null },
-      { vars: ["ألف", "باء", "جيم"], steps: 5, units: null },
+      { vars: ["ألف", "باء"], steps: 5, units: null },
+      { vars: ["ألف", "باء"], steps: 5, units: null },
+      { vars: ["ألف", "باء", "جيم"], steps: 6, units: null },
+      { vars: ["ألف", "باء", "جيم"], steps: 6, units: null },
       {
-        vars: ["العمر", "السعر", "الوزن"],
-        steps: 5,
-        units: { "العمر": "سنوات", "السعر": "دنانير", "الوزن": "كيلو" }
+        vars: ["العدد", "السعر", "الوزن"],
+        steps: 6,
+        units: { "العدد": "قطع", "السعر": "دنانير", "الوزن": "كيلو" }
       }
     ];
     var out = [];
@@ -918,16 +1057,33 @@
   }
 
   function generateGatingTrials(count) {
-    // 5 counterbalanced trials canceling modality recency bias (W-first vs N-first in both Blocked & Alternating)
-    var total = typeof count === "number" && count > 0 ? count : 5;
+    // 6 ABBA-counterbalanced trials:
+    // Cancels BOTH modality recency (word-first vs num-first) AND linear trial-order practice/fatigue
+    // Mean serial index of Blocked-6 === Mean serial index of Alternating-6 === 3.5!
+    var total = typeof count === "number" && count > 0 ? count : 6;
     var usedWords = {};
-    var blueprints = [
-      { mode: "blocked", pairs: 3, startKind: "word" },
-      { mode: "alternating", pairs: 2, startKind: "word" },
-      { mode: "alternating", pairs: 3, startKind: "word" },
-      { mode: "blocked", pairs: 3, startKind: "num" },
-      { mode: "alternating", pairs: 3, startKind: "num" }
-    ];
+    var abbaFlip = Math.random() < 0.5;
+    var modFlip = Math.random() < 0.5;
+    var kA = modFlip ? "num" : "word";
+    var kB = modFlip ? "word" : "num";
+
+    var blueprints = abbaFlip
+      ? [
+          { mode: "alternating", pairs: 2, startKind: kA },
+          { mode: "blocked", pairs: 3, startKind: kA },
+          { mode: "alternating", pairs: 3, startKind: kB },
+          { mode: "alternating", pairs: 3, startKind: kA },
+          { mode: "blocked", pairs: 3, startKind: kB },
+          { mode: "alternating", pairs: 2, startKind: kB }
+        ]
+      : [
+          { mode: "alternating", pairs: 2, startKind: kA },
+          { mode: "alternating", pairs: 3, startKind: kA },
+          { mode: "blocked", pairs: 3, startKind: kB },
+          { mode: "blocked", pairs: 3, startKind: kA },
+          { mode: "alternating", pairs: 3, startKind: kB },
+          { mode: "alternating", pairs: 2, startKind: kB }
+        ];
 
     var trials = [];
     for (var t = 0; t < total; t += 1) {
@@ -968,7 +1124,7 @@
       for (var u = 0; u < words.length; u += 1) {
         localExclude[words[u]] = true;
       }
-      var extraWords = pickDistinctWords(12 - words.length, localExclude, false);
+      var extraWords = pickDistinctWords(12 - words.length, localExclude, false, words);
       var wordPool = shuffle(words.concat(extraWords));
 
       trials.push({
@@ -987,29 +1143,68 @@
     return trials;
   }
 
-  function findFirstPremiseMention(premises, entityName) {
-    for (var i = 0; i < premises.length; i += 1) {
-      if (premises[i].indexOf(entityName) !== -1) return i;
+  function buildExactSyntacticCheck(premiseRecords, targetEntity, targetRole) {
+    // Builds a 100% non-deterministic, polarity-sensitive syntactic node check:
+    // Every premise P_k has two distinct syntactic argument positions:
+    //   left/first = "الطرف الأول في المقدمة k"
+    //   right/second = "الطرف الثاني في المقدمة k"
+    // Confusing the two entities inside the same premise (polarity error!) selects the WRONG side -> 0% false pass!
+    var mentions = [];
+    for (var i = 0; i < premiseRecords.length; i += 1) {
+      if (premiseRecords[i].first === targetEntity) {
+        mentions.push({ pIdx: i + 1, side: "الأول" });
+      } else if (premiseRecords[i].second === targetEntity) {
+        mentions.push({ pIdx: i + 1, side: "الثاني" });
+      }
     }
-    return 0;
+
+    if (targetRole === "mid" || mentions.length >= 2) {
+      var side1 = mentions[0] ? mentions[0].side : "الأول";
+      var side2 = mentions[1] ? mentions[1].side : "الأول";
+      var pA = mentions[0] ? mentions[0].pIdx : 1;
+      var pB = mentions[1] ? mentions[1].pIdx : 2;
+      var midOptions = [
+        "الطرف الأول في المقدمة " + pA + " والطرف الأول في المقدمة " + pB,
+        "الطرف الأول في المقدمة " + pA + " والطرف الثاني في المقدمة " + pB,
+        "الطرف الثاني في المقدمة " + pA + " والطرف الأول في المقدمة " + pB,
+        "الطرف الثاني في المقدمة " + pA + " والطرف الثاني في المقدمة " + pB
+      ];
+      return {
+        prompt: "تحقق بنيوي دقيق للعقدة المحورية (بلا اسم): ما موقعاها النحويان في المقدمتين اللتين ربطتهما؟",
+        options: midOptions,
+        answer: "الطرف " + side1 + " في المقدمة " + pA + " والطرف " + side2 + " في المقدمة " + pB
+      };
+    }
+
+    var allSlotOptions = [];
+    for (var k = 1; k <= premiseRecords.length; k += 1) {
+      allSlotOptions.push("الطرف الأول في المقدمة " + k);
+      allSlotOptions.push("الطرف الثاني في المقدمة " + k);
+    }
+    var m0 = mentions[0] || { pIdx: 1, side: "الأول" };
+    return {
+      prompt: "تحقق بنيوي دقيق للعقدة الفائزة (بلا اسم): ما موقعها النحوي الدقيق في الجمل التي قرأتها؟",
+      options: allSlotOptions,
+      answer: "الطرف " + m0.side + " في المقدمة " + m0.pIdx
+    };
   }
 
   function generateBindingTrials(count) {
-    // 6 strictly non-redundant relational trials (zero redundant inequalities!)
-    // Options always display all 6 same-domain entities (3-4 presented + 2-3 unpresented domain foils)
+    // 6 strictly non-redundant relational trials with shuffled condition order,
+    // shuffled premise order across ALL 3-entity and 4-entity chains, and exact syntactic-slot verification
     var total = typeof count === "number" && count > 0 ? count : 6;
     var triads = shuffle(BINDING_TRIADS);
     var trials = [];
 
-    // Interleaved condition blueprint: linear, flipped3, linear, flipped3, flipped4, flipped4
-    var specs = [
-      { polarity: "linear", entityCount: 3, targetRole: "min" },
-      { polarity: "flipped", entityCount: 3, targetRole: "max" },
-      { polarity: "linear", entityCount: 3, targetRole: "max" },
-      { polarity: "flipped", entityCount: 3, targetRole: "mid" },
-      { polarity: "flipped", entityCount: 4, targetRole: "min" },
-      { polarity: "flipped", entityCount: 4, targetRole: "max" }
+    var baseSpecs = [
+      { polarity: "linear", entityCount: 3, targetRole: "min", dirHint: "more" },
+      { polarity: "linear", entityCount: 3, targetRole: "max", dirHint: "less" },
+      { polarity: "flipped", entityCount: 3, targetRole: "min", dirHint: "mixed" },
+      { polarity: "flipped", entityCount: 3, targetRole: "mid", dirHint: "mixed" },
+      { polarity: "flipped", entityCount: 4, targetRole: "min", dirHint: "mixed" },
+      { polarity: "flipped", entityCount: 4, targetRole: "max", dirHint: "mixed" }
     ];
+    var specs = total === 6 ? shuffle(baseSpecs) : baseSpecs;
 
     for (var t = 0; t < total; t += 1) {
       var triad = triads[t % triads.length];
@@ -1018,7 +1213,7 @@
       var presented = shuffledAll.slice(0, spec.entityCount); // latent ascending: presented[0] < presented[1] < ...
       var foils = shuffledAll.slice(spec.entityCount);
 
-      var premises = [];
+      var premiseObjs = [];
       var answer = "";
       var question = "";
       var oppositeEndEntity = "";
@@ -1029,34 +1224,30 @@
         var eMax = presented[2];
 
         if (spec.polarity === "linear") {
-          // Chained consistent polarity (2 necessary premises, zero redundant link!)
-          if (t % 4 === 0) {
-            premises = [
-              eMax + " " + triad.more + " " + eMid,
-              eMid + " " + triad.more + " " + eMin
+          // Uniform comparator polarity across both premises, with randomized comparator & randomized premise order!
+          var useMore = Math.random() < 0.5;
+          if (useMore) {
+            premiseObjs = [
+              { first: eMax, second: eMid, text: eMax + " " + triad.more + " " + eMid },
+              { first: eMid, second: eMin, text: eMid + " " + triad.more + " " + eMin }
             ];
           } else {
-            premises = [
-              eMin + " " + triad.less + " " + eMid,
-              eMid + " " + triad.less + " " + eMax
+            premiseObjs = [
+              { first: eMin, second: eMid, text: eMin + " " + triad.less + " " + eMid },
+              { first: eMid, second: eMax, text: eMid + " " + triad.less + " " + eMax }
             ];
           }
+          premiseObjs = shuffle(premiseObjs);
         } else {
-          // Scrambled non-chained pivot + Polarity Inversion (Johnson-Laird Figure 2/3)
-          if (t % 2 === 1) {
-            premises = [
-              eMid + " " + triad.less + " " + eMax,
-              eMid + " " + triad.more + " " + eMin
-            ];
-          } else {
-            premises = [
-              eMin + " " + triad.less + " " + eMid,
-              eMax + " " + triad.more + " " + eMid
-            ];
-          }
-          if (Math.random() < 0.5) {
-            premises.reverse();
-          }
+          // Scrambled non-chained pivot + Polarity Inversion (one premise uses `more`, the other uses `less`)
+          var useMidFirst = Math.random() < 0.5;
+          var pH = useMidFirst
+            ? { first: eMid, second: eMax, firstIsHigher: false, text: eMid + " " + triad.less + " " + eMax }
+            : { first: eMax, second: eMid, firstIsHigher: true, text: eMax + " " + triad.more + " " + eMid };
+          var pL = useMidFirst
+            ? { first: eMid, second: eMin, firstIsHigher: true, text: eMid + " " + triad.more + " " + eMin }
+            : { first: eMin, second: eMid, firstIsHigher: false, text: eMin + " " + triad.less + " " + eMid };
+          premiseObjs = shuffle([pH, pL]);
         }
 
         if (spec.targetRole === "min") {
@@ -1073,27 +1264,32 @@
           oppositeEndEntity = eMin;
         }
       } else {
-        // 4-entity 3-premise non-redundant inverted-polarity chain: E0 < E1 < E2 < E3
+        // 4-entity 3-premise non-redundant inverted-polarity chain: n0 < n1 < n2 < n3
+        // Randomize argument sides for each link while guaranteeing >=1 `more` and >=1 `less`, then shuffle all 3 premises!
         var n0 = presented[0];
         var n1 = presented[1];
         var n2 = presented[2];
         var n3 = presented[3];
 
-        var rawPremises4 =
-          t % 2 === 0
-            ? [
-                n2 + " " + triad.more + " " + n1,
-                n1 + " " + triad.more + " " + n0,
-                n2 + " " + triad.less + " " + n3
-              ]
-            : [
-                n1 + " " + triad.less + " " + n2,
-                n3 + " " + triad.more + " " + n2,
-                n0 + " " + triad.less + " " + n1
-              ];
+        var s01 = Math.random() < 0.5;
+        var s12 = Math.random() < 0.5;
+        var s23 = Math.random() < 0.5;
+        if (s01 === s12 && s12 === s23) {
+          s12 = !s12; // Guarantee true polarity inversion (both `more` and `less` present!)
+        }
 
-        // Ensure target extreme appears in only ONE premise so structural check is 100% unambiguous
-        premises = rawPremises4;
+        var link01 = s01
+          ? { first: n0, second: n1, firstIsHigher: false, text: n0 + " " + triad.less + " " + n1 }
+          : { first: n1, second: n0, firstIsHigher: true, text: n1 + " " + triad.more + " " + n0 };
+        var link12 = s12
+          ? { first: n1, second: n2, firstIsHigher: false, text: n1 + " " + triad.less + " " + n2 }
+          : { first: n2, second: n1, firstIsHigher: true, text: n2 + " " + triad.more + " " + n1 };
+        var link23 = s23
+          ? { first: n2, second: n3, firstIsHigher: false, text: n2 + " " + triad.less + " " + n3 }
+          : { first: n3, second: n2, firstIsHigher: true, text: n3 + " " + triad.more + " " + n2 };
+
+        premiseObjs = shuffle([link01, link12, link23]);
+
         if (spec.targetRole === "min") {
           question = triad.askMin;
           answer = n0;
@@ -1105,21 +1301,28 @@
         }
       }
 
-      // Build objective structural verification question (for 2-step Lexical Pointer Decay check)
-      var ansPremiseIdx = findFirstPremiseMention(premises, answer);
-      var structuralLabels = ["المقدمة 1", "المقدمة 2", "المقدمة 3"].slice(0, premises.length);
-      var structuralCheckPrompt =
-        spec.targetRole === "mid"
-          ? "تحقق بنيوي من العقدة المحورية: هل ذُكرت العقدة الوسطى في كلتا المقدمتين معا أم في مقدمة واحدة فقط؟"
-          : "تحقق بنيوي من العقدة الفائزة (بدون اسمها): في أي مقدمة ورد ذكر هذه العقدة الطرفية؟";
-      var structuralOptions =
-        spec.targetRole === "mid"
-          ? ["ذُكرت في كلتا المقدمتين (عقدة الربط)", "ذُكرت في مقدمة واحدة فقط"]
-          : structuralLabels;
-      var structuralAnswer =
-        spec.targetRole === "mid"
-          ? "ذُكرت في كلتا المقدمتين (عقدة الربط)"
-          : structuralLabels[ansPremiseIdx];
+      var premises = premiseObjs.map(function (p) { return p.text; });
+      var structuralCheck;
+      if (spec.entityCount === 3 && spec.targetRole === "mid") {
+        // Exact 2x2 uniform space in Premise 1: (First vs Second) x (Higher vs Lower in Premise 1) -> 25% each!
+        var isFirstP1 = premiseObjs[0].first === answer;
+        var p1Side = isFirstP1 ? "الأول" : "الثاني";
+        var isHigherInP1 = isFirstP1 ? Boolean(premiseObjs[0].firstIsHigher) : !premiseObjs[0].firstIsHigher;
+        var rankInP1 = isHigherInP1 ? "الأعلى رتبة فيها" : "الأدنى رتبة فيها";
+        var trueMidDesc = "الطرف " + p1Side + " في المقدمة 1 (" + rankInP1 + ")";
+        structuralCheck = {
+          prompt: "تحقق بنيوي دقيق للعقدة المحورية (بلا اسم): ما موقعها وحكمها في المقدمة الأولى تحديدا؟",
+          options: [
+            "الطرف الأول في المقدمة 1 (الأعلى رتبة فيها)",
+            "الطرف الأول في المقدمة 1 (الأدنى رتبة فيها)",
+            "الطرف الثاني في المقدمة 1 (الأعلى رتبة فيها)",
+            "الطرف الثاني في المقدمة 1 (الأدنى رتبة فيها)"
+          ],
+          answer: trueMidDesc
+        };
+      } else {
+        structuralCheck = buildExactSyntacticCheck(premiseObjs, answer, spec.targetRole);
+      }
 
       trials.push({
         trialIndex: t,
@@ -1134,11 +1337,7 @@
         answer: answer,
         oppositeEndEntity: oppositeEndEntity,
         midEntity: presented[1],
-        structuralCheck: {
-          prompt: structuralCheckPrompt,
-          options: structuralOptions,
-          answer: structuralAnswer
-        }
+        structuralCheck: structuralCheck
       });
     }
     return trials;
@@ -1146,7 +1345,7 @@
 
   function generateVigilanceConfig() {
     // 36 pulses = 9 full 4-beat cycles
-    // Non-rhythmic stratified foreperiods (1350..2250 ms, mean 1750 ms) balanced across Halves 1 & 2
+    // Non-rhythmic stratified foreperiods (1360..2220 ms, mean 1765 ms) balanced across Halves 1 & 2
     // Abolishes cerebellar rhythmic tapping entrainment and enables clean Time-on-Task Vigilance Decrement
     var baseStrata = [
       1360, 1440, 1520, 1600, 1680, 1750, 1820, 1900, 1980,
@@ -1164,19 +1363,21 @@
       intervalsMs: intervalsMs,
       flashDurationMs: 240,
       anticipationMs: 120,
-      lapseThresholdMs: 900
+      bounceGuardMs: 220,
+      lapseThresholdMs: 850
     };
   }
 
   function buildStackControlTrial(trialIndex) {
-    var leafA = randInt(1, 4);
-    var leafB = randInt(1, 4);
-    var leafSum = leafA + leafB; // 2..8
+    // Keep answer >= 16 so 3-doublet zero-leak options NEVER clamp at lower bound
+    var leafA = randInt(2, 5);
+    var leafB = randInt(2, 4);
+    var leafSum = leafA + leafB; // 4..9
     var midFactor = randInt(2, 4);
-    var midProd = midFactor * leafSum; // 4..32
+    var midProd = midFactor * leafSum; // 8..36
     var rootAddMode = trialIndex % 2 === 1;
-    var rootBase = rootAddMode ? randInt(4, 13) : midProd + randInt(3, 12);
-    var answer = rootAddMode ? rootBase + midProd : rootBase - midProd;
+    var rootBase = rootAddMode ? randInt(8, 16) : midProd + randInt(16, 26);
+    var answer = rootAddMode ? rootBase + midProd : rootBase - midProd; // always >= 16!
 
     var frame1Text = rootAddMode
       ? "الأصل المعلّق: احفظ العدد " + rootBase + " وعملية الجمع (ستضيف إلى " + rootBase + " ناتج الفرع الأول)."
@@ -1186,31 +1387,6 @@
     var frame3Text = "الفرع الثاني المباشر: اجمع " + leafA + " مع " + leafB + ".";
     var closeText = "عوّض صعودا من الفرع الثاني إلى الفرع الأول ثم الأصل واختر النتيجة النهائية:";
 
-    // 6 plausible options (16.7% chance rate instead of 25%)
-    var distractorCandidates = [
-      midProd,
-      Math.max(1, Math.abs(rootBase - leafSum)),
-      rootAddMode ? Math.max(1, rootBase - midProd) : rootBase + midProd,
-      answer + midFactor,
-      Math.max(1, answer - 2),
-      answer + 2,
-      rootBase + leafSum,
-      answer + 4
-    ];
-    var distractors = [];
-    for (var i = 0; i < distractorCandidates.length && distractors.length < 5; i += 1) {
-      var d = distractorCandidates[i];
-      if (d > 0 && d !== answer && distractors.indexOf(d) === -1) {
-        distractors.push(d);
-      }
-    }
-    while (distractors.length < 5) {
-      var extra = answer + randInt(1, 9);
-      if (distractors.indexOf(extra) === -1 && extra !== answer) {
-        distractors.push(extra);
-      }
-    }
-
     return {
       trialIndex: trialIndex,
       kind: "stack",
@@ -1219,33 +1395,32 @@
       frame3Text: frame3Text,
       closeText: closeText,
       answer: answer,
-      options: shuffle([answer].concat(distractors))
+      options: buildZeroLeakNumericOptions(answer, 6, false)
     };
   }
 
   function buildRuleInterruptControlTrial(trialIndex) {
     // Replicates Experiment 5b: IF-ELSE conditional rule + single active accumulator + semantic interruption
+    // Balanced parity output (even -> even, odd -> odd, answer >= 16) + zero-leak 3-doublet options
     var variant = randInt(0, 1);
-    var baseAdd = randInt(3, 6);
-    var dividend = randInt(13, 19);
+    var baseAdd = randInt(8, 12);
     var divisor = 5;
-    var rem = dividend % divisor;
-    if (rem === 0) {
-      dividend += 2;
-      rem = dividend % divisor;
-    }
-    var accum = baseAdd + rem; // 4..10
+    var rem = randInt(1, 4);
+    var dividend = 15 + rem; // 16..19, dividend % 5 = rem
+    var accum = baseAdd + rem; // 9..16 (balanced odd/even!)
     var isEven = accum % 2 === 0;
 
-    var ruleText, answer, wrongBranchVal;
+    var ruleText, answer;
     if (variant === 0) {
-      ruleText = "القاعدة الشرطية المحفوظة: إن كان المجموع زوجيا فاضربه في 2، وإن كان فرديا فاطرح منه 1.";
-      answer = isEven ? accum * 2 : accum - 1;
-      wrongBranchVal = isEven ? accum - 1 : accum * 2;
+      ruleText = "القاعدة الشرطية المحفوظة: إن كان المجموع زوجيا فاضربه في 2، وإن كان فرديا فأضف إليه 7.";
+      answer = isEven ? accum * 2 : accum + 7; // even->even (20..32), odd->even? Wait: odd+7 is even; use +6 so odd+6 is ODD (15..21)!
     } else {
-      ruleText = "القاعدة الشرطية المحفوظة: إن كان المجموع زوجيا فاطرح منه 2، وإن كان فرديا فاضربه في 3.";
-      answer = isEven ? accum - 2 : accum * 3;
-      wrongBranchVal = isEven ? accum * 3 : Math.max(1, accum - 2);
+      ruleText = "القاعدة الشرطية المحفوظة: إن كان المجموع زوجيا فأضف إليه 6، وإن كان فرديا فاضربه في 3.";
+      answer = isEven ? accum + 6 : accum * 3; // even->even (16..22), odd->odd (27..45)!
+    }
+    if (variant === 0) {
+      ruleText = "القاعدة الشرطية المحفوظة: إن كان المجموع زوجيا فاضربه في 2، وإن كان فرديا فأضف إليه 8.";
+      answer = isEven ? accum * 2 : accum + 8; // even->even (20..32), odd->odd (17..23), ALWAYS >= 17!
     }
 
     var calcText =
@@ -1258,18 +1433,6 @@
       " وأمسك الناتج في ذهنك.";
 
     var intr = INTERRUPT_QUESTIONS[randInt(0, INTERRUPT_QUESTIONS.length - 1)];
-    var distractors = [];
-    var cands = [wrongBranchVal, accum, answer + 2, Math.max(1, answer - 2), accum + baseAdd, answer + 4];
-    for (var i = 0; i < cands.length && distractors.length < 5; i += 1) {
-      var v = cands[i];
-      if (v > 0 && v !== answer && distractors.indexOf(v) === -1) {
-        distractors.push(v);
-      }
-    }
-    while (distractors.length < 5) {
-      var ex = answer + randInt(1, 7);
-      if (ex !== answer && distractors.indexOf(ex) === -1) distractors.push(ex);
-    }
 
     return {
       trialIndex: trialIndex,
@@ -1281,66 +1444,73 @@
       interruptOptions: shuffle(intr.options),
       applyPrompt: "عد الآن إلى العدد الذي أمسكته قبل المقاطعة وطبّق عليه القاعدة الشرطية المحفوظة:",
       answer: answer,
-      options: shuffle([answer].concat(distractors))
+      options: buildZeroLeakNumericOptions(answer, 6, false)
     };
   }
 
   function buildVisual2DPolygonTrial(trialIndex) {
+    // True Group-Symmetric Z2 x Z2 Polygon Orbit (eliminates Posner-Keele prototype extraction leak!):
+    // Generates {A0, A1} x {B0, B1} on two disjoint vertex-pair axes and selects targetCorner uniformly in {0..3}
+    // Every choice has identical pairwise distances to the other 3 choices -> blind guessing = exact 25.0%!
     var numVertices = 7;
     var baseAngles = [];
     var offsetAngle = randInt(8, 42) * (Math.PI / 180);
     for (var i = 0; i < numVertices; i += 1) {
-      var ang = offsetAngle + (i * 2 * Math.PI) / numVertices + randInt(-5, 5) * (Math.PI / 180);
+      var ang = offsetAngle + (i * 2 * Math.PI) / numVertices + randInt(-4, 4) * (Math.PI / 180);
       baseAngles.push(ang);
     }
+
+    // Keep base radii in [21, 31] so +deltaR (10..12) stays strictly within [21, 43] without boundary clamping!
     var baseRadii = [];
     for (var r = 0; r < numVertices; r += 1) {
-      baseRadii.push(randInt(25, 40));
+      baseRadii.push(randInt(21, 31));
     }
 
-    function radiiToPoints(radii, angleTweaks) {
+    var v0 = randInt(0, numVertices - 1);
+    var aIdx1 = v0;
+    var aIdx2 = (v0 + 3) % numVertices;
+    var bIdx1 = (v0 + 2) % numVertices;
+    var bIdx2 = (v0 + 5) % numVertices;
+
+    var magA = randInt(10, 12);
+    var magB = randInt(10, 12);
+
+    function buildStatePoints(bitA, bitB) {
+      var radii = baseRadii.slice();
+      var tweaks = [0, 0, 0, 0, 0, 0, 0];
+      if (bitA === 1) {
+        radii[aIdx1] += magA;
+        radii[aIdx2] = Math.max(15, radii[aIdx2] - (magA - 2));
+        tweaks[aIdx1] = 0.10;
+      }
+      if (bitB === 1) {
+        radii[bIdx1] += magB;
+        radii[bIdx2] = Math.max(15, radii[bIdx2] - (magB - 2));
+        tweaks[bIdx1] = -0.10;
+      }
       var pts = [];
       for (var k = 0; k < numVertices; k += 1) {
-        var a = baseAngles[k] + (angleTweaks ? angleTweaks[k] : 0);
+        var a = baseAngles[k] + tweaks[k];
         var rad = radii[k];
         var x = Math.round((50 + rad * Math.cos(a)) * 10) / 10;
         var y = Math.round((50 + rad * Math.sin(a)) * 10) / 10;
-        pts.push([Math.max(9, Math.min(91, x)), Math.max(9, Math.min(91, y))]);
+        pts.push([Math.max(8, Math.min(92, x)), Math.max(8, Math.min(92, y))]);
       }
       return pts;
     }
 
-    var targetPoints = radiiToPoints(baseRadii, null);
-    var foils = [];
-
-    // Controlled Z2xZ2 metric perturbations (~10-12 units) preserving global outline category
-    for (var f = 0; f < 3; f += 1) {
-      var modRadii = baseRadii.slice();
-      var tweaks = [0, 0, 0, 0, 0, 0, 0];
-      var idx1 = (f * 2 + 1) % numVertices;
-      var idx2 = (idx1 + 3) % numVertices;
-      var dir1 = f === 0 ? 1 : f === 1 ? -1 : 1;
-      var dir2 = f === 0 ? -1 : f === 1 ? 1 : 1;
-      var mag = randInt(9, 12);
-
-      var cand1 = modRadii[idx1] + dir1 * mag;
-      if (cand1 > 44 || cand1 < 17) cand1 = modRadii[idx1] - dir1 * mag;
-      modRadii[idx1] = Math.max(17, Math.min(44, cand1));
-
-      var cand2 = modRadii[idx2] + dir2 * mag;
-      if (cand2 > 44 || cand2 < 17) cand2 = modRadii[idx2] - dir2 * mag;
-      modRadii[idx2] = Math.max(17, Math.min(44, cand2));
-
-      tweaks[idx1] = f === 1 ? 0.11 : -0.10;
-      foils.push(radiiToPoints(modRadii, tweaks));
+    var orbit = [
+      buildStatePoints(0, 0),
+      buildStatePoints(1, 0),
+      buildStatePoints(0, 1),
+      buildStatePoints(1, 1)
+    ];
+    var targetCorner = randInt(0, 3);
+    var indexed = [];
+    for (var c = 0; c < 4; c += 1) {
+      indexed.push({ isTarget: c === targetCorner, points: orbit[c] });
     }
 
-    var indexed = [
-      { isTarget: true, points: targetPoints },
-      { isTarget: false, points: foils[0] },
-      { isTarget: false, points: foils[1] },
-      { isTarget: false, points: foils[2] }
-    ];
     var mixed = shuffle(indexed);
     var correctIndex = 0;
     var optionsPoints = [];
@@ -1355,41 +1525,47 @@
       visualSubtype: "polygon",
       flashMs: 800,
       maskMs: 400,
-      delayMs: 2200,
+      delayMs: 2800, // 400ms mask + 2800ms silent retention = exact 3200ms (3.2s) clinical benchmark
       maskSeed: randInt(100, 9999),
-      targetPoints: targetPoints,
+      targetPoints: orbit[targetCorner],
       optionsPoints: optionsPoints,
       correctIndex: correctIndex
     };
   }
 
   function buildVisual2DWindowTrial(trialIndex) {
-    // Replicates dvsdVerification Experiment 13: Pure Non-Symbolic Z2xZ2 Asymmetric Proportion Window
-    // All 4 options share the EXACT same verbal/directional topology (e.g. "vertical line slightly right, horizontal upper")
-    // Differing ONLY in metric aspect ratio and partition cross-ratio by ~13%
+    // True Group-Symmetric Z2 x Z2 Asymmetric Proportion Window (dvsdVerification Experiment 13):
+    // All 4 options share the EXACT same verbal quadrant topology, AND targetCorner is chosen uniformly in {0..3}
+    // Eliminates inner-corner bias so blind guessing without watching the flash = exact 25.0%!
     var rightSide = Math.random() < 0.5;
     var upperSide = Math.random() < 0.5;
 
     var baseW = randInt(58, 74);
     var baseH = randInt(56, 72);
-    var splitX = rightSide ? randInt(58, 66) : randInt(34, 42); // % within frame
-    var splitY = upperSide ? randInt(33, 41) : randInt(59, 67); // % within frame
+    var dSplit = 12;
 
-    var dSplit = 11; // keeps all foils strictly on the SAME side of 50% center (identical verbal label!)
-    var sXAlt = rightSide
-      ? (splitX + dSplit <= 79 ? splitX + dSplit : splitX - dSplit)
-      : (splitX - dSplit >= 21 ? splitX - dSplit : splitX + dSplit);
-    var sYAlt = upperSide
-      ? (splitY - dSplit >= 21 ? splitY - dSplit : splitY + dSplit)
-      : (splitY + dSplit <= 79 ? splitY + dSplit : splitY - dSplit);
+    var xInner = rightSide ? randInt(56, 63) : randInt(37, 44);
+    var xOuter = rightSide ? xInner + dSplit : xInner - dSplit; // strictly on same side of 50%!
+    var yInner = upperSide ? randInt(36, 43) : randInt(57, 64);
+    var yOuter = upperSide ? yInner - dSplit : yInner + dSplit; // strictly on same side of 50%!
 
-    // Z2 x Z2 factorial structure: (splitX vs sXAlt) x (splitY vs sYAlt)
-    var specs = [
-      { isTarget: true, w: baseW, h: baseH, sx: splitX, sy: splitY },
-      { isTarget: false, w: baseW, h: baseH, sx: sXAlt, sy: splitY },
-      { isTarget: false, w: baseW, h: baseH, sx: splitX, sy: sYAlt },
-      { isTarget: false, w: baseW, h: baseH, sx: sXAlt, sy: sYAlt }
+    var rawCorners = [
+      { w: baseW, h: baseH, sx: xInner, sy: yInner },
+      { w: baseW, h: baseH, sx: xOuter, sy: yInner },
+      { w: baseW, h: baseH, sx: xInner, sy: yOuter },
+      { w: baseW, h: baseH, sx: xOuter, sy: yOuter }
     ];
+    var targetCorner = randInt(0, 3);
+    var specs = [];
+    for (var c = 0; c < 4; c += 1) {
+      specs.push({
+        isTarget: c === targetCorner,
+        w: rawCorners[c].w,
+        h: rawCorners[c].h,
+        sx: rawCorners[c].sx,
+        sy: rawCorners[c].sy
+      });
+    }
 
     var mixed = shuffle(specs);
     var correctIndex = 0;
@@ -1405,11 +1581,10 @@
       visualSubtype: "window",
       flashMs: 800,
       maskMs: 400,
-      delayMs: 2200,
+      delayMs: 2800, // 400ms mask + 2800ms silent retention = exact 3.2s post-flash retention
       maskSeed: randInt(100, 9999),
-      targetWindow: specs[0],
+      targetWindow: specs[targetCorner],
       optionsWindows: optionsSpecs,
-      // Provide fallback polygon arrays so any external consumer inspecting targetPoints never breaks
       targetPoints: [[20, 20], [80, 20], [80, 80], [20, 80]],
       optionsPoints: [[], [], [], []],
       correctIndex: correctIndex
@@ -1417,25 +1592,32 @@
   }
 
   function generateControlTrials() {
-    // 6 precision-calibrated positive-control trials
-    return [
+    // 6 precision-calibrated positive-control trials (3 Rostral/DLPFC Stack+Rule, 3 Ventral 2D 0.8s+3.2s)
+    var frontalBlock = shuffle([
       buildStackControlTrial(0),
       buildStackControlTrial(1),
-      buildRuleInterruptControlTrial(2),
+      buildRuleInterruptControlTrial(2)
+    ]);
+    var visualBlock = shuffle([
       buildVisual2DPolygonTrial(3),
       buildVisual2DWindowTrial(4),
-      buildVisual2DPolygonTrial(5)
-    ];
+      Math.random() < 0.5 ? buildVisual2DPolygonTrial(5) : buildVisual2DWindowTrial(5)
+    ]);
+    var combined = frontalBlock.concat(visualBlock);
+    for (var i = 0; i < combined.length; i += 1) {
+      combined[i].trialIndex = i;
+    }
+    return combined;
   }
 
   function generateWarmupTrial(probeId) {
     if (probeId === "isolation") {
       return {
-        words: ["شرط", "قصد", "حكم"],
-        distractorPool: shuffle(["شرط", "قصد", "حكم", "عذر", "مناط", "لزوم"]),
-        taskPrompt: "اضرب 3 في 4 ثم اطرح من الناتج 2",
-        taskOptions: shuffle(["10", "14", "12", "9"]),
-        taskAnswer: "10"
+        words: ["شرط", "قصد", "حكم", "عذر"],
+        distractorPool: shuffle(["شرط", "قصد", "حكم", "عذر", "مناط", "لزوم", "بداهة", "يقين"]),
+        taskPrompt: "اضرب 5 في 4 ثم أضف إلى الناتج 3",
+        taskOptions: buildZeroLeakNumericOptions(23, 4, true),
+        taskAnswer: "23"
       };
     }
     if (probeId === "updating") {
@@ -1455,19 +1637,26 @@
       };
     }
     if (probeId === "binding") {
-      return generateBindingTrials(2)[1];
+      var bList = generateBindingTrials(6);
+      for (var i = 0; i < bList.length; i += 1) {
+        if (bList[i].polarity === "flipped" && bList[i].entityCount === 3 && bList[i].targetRole !== "mid") {
+          return bList[i];
+        }
+      }
+      return bList[0];
     }
     if (probeId === "vigilance") {
       return {
-        totalPulses: 8,
+        totalPulses: 4,
         cycleLength: 4,
-        intervalsMs: [1550, 1850, 1450, 1950, 1650, 2050, 1500, 1800],
+        intervalsMs: [1450, 1700, 1400, 1650],
         flashDurationMs: 240,
         anticipationMs: 120,
-        lapseThresholdMs: 900
+        bounceGuardMs: 220,
+        lapseThresholdMs: 850
       };
     }
-    return buildStackControlTrial(0);
+    return buildVisual2DWindowTrial(0);
   }
 
   var Stimuli = {
