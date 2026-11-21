@@ -1412,7 +1412,7 @@
       answer = isEven ? accum + 6 : accum * 3; // even->even (16..22), odd->odd (27..45)!
     }
 
-    var calcText = baseAdd + " + (باقي " + dividend + " ÷ " + divisor + ")";
+    var calcText = "احفظ مجموع: " + baseAdd + " + (باقي " + dividend + " ÷ " + divisor + ")";
 
     var intr = INTERRUPT_QUESTIONS[randInt(0, INTERRUPT_QUESTIONS.length - 1)];
 
@@ -1424,7 +1424,7 @@
       interruptPrompt: intr.prompt,
       interruptAnswer: intr.answer,
       interruptOptions: shuffle(intr.options),
-      applyPrompt: "طبّق الشرط على عددك:",
+      applyPrompt: "طبّق الشرط الأول على المجموع المحفوظ:",
       answer: answer,
       options: buildZeroLeakNumericOptions(answer, 6, false)
     };
