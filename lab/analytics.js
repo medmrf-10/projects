@@ -114,6 +114,8 @@
 
   var DEFAULT_PHASES_META = {
     baseline: { id: "baseline", label: "خط الأساس القاعدي (قبل التدخل)", color: "#64748b" },
+    sleep_inertia: { id: "sleep_inertia", label: "فحص جمود الاستيقاظ الصباحي (+15د)", color: "#7c3aed" },
+    post_washout: { id: "post_washout", label: "ما بعد الغسيل الدوائي العارض (6–8 أسابيع)", color: "#0891b2" },
     metabolic: { id: "metabolic", label: "الدعم الاستقلابي والكرياتين والتأهيل العضلي", color: "#0284c7" },
     med_early: { id: "med_early", label: "العلاج الدوائي الجبهي المبكر (أسبوع 1–4)", color: "#d97706" },
     med_stable: { id: "med_stable", label: "استقرار العلاج الدوائي الجبهي (أسبوع 6–12+)", color: "#0f766e" },

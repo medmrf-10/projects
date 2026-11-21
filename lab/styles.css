@@ -345,7 +345,9 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
   flex-wrap: wrap;
 }
 
@@ -2708,5 +2710,539 @@ html[data-theme="dark"] .corsi-cell.is-lit {
   .corsi-cell:active,
   .pacer-dot.is-beat {
     transform: none !important;
+  }
+}
+
+/* ==========================================================================
+   17. Version 3 Deep Anti-Chunking & Continuous Precision Suite (D1–D5)
+   ========================================================================== */
+
+.nback-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+  margin-top: 6px;
+}
+
+.dual-angle-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin: 8px auto;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.orient-single-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 6px auto;
+}
+
+.orient-node {
+  width: 88px;
+  height: 88px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.orient-node.is-large {
+  width: 112px;
+  height: 112px;
+}
+
+.orient-node svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.orient-triad-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 42px;
+  width: 100%;
+  max-width: 280px;
+  margin: 6px auto;
+  justify-items: center;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.orient-triad-stage .orient-bottom {
+  grid-column: 1 / -1;
+}
+
+.orient-fixation-center {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+.orient-locator-mini {
+  transform: scale(0.72);
+  transform-origin: center;
+  margin: -18px auto -22px;
+}
+
+.orient-dial-interactive {
+  width: 196px;
+  height: 196px;
+  margin: 4px auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.orient-dial-interactive:active {
+  cursor: grabbing;
+}
+
+.orient-dial-interactive svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.orient-fine-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.d3-step-btn {
+  min-height: 36px;
+  padding: 4px 11px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.two-digit-readout {
+  min-width: 132px;
+  padding: 10px 18px;
+  margin: 4px auto 8px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--accent-border);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 1.65rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.numpad-5col {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 340px;
+  margin: 4px auto;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.binding-pair-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px 22px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  border: 1.5px solid var(--border-strong);
+  margin: 8px auto;
+}
+
+.role-chip {
+  font-family: var(--font-display-ar);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.binding-arrow {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.state-chip {
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  font-family: var(--font-display-ar);
+  font-size: 1.28rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.v3-callout-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+}
+
+.v3-callout-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.v3-callout-copy strong {
+  font-family: var(--font-display-ar);
+  font-size: 0.96rem;
+  color: var(--text);
+}
+
+.v3-callout-copy span {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 420px) {
+  .nback-actions {
+    gap: 8px;
+  }
+
+  .nback-actions .opt-btn {
+    min-height: 48px;
+    padding: 10px 8px;
+    font-size: 0.9rem;
+  }
+
+  .orient-dial-interactive {
+    width: 172px;
+    height: 172px;
+  }
+
+  .orient-node {
+    width: 74px;
+    height: 74px;
+  }
+
+  .numpad-5col {
+    max-width: 290px;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 310px) {
+  .nback-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   18. Upgraded Version 3 Frame-Locked Canvas, VCS Glyphs & RCI Bar
+   ========================================================================== */
+
+.deep-canvas-box {
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.deep-canvas-wrap {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.deep-stage-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border-strong);
+  box-shadow: var(--shadow-xs);
+  max-width: 100%;
+}
+
+.pvt-canvas-stage {
+  border-color: #334155;
+}
+
+.pvt-tap-btn {
+  width: 100%;
+  max-width: 380px;
+  min-height: 54px;
+}
+
+.arena-stage-wrap:has(.deep-canvas-box) {
+  align-items: flex-start;
+  padding-top: clamp(14px, 3.5vh, 36px);
+}
+
+#d1SubLabel,
+#d2SubLabel,
+#d3Pacer,
+#d4SubLabel {
+  min-height: 48px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#d1ControlsMount,
+#d2ControlsMount,
+#d3ResponseMount,
+#d4ControlsMount {
+  width: 100%;
+  min-width: 0;
+}
+
+.d3-scrub-track {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  height: 40px;
+  margin: 0 auto 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+.d3-scrub-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 16px;
+  margin-left: -8px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: var(--shadow-xs);
+  pointer-events: none;
+}
+
+.d3-scrub-hint {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  pointer-events: none;
+  padding: 0 14px;
+  text-align: center;
+}
+
+.glyph-choice-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin: 4px auto 0;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.glyph-choice-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin: 4px auto 0;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.glyph-opt-btn {
+  position: relative;
+  min-height: 76px;
+  padding: 8px 6px 12px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+  transition: border-color 110ms ease, background-color 110ms ease, transform 70ms ease;
+}
+
+.glyph-opt-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.glyph-opt-btn:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+.glyph-mini-canvas {
+  width: 56px;
+  height: 56px;
+  max-width: 100%;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.glyph-key-hint {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.gate-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  max-width: 100%;
+}
+
+.gate-pill.is-red {
+  background: rgba(220, 38, 38, 0.12);
+  border: 1.5px solid #dc2626;
+  color: #dc2626;
+}
+
+.gate-pill.is-blue {
+  background: rgba(37, 99, 235, 0.12);
+  border: 1.5px dashed #2563eb;
+  color: #2563eb;
+}
+
+.d3-rot-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.deep-calib-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.deep-calib-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.deep-calib-item .phase-select {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.form-pill-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.env-alert-banner {
+  margin-top: 12px;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-border);
+  color: var(--amber);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 440px) {
+  .glyph-choice-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .glyph-choice-grid-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .glyph-opt-btn {
+    min-height: 68px;
+    padding: 6px 4px 8px;
+  }
+
+  .glyph-mini-canvas {
+    width: 48px;
+    height: 48px;
+  }
+
+  .d3-rot-btn {
+    min-width: 38px;
+    padding: 6px 8px;
   }
 }

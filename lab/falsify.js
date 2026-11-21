@@ -11,13 +11,17 @@
   var isBattery = false;
   var batteryQueue = ["f1_crossmodal", "f2_suppression", "f3_spatial_slots", "f4_polarity_axis"];
   var batteryIdx = 0;
+  var resetArmed = false;
+  var resetTimer = null;
 
   function getCore() {
     return root.NeuroLab.FalsifyCore;
   }
 
   function esc(str) {
-    return String(str == null ? "" : str)
+    var Core = getCore();
+    var ascii = Core && Core.toAsciiDigits ? Core.toAsciiDigits(str) : String(str == null ? "" : str);
+    return ascii
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -265,9 +269,7 @@
             { label: "مربعات 4×4 + شكل (SS)", val: ssPct + "%" },
             { label: "دقة المسألة الفاصلة", val: procAccPct + "%" }
           ],
-          svPct >= 70 && vvPct <= 50
-            ? "صمدت المربعات المكانية أمام الحساب (" + svPct + "%) بينما انمسحت الكلمات (" + vvPct + "%): تملك مسودة مكانية ثنائية الأبعاد مستقلة عن الكلام."
-            : "كلمات+حساب: " + vvPct + "%، كلمات+شكل: " + vsPct + "%، مربعات+حساب: " + svPct + "%، مربعات+شكل: " + ssPct + "%."
+          Core.computeVerdictSummary().verdicts[0]
         );
       }
 
@@ -509,9 +511,7 @@
             { label: "زمن عكس الصفة (صامت / كتم)", val: rtS + " / " + rtV + " ms" },
             { label: "توقف اللسان القسري للتفكير", val: String(tongueFreezeCount) }
           ],
-          drop >= 28 || tongueFreezeCount >= 2
-            ? "تأثر الأداء بوضوح عند إشغال اللسان (هبوط " + drop + "% وتوقف اللسان " + tongueFreezeCount + " مرات): دماغك يستعين بالكلام الداخلي لتعويض الفضاء."
-            : "صمد حفظ المواقع رغم إشغال اللسان (" + sVoc + "% مقابل " + sSil + "%): تملك تمثيلا مكانيا مسطحا لا يعتمد على اللسان."
+          Core.computeVerdictSummary().verdicts[1]
         );
       }
 
@@ -723,12 +723,10 @@
           [
             { label: "تحديث نصي مركزي (3 متغيرات)", val: verbal3Pct + "%" },
             { label: "تحديث في 3 صناديق مكانية ثابتة", val: spatial3Pct + "%" },
-            { label: "أثر الإنقاذ المكاني", val: (delta >= 0 ? "+" : "") + delta + "%" },
+            { label: "أثر الإنقاذ المكاني", val: (delta > 0 ? "+" : "") + delta + "%" },
             { label: "خلط الأصناف (نصي / مكاني)", val: vSwaps + " / " + sSwaps }
           ],
-          delta >= 25 && spatial3Pct >= 60
-            ? "الصناديق المكانية الثابتة أنقذت الدقة بمقدار +" + delta + "%: توزيع المتغيرات بصريا على الشاشة يعالج الخلط فورا."
-            : "بقيت الدقة " + spatial3Pct + "% حتى مع الصناديق المكانية الثابتة (مقابل " + verbal3Pct + "% نصيا): العطل كيميائي جبهي خالص وليس بسبب غياب الفضاء."
+          Core.computeVerdictSummary().verdicts[2]
         );
       }
 
@@ -882,19 +880,18 @@
           nonSpatialRuleFlipCostMs: nonSpatialRuleFlipCostMs
         });
 
+        var fmtS = function (v) { return v > 0 ? "+" + v + " ms" : v < 0 ? "-" + Math.abs(v) + " ms" : "0 ms"; };
         return showExperimentResult(
           "f4_polarity_axis",
-          (axisFlipCostMs >= 0 ? "+" : "") + axisFlipCostMs + " ms",
+          fmtS(axisFlipCostMs),
           [
-            { label: "ضريبة القلب اللفظي المجرد", val: (verbalFlipCostMs >= 0 ? "+" : "") + verbalFlipCostMs + " ms" },
-            { label: "ضريبة القلب مع المسطرة البصرية", val: (axisFlipCostMs >= 0 ? "+" : "") + axisFlipCostMs + " ms" },
+            { label: "ضريبة القلب اللفظي المجرد", val: fmtS(verbalFlipCostMs) },
+            { label: "ضريبة القلب مع المسطرة البصرية", val: fmtS(axisFlipCostMs) },
             { label: "نسبة انمحاء الضريبة بالمسطرة", val: axisReliefPct + "%" },
-            { label: "كلفة عكس الإشارة غير المكاني", val: "+" + nonSpatialRuleFlipCostMs + " ms" },
+            { label: "كلفة عكس الإشارة غير المكاني", val: fmtS(nonSpatialRuleFlipCostMs) },
             { label: "دقة المقلوب (مجرد / بمسطرة)", val: mean(flipVAcc) + "% / " + mean(flipAAcc) + "%" }
           ],
-          axisReliefPct >= 45 && nonSpatialRuleFlipCostMs < 2500
-            ? "تقلصت ضريبة قلب الصفة بنسبة " + axisReliefPct + "% بمجرد رسم مسطرة اتجاه مسطحة أمام العين: العلة هي غياب المسطرة المكانية الذهنية."
-            : "ضريبة القلب المجرد: +" + verbalFlipCostMs + " ms، ومع المسطرة: +" + axisFlipCostMs + " ms، وعكس القاعدة الحسابية: +" + nonSpatialRuleFlipCostMs + " ms."
+          Core.computeVerdictSummary().verdicts[3]
         );
       }
 
@@ -1052,7 +1049,7 @@
       '<div class="backup-actions-row">' +
       '<button id="btnRunFullFalsify" type="button" class="btn-primary">بدء بطارية الحسم الكاملة — 4 تجارب متتالية</button>' +
       '<button id="btnCopyFalsifyReport" type="button" class="btn-ghost">نسخ تقرير الحسم كنص</button>' +
-      '<button id="btnResetFalsify" type="button" class="btn-danger">مسح سجل الحسم</button>' +
+      '<button id="btnResetFalsify" type="button" class="btn-danger">' + (resetArmed ? "اضغط ثانية لتأكيد المسح" : "مسح سجل الحسم") + "</button>" +
       "</div>" +
       "</section>" +
       '<section class="card verdict-box">' +
@@ -1068,17 +1065,47 @@
     var copyBtn = document.getElementById("btnCopyFalsifyReport");
     if (copyBtn) {
       copyBtn.addEventListener("click", function () {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(summary.plainTextReport);
+        var text = summary.plainTextReport;
+        var markCopied = function () {
           copyBtn.textContent = "تم نسخ تقرير الحسم";
           setTimeout(function () { copyBtn.textContent = "نسخ تقرير الحسم كنص"; }, 1800);
+        };
+        var fallbackCopy = function () {
+          var area = document.createElement("textarea");
+          area.value = text;
+          area.setAttribute("readonly", "readonly");
+          area.style.position = "fixed";
+          area.style.opacity = "0";
+          document.body.appendChild(area);
+          area.select();
+          try { if (document.execCommand("copy")) markCopied(); } catch (_) {}
+          document.body.removeChild(area);
+        };
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+          try {
+            navigator.clipboard.writeText(text).then(markCopied).catch(fallbackCopy);
+            return;
+          } catch (_) {}
         }
+        fallbackCopy();
       });
     }
 
     var resetBtn = document.getElementById("btnResetFalsify");
     if (resetBtn) {
       resetBtn.addEventListener("click", function () {
+        if (!resetArmed) {
+          resetArmed = true;
+          resetBtn.textContent = "اضغط ثانية لتأكيد المسح";
+          clearTimeout(resetTimer);
+          resetTimer = setTimeout(function () {
+            resetArmed = false;
+            render();
+          }, 3800);
+          return;
+        }
+        clearTimeout(resetTimer);
+        resetArmed = false;
         Core.clearState();
         render();
       });

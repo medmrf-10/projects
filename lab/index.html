@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="./styles.css?v=6" />
+  <link rel="stylesheet" href="./styles.css?v=9" />
 
   <style>
     :where(.topbar-inner) {
@@ -97,6 +97,16 @@
         <button
           type="button"
           class="tab-btn"
+          data-view="deep"
+          role="tab"
+          aria-selected="false"
+          aria-controls="view-deep"
+        >
+          النسخة العميقة 3 (5)
+        </button>
+        <button
+          type="button"
+          class="tab-btn"
           data-view="trends"
           role="tab"
           aria-selected="false"
@@ -134,9 +144,16 @@
           حسم الفرضية (4)
         </button>
         <button
-          id="topBatteryBtn"
+          id="topDeepBtn"
           type="button"
           class="pill-btn is-primary"
+        >
+          النسخة العميقة 3 (5)
+        </button>
+        <button
+          id="topBatteryBtn"
+          type="button"
+          class="pill-btn"
         >
           البطارية السريعة (6)
         </button>
@@ -147,6 +164,16 @@
   <main class="shell">
     <!-- القسم الأول: لوحة المناطق المتضررة -->
     <section id="view-dashboard" class="view-panel" role="tabpanel">
+      <div class="v3-callout-strip" role="region" aria-label="النسخة الثالثة العميقة المضادة للتكتيل">
+        <div class="v3-callout-copy">
+          <strong>النسخة الثالثة المرقّاة: البطارية السيكوفيزيائية المقاومة للتكتيل (D1–D5 · ≤15 د)</strong>
+          <span>محرك rAF + Canvas برموز متعامدة (Form A/B/C): نافذة TBRS ثابتة (3.6s)، بوابة Reference-Back بتفكيك M3، خليط Bays المقنّع (200ms · N=4)، عتبة التوطيد (SOA_75)، وPVT-5 المعياري.</span>
+        </div>
+        <button id="bannerOpenDeepBtn" type="button" class="btn-primary">
+          فتح النسخة العميقة 3
+        </button>
+      </div>
+
       <div class="context-bar" aria-label="معايرة الجلسة السريعة">
         <div class="context-controls">
           <div class="context-field">
@@ -254,6 +281,11 @@
     <!-- قسم حسم الفرضية الفراغية (4 تجارب) -->
     <section id="view-falsify" class="view-panel" role="tabpanel" hidden>
       <div id="falsifyMount"></div>
+    </section>
+
+    <!-- قسم النسخة الثالثة العميقة المضادة للتكتيل (5 مسابير) -->
+    <section id="view-deep" class="view-panel" role="tabpanel" hidden>
+      <div id="deepMount"></div>
     </section>
 
     <!-- القسم الثاني: المنحنيات والسجل الطولي -->
@@ -477,11 +509,13 @@
   <!-- إشعار سريع لطيف -->
   <div id="toastEl" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="./stimuli.js?v=6"></script>
-  <script src="./analytics.js?v=6"></script>
-  <script src="./engine.js?v=6"></script>
-  <script src="./falsify-core.js?v=6"></script>
-  <script src="./falsify.js?v=6"></script>
+  <script src="./stimuli.js?v=9"></script>
+  <script src="./analytics.js?v=9"></script>
+  <script src="./engine.js?v=9"></script>
+  <script src="./falsify-core.js?v=9"></script>
+  <script src="./falsify.js?v=9"></script>
+  <script src="./deep-core.js?v=9"></script>
+  <script src="./deep.js?v=9"></script>
   <script>
     (function () {
       "use strict";
@@ -558,12 +592,13 @@
       ];
 
       const FALLBACK_PHASES = [
-        { id: "baseline", label: "خط الأساس المرجعي (21 نوفمبر)" },
-        { id: "stabilization", label: "الاستقرار الأولي" },
-        { id: "intervention", label: "التدخل الموجه" },
-        { id: "recovery", label: "استعادة الكفاءة" },
-        { id: "consolidation", label: "تثبيت التعافي" },
-        { id: "maintenance", label: "المتابعة المستدامة" }
+        { id: "baseline", label: "خط الأساس القاعدي (قبل التدخل)" },
+        { id: "sleep_inertia", label: "فحص جمود الاستيقاظ الصباحي (+15د)" },
+        { id: "post_washout", label: "ما بعد الغسيل الدوائي العارض (6–8 أسابيع)" },
+        { id: "metabolic", label: "الدعم الاستقلابي والكرياتين والتأهيل العضلي" },
+        { id: "med_early", label: "العلاج الدوائي الجبهي المبكر (أسبوع 1–4)" },
+        { id: "med_stable", label: "استقرار العلاج الدوائي الجبهي (أسبوع 6–12+)" },
+        { id: "post_airway", label: "ما بعد إصلاح مجرى التنفس واسترداد النوم العميق" }
       ];
 
       function toAsciiDigits(val) {
@@ -640,14 +675,19 @@
         html: document.documentElement,
         themeToggleBtn: document.getElementById("themeToggleBtn"),
         topFalsifyBtn: document.getElementById("topFalsifyBtn"),
+        topDeepBtn: document.getElementById("topDeepBtn"),
+        bannerOpenDeepBtn: document.getElementById("bannerOpenDeepBtn"),
         topBatteryBtn: document.getElementById("topBatteryBtn"),
         launchBatteryBtn: document.getElementById("launchBatteryBtn"),
         viewTabs: Array.from(document.querySelectorAll(".view-tabs [data-view]")),
         viewFalsify: document.getElementById("view-falsify"),
         falsifyMount: document.getElementById("falsifyMount"),
+        viewDeep: document.getElementById("view-deep"),
+        deepMount: document.getElementById("deepMount"),
         views: {
           dashboard: document.getElementById("view-dashboard"),
           falsify: document.getElementById("view-falsify"),
+          deep: document.getElementById("view-deep"),
           trends: document.getElementById("view-trends"),
           data: document.getElementById("view-data")
         },
@@ -901,6 +941,11 @@
           if (dom.viewFalsify) dom.viewFalsify.hidden = false;
           if (window.NeuroLab && window.NeuroLab.Falsify && typeof window.NeuroLab.Falsify.render === "function") {
             window.NeuroLab.Falsify.render();
+          }
+        } else if (normalized === "deep") {
+          if (dom.viewDeep) dom.viewDeep.hidden = false;
+          if (window.NeuroLab && window.NeuroLab.Deep && typeof window.NeuroLab.Deep.render === "function") {
+            window.NeuroLab.Deep.render();
           }
         } else if (normalized === "trends") {
           renderTrendsView();
@@ -1528,6 +1573,9 @@
         if (state.activeView === "falsify" && window.NeuroLab && window.NeuroLab.Falsify && typeof window.NeuroLab.Falsify.render === "function") {
           try { window.NeuroLab.Falsify.render(); } catch (_) {}
         }
+        if (state.activeView === "deep" && window.NeuroLab && window.NeuroLab.Deep && typeof window.NeuroLab.Deep.render === "function") {
+          try { window.NeuroLab.Deep.render(); } catch (_) {}
+        }
       }
 
       function handleSessionUpdate(payload) {
@@ -1611,6 +1659,22 @@
             text = "";
           }
         }
+        if (window.NeuroLab && window.NeuroLab.FalsifyCore && typeof window.NeuroLab.FalsifyCore.computeVerdictSummary === "function") {
+          try {
+            const fSum = window.NeuroLab.FalsifyCore.computeVerdictSummary();
+            if (fSum && fSum.completedCount > 0) {
+              text = (text ? text + "\n\n" : "") + fSum.plainTextReport;
+            }
+          } catch (_) {}
+        }
+        if (window.NeuroLab && window.NeuroLab.DeepCore && typeof window.NeuroLab.DeepCore.computeDeepVerdictSummary === "function") {
+          try {
+            const deepSum = window.NeuroLab.DeepCore.computeDeepVerdictSummary();
+            if (deepSum && deepSum.completedCount > 0) {
+              text = (text ? text + "\n\n" : "") + deepSum.plainTextReport;
+            }
+          } catch (_) {}
+        }
         text = toAsciiDigits(text || "لا توجد سجلات كافية لتوليد الملخص التشخيصي بعد.");
 
         try {
@@ -1642,20 +1706,30 @@
 
       function exportFullJson() {
         const A = getAnalyticsApi();
-        let jsonStr = "";
+        let baseObj = null;
         if (typeof A.exportJSON === "function") {
-          try { jsonStr = A.exportJSON(); } catch (_) {}
+          try {
+            const rawExport = A.exportJSON();
+            if (rawExport) baseObj = JSON.parse(rawExport);
+          } catch (_) {}
         }
 
-        if (!jsonStr) {
-          const fallbackPayload = {
+        if (!baseObj || typeof baseObj !== "object") {
+          baseObj = {
             exportedAt: new Date().toISOString(),
             activeContext: getCurrentContext(),
             records: getAllHistoryRecords()
           };
-          jsonStr = JSON.stringify(fallbackPayload, null, 2);
         }
 
+        if (window.NeuroLab && window.NeuroLab.FalsifyCore && typeof window.NeuroLab.FalsifyCore.loadState === "function") {
+          try { baseObj.falsifyState = window.NeuroLab.FalsifyCore.loadState(); } catch (_) {}
+        }
+        if (window.NeuroLab && window.NeuroLab.DeepCore && typeof window.NeuroLab.DeepCore.loadState === "function") {
+          try { baseObj.deepState = window.NeuroLab.DeepCore.loadState(); } catch (_) {}
+        }
+
+        const jsonStr = JSON.stringify(baseObj, null, 2);
         const blob = new Blob([toAsciiDigits(jsonStr)], { type: "application/json;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const now = new Date();
@@ -1671,7 +1745,7 @@
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        showToast("تم تصدير السجل الكامل بصيغة JSON.");
+        showToast("تم تصدير السجل الكامل (شاملا النسخ 1 و2 و3) بصيغة JSON.");
       }
 
       function handleImportJsonFile(file) {
@@ -1680,11 +1754,47 @@
         reader.onload = function () {
           try {
             const rawText = String(reader.result || "");
+            const parsed = JSON.parse(rawText);
+
+            if (parsed && parsed.suite === "neurolab_deep_v3" && window.NeuroLab && window.NeuroLab.DeepCore) {
+              const dRes = window.NeuroLab.DeepCore.importStateJSON(parsed);
+              if (dRes && dRes.ok) {
+                refreshAllViews();
+                switchView("deep");
+                showToast("تم استيراد سجل النسخة الثالثة بنجاح (" + toAsciiDigits(dRes.count || 0) + " مسابير).");
+              } else {
+                showToast((dRes && dRes.error) || "تعذر استيراد ملف النسخة الثالثة.");
+              }
+              return;
+            }
+
+            if (parsed && parsed.suite === "neurolab_falsify_v1" && window.NeuroLab && window.NeuroLab.FalsifyCore) {
+              const fRes = window.NeuroLab.FalsifyCore.importStateJSON(parsed);
+              if (fRes && fRes.ok) {
+                refreshAllViews();
+                switchView("falsify");
+                showToast("تم استيراد سجل تجارب الحسم بنجاح (" + toAsciiDigits(fRes.count || 0) + " تجارب).");
+              } else {
+                showToast((fRes && fRes.error) || "تعذر استيراد ملف الحسم.");
+              }
+              return;
+            }
+
+            let importedExtra = 0;
+            if (parsed && parsed.falsifyState && window.NeuroLab && window.NeuroLab.FalsifyCore && typeof window.NeuroLab.FalsifyCore.importStateJSON === "function") {
+              const fSub = window.NeuroLab.FalsifyCore.importStateJSON(parsed);
+              if (fSub && fSub.ok) importedExtra += Number(fSub.count || 0);
+            }
+            if (parsed && parsed.deepState && window.NeuroLab && window.NeuroLab.DeepCore && typeof window.NeuroLab.DeepCore.importStateJSON === "function") {
+              const dSub = window.NeuroLab.DeepCore.importStateJSON(parsed);
+              if (dSub && dSub.ok) importedExtra += Number(dSub.count || 0);
+            }
+
             const A = getAnalyticsApi();
             if (typeof A.importJSON === "function") {
               const res = A.importJSON(rawText);
               if (res && typeof res === "object" && "ok" in res) {
-                if (!res.ok) {
+                if (!res.ok && importedExtra === 0) {
                   showToast(res.error || "تعذر استيراد السجل.");
                   return;
                 }
@@ -1692,15 +1802,16 @@
                 populatePhases();
                 hydrateContextInputs();
                 refreshAllViews();
-                showToast("تم استيراد السجل بنجاح (" + toAsciiDigits(res.count || 0) + " عنصر جديد).");
+                const totalImported = Number((res && res.count) || 0) + importedExtra;
+                showToast("تم استيراد السجل بنجاح (" + toAsciiDigits(totalImported) + " عنصر مستورد).");
                 return;
               }
-              if (res !== false) {
+              if (res !== false || importedExtra > 0) {
                 initTheme();
                 populatePhases();
                 hydrateContextInputs();
                 refreshAllViews();
-                showToast("تم استيراد السجل وتحديث المنحنيات بنجاح.");
+                showToast("تم استيراد السجل وتحديث جميع الأقسام بنجاح.");
                 return;
               }
             }
@@ -1742,6 +1853,12 @@
           try { A.clearAllData(); } catch (_) {}
         } else if (typeof A.resetAll === "function") {
           try { A.resetAll(); } catch (_) {}
+        }
+        if (window.NeuroLab && window.NeuroLab.FalsifyCore && typeof window.NeuroLab.FalsifyCore.clearState === "function") {
+          try { window.NeuroLab.FalsifyCore.clearState(); } catch (_) {}
+        }
+        if (window.NeuroLab && window.NeuroLab.DeepCore && typeof window.NeuroLab.DeepCore.clearState === "function") {
+          try { window.NeuroLab.DeepCore.clearState(); } catch (_) {}
         }
         try { localStorage.removeItem(NOTES_STORAGE_KEY); } catch (_) {}
 
@@ -1816,6 +1933,16 @@
             switchView("falsify");
           });
         }
+        if (dom.topDeepBtn) {
+          dom.topDeepBtn.addEventListener("click", function () {
+            switchView("deep");
+          });
+        }
+        if (dom.bannerOpenDeepBtn) {
+          dom.bannerOpenDeepBtn.addEventListener("click", function () {
+            switchView("deep");
+          });
+        }
         if (dom.topBatteryBtn) {
           dom.topBatteryBtn.addEventListener("click", launchFullBattery);
         }
@@ -1886,6 +2013,9 @@
             if (window.NeuroLab && window.NeuroLab.Falsify && typeof window.NeuroLab.Falsify.abort === "function") {
               try { window.NeuroLab.Falsify.abort(); } catch (_) {}
             }
+            if (window.NeuroLab && window.NeuroLab.Deep && typeof window.NeuroLab.Deep.abort === "function") {
+              try { window.NeuroLab.Deep.abort(); } catch (_) {}
+            }
             const E = getEngineApi();
             if (dom.arenaOverlay && !dom.arenaOverlay.hidden) {
               if (typeof E.abort === "function") {
@@ -1901,21 +2031,24 @@
         }
 
         window.addEventListener("hashchange", function () {
-          if (shouldOpenFalsifyFromUrl()) {
-            switchView("falsify");
+          const urlView = getRequestedUrlView();
+          if (urlView) {
+            switchView(urlView);
           }
         });
       }
 
-      function shouldOpenFalsifyFromUrl() {
+      function getRequestedUrlView() {
         try {
           const hash = String(window.location.hash || "").trim().toLowerCase();
-          if (hash === "#falsify" || hash === "#view-falsify") return true;
+          if (hash === "#deep" || hash === "#v3" || hash === "#view-deep") return "deep";
+          if (hash === "#falsify" || hash === "#view-falsify") return "falsify";
           const params = new URLSearchParams(window.location.search || "");
           const mode = String(params.get("mode") || "").trim().toLowerCase();
-          if (mode === "falsify") return true;
+          if (mode === "deep" || mode === "v3") return "deep";
+          if (mode === "falsify") return "falsify";
         } catch (_) {}
-        return false;
+        return null;
       }
 
       function bootstrap() {
@@ -1931,11 +2064,15 @@
         if (window.NeuroLab && window.NeuroLab.Falsify && typeof window.NeuroLab.Falsify.init === "function") {
           window.NeuroLab.Falsify.init({ mountEl: dom.falsifyMount });
         }
+        if (window.NeuroLab && window.NeuroLab.Deep && typeof window.NeuroLab.Deep.init === "function") {
+          window.NeuroLab.Deep.init({ mountEl: dom.deepMount });
+        }
         bindEvents();
         refreshAllViews();
 
-        if (shouldOpenFalsifyFromUrl()) {
-          switchView("falsify");
+        const initialView = getRequestedUrlView();
+        if (initialView) {
+          switchView(initialView);
         }
       }
 

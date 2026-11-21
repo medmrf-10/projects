@@ -487,17 +487,42 @@
 
   var memFallback = { results: {}, history: [] };
 
+  function toAsciiDigits(val) {
+    return String(val == null ? "" : val)
+      .replace(/[\u0660-\u0669]/g, function (d) {
+        return String(d.charCodeAt(0) - 0x0660);
+      })
+      .replace(/[\u06F0-\u06F9]/g, function (d) {
+        return String(d.charCodeAt(0) - 0x06f0);
+      });
+  }
+
+  function sanitizeFalsifyState(obj) {
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+    var rawRes = obj.results && typeof obj.results === "object" && !Array.isArray(obj.results)
+      ? obj.results
+      : {};
+    var validIds = { f1_crossmodal: true, f2_suppression: true, f3_spatial_slots: true, f4_polarity_axis: true };
+    var cleanRes = {};
+    Object.keys(rawRes).forEach(function (k) {
+      if (validIds[k] && rawRes[k] && typeof rawRes[k] === "object" && !Array.isArray(rawRes[k])) {
+        cleanRes[k] = Object.assign({ expId: k }, rawRes[k]);
+      }
+    });
+    var cleanHist = Array.isArray(obj.history)
+      ? obj.history.filter(function (it) { return it && typeof it === "object" && !Array.isArray(it); }).slice(0, 40)
+      : [];
+    return { results: cleanRes, history: cleanHist };
+  }
+
   function loadState() {
     try {
       if (typeof localStorage !== "undefined") {
         var raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           var parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === "object") {
-            parsed.results = parsed.results || {};
-            parsed.history = Array.isArray(parsed.history) ? parsed.history : [];
-            return parsed;
-          }
+          var clean = sanitizeFalsifyState(parsed);
+          if (clean) return clean;
         }
       }
     } catch (_) {}
@@ -528,6 +553,55 @@
     } catch (_) {}
   }
 
+  function exportStateJSON() {
+    var st = loadState();
+    var sum = computeVerdictSummary(st);
+    return toAsciiDigits(JSON.stringify({
+      suite: "neurolab_falsify_v1",
+      exportedAt: new Date().toISOString(),
+      completedCount: sum.completedCount,
+      results: st.results,
+      history: st.history,
+      verdicts: sum.verdicts
+    }, null, 2));
+  }
+
+  function importStateJSON(jsonOrObj) {
+    var parsed = jsonOrObj;
+    if (typeof jsonOrObj === "string") {
+      try { parsed = JSON.parse(jsonOrObj); } catch (_) { return { ok: false, error: "ملف JSON غير صالح." }; }
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false, error: "بنية ملف الحسم غير متوافقة." };
+    }
+    var targetObj = parsed.falsifyState && typeof parsed.falsifyState === "object"
+      ? parsed.falsifyState
+      : parsed;
+    var incoming = sanitizeFalsifyState(targetObj);
+    if (!incoming || (Object.keys(incoming.results).length === 0 && incoming.history.length === 0)) {
+      return { ok: false, error: "لا يحتوي الملف على نتائج صالحة لتجارب الحسم (F1–F4)." };
+    }
+    var cur = loadState();
+    var nextState = {
+      results: Object.assign({}, cur.results, incoming.results),
+      history: incoming.history.concat(cur.history).slice(0, 40)
+    };
+    memFallback = nextState;
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+      }
+    } catch (_) {}
+    return { ok: true, count: Object.keys(incoming.results).length };
+  }
+
+  function fmtMs(val) {
+    var n = Math.round(Number(val) || 0);
+    if (n > 0) return "+" + n + " ms";
+    if (n < 0) return "-" + Math.abs(n) + " ms";
+    return "0 ms";
+  }
+
   function computeVerdictSummary(stateObj) {
     var st = stateObj || loadState();
     var r = st.results || {};
@@ -540,20 +614,42 @@
     var verdicts = [];
 
     if (f1) {
-      if (f1.svPct >= 70 && f1.vvPct <= 50) {
+      if (f1.vvPct >= 75 && f1.svPct >= 75) {
+        verdicts.push(
+          "1. شق تقاطع القنوات (F1): [سقف مرتفع مع قابلية التكتيل] — سجلت الكلمات + الحساب " + f1.vvPct +
+          "% والمربعات + الحساب " + f1.svPct + "% (وتحت الشكل: " + f1.vsPct + "% / " + f1.ssPct +
+          "%)؛ العرض المتكتل سمح بربط الكلمات في جملة أو المربعات في مسار، لذا افحص المسبار العميق D1 لعزل السعة الخام."
+        );
+      } else if (f1.vvPct >= 75 && f1.svPct < 75) {
+        verdicts.push(
+          "1. شق تقاطع القنوات (F1): [صمود الكلمات عبر التكتيل الجُمَلي/القصصي] — بلغت الكلمات + الحساب " + f1.vvPct +
+          "% مقابل " + f1.svPct + "% للمربعات + الحساب (وتحت الشكل: كلمات " + f1.vsPct + "%، مربعات " + f1.ssPct +
+          "%)؛ دمج الكلمات الأربع في جملة أو مشهد واحد حماها من المسح، لذا افحص المسبار العميق D1 لعزل السعة بلا قصص."
+        );
+      } else if (f1.svPct >= 70 && f1.vvPct <= 55) {
         verdicts.push(
           "1. شق استقلال المسودة المكانية المسطحة (F1): [بطلت فرضية القناة الواحدة هنا] — صمدت المواقع المكانية 4×4 أمام الحساب بنسبة " +
-          f1.svPct + "% مقابل " + f1.vvPct + "% للكلمات، مما يثبت أنك تملك مسودة مكانية ثنائية الأبعاد مستقلة عن الكلام."
+          f1.svPct + "% مقابل " + f1.vvPct + "% للكلمات، مما يثبت وجود مسودة مكانية ثنائية الأبعاد مستقلة عن الكلام."
+        );
+      } else if (f1.svPct >= 75 && f1.vvPct < 75) {
+        verdicts.push(
+          "1. شق استقلال المسودة المكانية المسطحة (F1): [تفوق الاحتفاظ المكاني على اللفظي تحت الحساب] — سجلت المربعات + الحساب " +
+          f1.svPct + "% مقابل " + f1.vvPct + "% للكلمات + الحساب (وتحت الشكل: " + f1.ssPct + "% / " + f1.vsPct + "%)."
         );
       } else if (f1.vsPct - f1.vvPct >= 22) {
         verdicts.push(
           "1. شق تقاطع القنوات (F1): [تداخل لفظي خاص] — بقيت الكلمات بنسبة " + f1.vsPct +
           "% بعد الشكل الصامت وهبطت إلى " + f1.vvPct + "% بعد الحساب (والمواقع + الحساب: " + f1.svPct + "%)."
         );
+      } else if (f1.vvPct < 65 && f1.svPct < 65) {
+        verdicts.push(
+          "1. شق تقاطع القنوات (F1): [مسح انتباهي جبهي شامل] — هبط التخزين تحت الحساب (كلمات " + f1.vvPct +
+          "%، مواقع " + f1.svPct + "%) وتحت الشكل (كلمات " + f1.vsPct + "%، مواقع " + f1.ssPct + "%)؛ المشكلة ضعف تثبيت جبهي عام وليست ازدحاما لفظيا فقط."
+        );
       } else {
         verdicts.push(
-          "1. شق تقاطع القنوات (F1): [مسح انتباهي جبهي شامل] — انمسح التخزين تحت الحساب (كلمات " + f1.vvPct +
-          "%، مواقع " + f1.svPct + "%) وتحت الشكل (كلمات " + f1.vsPct + "%، مواقع " + f1.ssPct + "%)؛ المشكلة ضعف تثبيت جبهي عام وليست ازدحاما لفظيا فقط."
+          "1. شق تقاطع القنوات (F1): [أداء متوسط متقارب] — كلمات + حساب " + f1.vvPct +
+          "%، كلمات + شكل " + f1.vsPct + "%، مواقع + حساب " + f1.svPct + "%، مواقع + شكل " + f1.ssPct + "%."
         );
       }
     } else {
@@ -565,13 +661,23 @@
         verdicts.push(
           "2. شق الاعتماد الخفي على اللسان الداخلي (F2): [ثبتت الفرضية] — كتم اللسان بـ «واحد — اثنان» خفض السعة المكانية بمقدار " +
           f2.spatialDropPct + "% (من " + f2.spatialSilentPct + "% إلى " + f2.spatialVocalPct + "%) مع " +
-          f2.tongueFreezeCount + " توقفات قسرية للسان أثناء التفكير، مما يثبت أن دماغك يترجم المواقع والعلاقات سرا إلى كلام."
+          f2.tongueFreezeCount + " توقفات قسرية للسان أثناء التفكير."
+        );
+      } else if (f2.spatialVocalPct >= 75 && f2.spatialSilentPct >= 75) {
+        verdicts.push(
+          "2. شق الاعتماد الخفي على اللسان الداخلي (F2): [صمد التسلسل بدون اللسان مع احتمال رسم مسار منحني] — بقيت دقة المربعات " +
+          f2.spatialVocalPct + "% مع كتم اللسان مقابل " + f2.spatialSilentPct + "% صامت (توقف اللسان: " + f2.tongueFreezeCount +
+          ")؛ ولقطع حيلة الخط المنحني المتتالي انتقل إلى مسبار الزوايا المتزامنة D3."
+        );
+      } else if (f2.spatialVocalPct < 55 && f2.spatialSilentPct < 55) {
+        verdicts.push(
+          "2. شق الاعتماد الخفي على اللسان الداخلي (F2): [سعة مكانية منخفضة في الوضعين] — سجلت المربعات " +
+          f2.spatialSilentPct + "% صامتا و" + f2.spatialVocalPct + "% مع كتم اللسان (توقف اللسان: " + f2.tongueFreezeCount + ")."
         );
       } else {
         verdicts.push(
-          "2. شق الاعتماد الخفي على اللسان الداخلي (F2): [بطلت الفرضية] — صمد حفظ المواقع رغم إشغال اللسان (" +
-          f2.spatialVocalPct + "% مقابل " + f2.spatialSilentPct + "% صامت، وتوقف اللسان " + f2.tongueFreezeCount +
-          " مرات)، مما يثبت وجود ترميز بصري مكاني غير لفظي."
+          "2. شق الاعتماد الخفي على اللسان الداخلي (F2): [تأثر محدود بكتم اللسان] — صمد حفظ المواقع عند " +
+          f2.spatialVocalPct + "% مقابل " + f2.spatialSilentPct + "% صامت (توقف اللسان: " + f2.tongueFreezeCount + ")."
         );
       }
     } else {
@@ -579,15 +685,30 @@
     }
 
     if (f3) {
-      if (f3.spatialRescueDeltaPct >= 25 && f3.spatial3Pct >= 60) {
+      if (f3.verbal3Pct >= 75 && f3.spatial3Pct >= 75) {
+        verdicts.push(
+          "3. شق تحديث 3 متغيرات أحادية الخانة (F3): [سقف كامل عبر دمج الخانات الثلاث] — حققت " +
+          f3.verbal3Pct + "% نصيا و" + f3.spatial3Pct + "% مكانيا؛ الأرقام من خانة واحدة تقبل الضغط في عدد واحد من 3 خانات، لذا انتقل إلى المسبار D2 (سجلات من خانتين + بوابة زوجي/فردي) لعزل الرف الجانبي الخام."
+        );
+      } else if (f3.spatialRescueDeltaPct >= 25 && f3.spatial3Pct >= 60) {
         verdicts.push(
           "3. شق سبب انهيار الـ 3 متغيرات (F3): [ثبتت مساهمة غياب الفرز المكاني] — توزيع المتغيرات في 3 صناديق مكانية ثابتة رفع دقتك من " +
           f3.verbal3Pct + "% إلى " + f3.spatial3Pct + "% (قفزة +" + f3.spatialRescueDeltaPct + "%)."
         );
+      } else if (f3.verbal3Pct - f3.spatial3Pct >= 25 && f3.verbal3Pct >= 60) {
+        verdicts.push(
+          "3. شق تحديث الـ 3 متغيرات (F3): [تفوق التسميع النصي على الصناديق المكانية] — سجلت نصيا " +
+          f3.verbal3Pct + "% مقابل " + f3.spatial3Pct + "% في الصناديق المكانية."
+        );
+      } else if (f3.verbal3Pct < 65 && f3.spatial3Pct < 65) {
+        verdicts.push(
+          "3. شق سبب انهيار الـ 3 متغيرات (F3): [بقاء الهبوط رغم الصناديق المكانية] — سجلت الدقة " +
+          f3.spatial3Pct + "% مع الصناديق المكانية مقابل " + f3.verbal3Pct + "% نصيا؛ الهبوط هنا ناتج عن تسرب التثبيت الجبهي لا غياب المكان وحده."
+        );
       } else {
         verdicts.push(
-          "3. شق سبب انهيار الـ 3 متغيرات (F3): [بطل عزوه لغياب الفضاء — العطل كيميائي جبهي 100%] — حتى مع وضع 3 صناديق مكانية ثابتة أمام عينك بقيت الدقة " +
-          f3.spatial3Pct + "% مقابل " + f3.verbal3Pct + "% نصيا؛ أي أن الانهيار سببه تسرب الشحنة الجبهية القابل للعلاج الدوائي وليس غياب التخيل الفراغي."
+          "3. شق تحديث الـ 3 متغيرات (F3): [أداء متوسط متقارب] — الصناديق المكانية " +
+          f3.spatial3Pct + "% مقابل النصي المركزي " + f3.verbal3Pct + "%."
         );
       }
     } else {
@@ -595,17 +716,26 @@
     }
 
     if (f4) {
-      if (f4.verbalFlipCostMs >= 3500 && f4.axisReliefPct >= 45 && f4.nonSpatialRuleFlipCostMs < 2500) {
+      if (f4.verbalFlipCostMs < 1500) {
+        var extraAxisNote = f4.axisFlipCostMs - f4.verbalFlipCostMs >= 900
+          ? " (أبطأتك المسطرة البصرية لعدم حاجة الحل الذهني المباشر إليها)."
+          : ".";
         verdicts.push(
-          "4. شق ضريبة عكس الصفات (F4): [ثبت أن علتها غياب المسطرة المكانية] — بلغت ضريبة القلب اللفظي المجرد +" +
-          f4.verbalFlipCostMs + " ms وتقلصت مع المسطرة البصرية إلى +" + f4.axisFlipCostMs + " ms (انمحاء " +
-          f4.axisReliefPct + "%)، بينما عكس القاعدة غير المكاني لم يكلف سوى +" + f4.nonSpatialRuleFlipCostMs + " ms."
+          "4. شق ضريبة عكس الصفات (F4): [لا توجد ضريبة قلب مرتفعة في الصياغة الصافية] — بلغ فرق القلب المجرد " +
+          fmtMs(f4.verbalFlipCostMs) + "، ومع المسطرة البصرية " + fmtMs(f4.axisFlipCostMs) +
+          "، وعكس القاعدة غير المكاني " + fmtMs(f4.nonSpatialRuleFlipCostMs) + extraAxisNote
+        );
+      } else if (f4.verbalFlipCostMs >= 3500 && f4.axisReliefPct >= 45 && f4.nonSpatialRuleFlipCostMs < 2500) {
+        verdicts.push(
+          "4. شق ضريبة عكس الصفات (F4): [ثبت أن علتها غياب المسطرة المكانية] — بلغت ضريبة القلب اللفظي المجرد " +
+          fmtMs(f4.verbalFlipCostMs) + " وتقلصت مع المسطرة البصرية إلى " + fmtMs(f4.axisFlipCostMs) + " (انمحاء " +
+          f4.axisReliefPct + "%)، بينما عكس القاعدة غير المكاني كلف " + fmtMs(f4.nonSpatialRuleFlipCostMs) + "."
         );
       } else {
         verdicts.push(
-          "4. شق ضريبة عكس الصفات (F4): [بطل حصرها في غياب المسطرة — شق جبهي تنفيذي] — بلغت ضريبة القلب المجرد +" +
-          f4.verbalFlipCostMs + " ms ومع المسطرة البصرية +" + f4.axisFlipCostMs + " ms، وعكس القاعدة غير المكاني +" +
-          f4.nonSpatialRuleFlipCostMs + " ms؛ مما يدل على مساهمة بطء تبديل الإشارة الجبهي القابل للتحسن بالعلاج."
+          "4. شق ضريبة عكس الصفات (F4): [مساهمة جبهية تنفيذية في ضريبة القلب] — بلغت ضريبة القلب المجرد " +
+          fmtMs(f4.verbalFlipCostMs) + " ومع المسطرة البصرية " + fmtMs(f4.axisFlipCostMs) +
+          "، وعكس القاعدة غير المكاني " + fmtMs(f4.nonSpatialRuleFlipCostMs) + "."
         );
       }
     } else {
@@ -622,12 +752,13 @@
       completedCount: done,
       verdicts: verdicts,
       overallHeadline: headline,
-      plainTextReport: reportLines.join("\n")
+      plainTextReport: toAsciiDigits(reportLines.join("\n"))
     };
   }
 
   root.NeuroLab.FalsifyCore = {
     EXPERIMENTS: EXPERIMENTS,
+    toAsciiDigits: toAsciiDigits,
     renderPolySVG: renderPolySVG,
     buildSimulPolyTask: buildSimulPolyTask,
     buildMathTask: buildMathTask,
@@ -638,6 +769,8 @@
     loadState: loadState,
     saveExperimentResult: saveExperimentResult,
     clearState: clearState,
+    exportStateJSON: exportStateJSON,
+    importStateJSON: importStateJSON,
     computeVerdictSummary: computeVerdictSummary
   };
 })();
