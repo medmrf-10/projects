@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>مِدار 3D — مختبر التدوير الذهني ثلاثي الأبعاد</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect x='2' y='2' width='32' height='32' rx='9' fill='%232563eb'/%3E%3Cpath d='M18 7L27 12.2V22.6L18 27.8L9 22.6V12.2L18 7Z' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linejoin='round'/%3E%3Cpath d='M18 7V17.4M18 17.4L27 12.2M18 17.4L9 12.2M18 17.4V27.8' fill='none' stroke='%23ffffff' stroke-width='1.7' stroke-linejoin='round' opacity='0.85'/%3E%3Ccircle cx='27' cy='12.2' r='3' fill='%23f59e0b'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="header-top">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 36 36" width="32" height="32" fill="none">
+                <rect x="2" y="2" width="32" height="32" rx="9" fill="currentColor" opacity="0.12"/>
+                <path d="M18 7L27 12.2V22.6L18 27.8L9 22.6V12.2L18 7Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M18 7V17.4M18 17.4L27 12.2M18 17.4L9 12.2M18 17.4V27.8" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity="0.85"/>
+                <circle cx="27" cy="12.2" r="2.6" fill="#f59e0b"/>
+              </svg>
+            </div>
+            <div class="brand-copy">
+              <h1 class="brand-title" data-i18n="appTitle">مِدار <span class="num" dir="ltr">3D</span></h1>
+              <p class="brand-subtitle" data-i18n="appSubtitle">مختبر التدوير الذهني ثلاثي الأبعاد</p>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <button type="button" class="icon-pill" id="btnLangToggle" aria-label="Switch language">
+              <span id="langToggleLabel">EN</span>
+            </button>
+            <button type="button" class="icon-pill" id="btnThemeToggle" aria-label="Toggle theme">
+              <svg id="themeIconSun" class="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+              </svg>
+              <svg id="themeIconMoon" class="theme-icon hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+              <span class="theme-label" id="themeToggleLabel">داكن</span>
+            </button>
+          </div>
+        </div>
+
+        <nav class="main-tabs" role="tablist" aria-label="الأوضاع الرئيسية">
+          <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-tab="train" id="tabBtnTrain">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+            </svg>
+            <span data-i18n="tabTrain">تدريب</span>
+          </button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="test" id="tabBtnTest">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            <span data-i18n="tabTest">اختبار</span>
+          </button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="compare" id="tabBtnCompare">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span data-i18n="tabCompare">مقارنة</span>
+          </button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="history" id="tabBtnHistory">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 3v18h18"></path>
+              <path d="M7 14l4-4 4 4 5-6"></path>
+            </svg>
+            <span data-i18n="tabHistory">سجلي</span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="app-main">
+      <!-- URL Deep-Link Challenge Banner -->
+      <section class="challenge-banner hidden" id="urlChallengeBanner" aria-live="polite">
+        <div class="challenge-banner-body">
+          <div class="challenge-banner-head">
+            <span class="badge badge-accent" data-i18n="urlChallengeTag">رابط تحدٍّ مشترك</span>
+            <span class="seed-chip num" dir="ltr" id="urlChallengeSeed">SM-0000</span>
+          </div>
+          <p class="challenge-banner-text" id="urlChallengeDesc"></p>
+        </div>
+        <div class="challenge-banner-actions">
+          <button type="button" class="btn btn-primary" id="btnStartUrlChallenge" data-i18n="startSharedChallenge">ابدأ نفس التحدي الآن</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnDismissUrlChallenge" data-i18n="dismiss">تجاهل</button>
+        </div>
+      </section>
+
+      <!-- TAB 1: TRAINING -->
+      <section class="tab-panel" id="panelTrain" role="tabpanel" aria-labelledby="tabBtnTrain">
+        <div class="train-toolbar card">
+          <div class="toolbar-group">
+            <span class="toolbar-label" data-i18n="formatLabel">النمط</span>
+            <div class="segmented" id="trainFormatSeg" role="group">
+              <button type="button" class="seg-btn active" data-value="pair" data-i18n="formatPairShort">شكلان 3D</button>
+              <button type="button" class="seg-btn" data-value="quad" data-i18n="formatQuadShort">اختيار من 4</button>
+            </div>
+          </div>
+
+          <div class="toolbar-group">
+            <span class="toolbar-label" data-i18n="difficultyLabel">المستوى</span>
+            <div class="level-pills" id="trainLevelPills" role="group">
+              <button type="button" class="pill-btn active" data-value="adaptive" data-i18n="adaptiveShort">تكيّفي</button>
+              <button type="button" class="pill-btn num" dir="ltr" data-value="1">1</button>
+              <button type="button" class="pill-btn num" dir="ltr" data-value="2">2</button>
+              <button type="button" class="pill-btn num" dir="ltr" data-value="3">3</button>
+              <button type="button" class="pill-btn num" dir="ltr" data-value="4">4</button>
+              <button type="button" class="pill-btn num" dir="ltr" data-value="5">5</button>
+            </div>
+          </div>
+
+          <div class="train-stats-strip">
+            <div class="mini-stat">
+              <span class="mini-stat-label" data-i18n="currentLevel">المستوى</span>
+              <span class="mini-stat-value" id="trainLevelReadout"></span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-label" data-i18n="accuracy">الدقة</span>
+              <span class="mini-stat-value num" dir="ltr" id="trainAccReadout">0 / 0</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-stat-label" data-i18n="streak">السلسلة</span>
+              <span class="mini-stat-value num" dir="ltr" id="trainStreakReadout">0</span>
+            </div>
+            <button type="button" class="btn btn-ghost btn-xs hidden" id="btnSaveTrainSession" data-i18n="saveTraining">حفظ في السجل</button>
+          </div>
+        </div>
+
+        <!-- Training Prompt & Arena -->
+        <div class="arena-card card" id="trainArenaCard">
+          <div class="arena-head">
+            <p class="arena-question" id="trainQuestionPrompt"></p>
+            <div class="arena-meta">
+              <span class="badge badge-neutral" id="trainCalmBadge" data-i18n="untimedCalm">تدريب هادئ بلا وقت</span>
+              <span class="badge badge-neutral hidden" id="trainOrbitBadge" data-i18n="orbitUnlocked">اسحب للتدوير 3D</span>
+            </div>
+          </div>
+
+          <!-- Pair Canvases -->
+          <div class="pair-grid" id="trainPairGrid">
+            <div class="viewport-box" id="trainRefBox">
+              <div class="viewport-label-row">
+                <span class="viewport-label" data-i18n="refFigure">الشكل المرجعي</span>
+                <span class="viewport-hint hidden" id="trainRefHint" data-i18n="dragHint">اسحب للتدوير</span>
+              </div>
+              <div class="canvas-wrap">
+                <canvas id="trainRefCanvas" aria-label="الشكل المرجعي ثلاثي الأبعاد"></canvas>
+              </div>
+            </div>
+            <div class="viewport-box" id="trainTargetBox">
+              <div class="viewport-label-row">
+                <span class="viewport-label" data-i18n="targetFigure">الشكل المقارَن</span>
+                <span class="viewport-hint hidden" id="trainTargetHint" data-i18n="dragHint">اسحب للتدوير</span>
+              </div>
+              <div class="canvas-wrap">
+                <canvas id="trainTargetCanvas" aria-label="الشكل المقارن ثلاثي الأبعاد"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quad Canvases -->
+          <div class="quad-layout hidden" id="trainQuadLayout">
+            <div class="quad-ref-col">
+              <div class="viewport-box">
+                <div class="viewport-label-row">
+                  <span class="viewport-label" data-i18n="refFigure">الشكل المرجعي</span>
+                  <span class="viewport-hint hidden" id="trainQuadRefHint" data-i18n="dragHint">اسحب للتدوير</span>
+                </div>
+                <div class="canvas-wrap canvas-wrap-quad-ref">
+                  <canvas id="trainQuadRefCanvas" aria-label="الشكل المرجعي ثلاثي الأبعاد"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="quad-options-grid" id="trainQuadOptionsGrid"></div>
+          </div>
+
+          <!-- Pair Decision Controls -->
+          <div class="decision-row" id="trainDecisionRow">
+            <button type="button" class="btn-decision btn-same" id="btnTrainSame">
+              <span class="decision-main" data-i18n="sameFigureBtn">نفس المجسم (دوران)</span>
+              <span class="decision-sub" data-i18n="sameFigureSub">يطابقه بالتدوير ثلاثي الأبعاد</span>
+              <kbd class="kbd-hint">1</kbd>
+            </button>
+            <button type="button" class="btn-decision btn-diff" id="btnTrainDiff">
+              <span class="decision-main" data-i18n="diffFigureBtn">مختلف (معكوس مرآوياً)</span>
+              <span class="decision-sub" data-i18n="diffFigureSub">صورة مرآوية لا تطابقه بالدوران</span>
+              <kbd class="kbd-hint">2</kbd>
+            </button>
+          </div>
+
+          <!-- Post-Answer Live 3D Reveal Panel -->
+          <div class="reveal-panel hidden" id="trainRevealPanel" aria-live="polite">
+            <div class="reveal-verdict" id="trainRevealVerdict">
+              <div class="verdict-copy">
+                <div class="verdict-title-row">
+                  <span class="verdict-title" id="trainVerdictTitle"></span>
+                  <span class="badge badge-accent" id="trainAngleBadge"></span>
+                  <span class="badge badge-neutral" id="trainRtBadge"></span>
+                </div>
+                <p class="verdict-explain" id="trainVerdictExplain"></p>
+              </div>
+              <button type="button" class="btn btn-primary" id="btnTrainNext">
+                <span data-i18n="nextQuestion">السؤال التالي</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12h14M12 5l7 7-7 7"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div class="reveal-controls">
+              <button type="button" class="btn btn-accent-soft" id="btnTrainAnimate">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span data-i18n="watchLiveRotation">شاهد الدوران الحي</span>
+              </button>
+              <button type="button" class="btn btn-outline toggle-chip" id="btnTrainAnchor" aria-pressed="false">
+                <span class="anchor-dot" aria-hidden="true"></span>
+                <span data-i18n="toggleAnchor">تمييز الطرف المرجعي</span>
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btnTrainResetView" data-i18n="resetView">إعادة الزاوية</button>
+            </div>
+            <p class="reveal-tip" id="trainRevealTip" data-i18n="orbitTip">اسحب أي مجسم بإصبعك أو الفأرة لتدويره ومقارنة اتجاه الذراع الطرفية.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: STANDARD TEST -->
+      <section class="tab-panel hidden" id="panelTest" role="tabpanel" aria-labelledby="tabBtnTest">
+        <!-- Test Setup -->
+        <div class="setup-card card" id="testSetupView">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title" data-i18n="testSetupTitle">إعداد الاختبار القياسي</h2>
+              <p class="section-desc" data-i18n="testSetupDesc">تقييم دقيق بأسلوب شيبرد–ميتزلر مع تحليل زوايا الدوران ورمز مشاركة للمقارنة.</p>
+            </div>
+          </div>
+
+          <div class="config-grid">
+            <div class="field-block">
+              <label class="field-label" data-i18n="formatLabel">النمط</label>
+              <div class="segmented segmented-full" id="testFormatSeg">
+                <button type="button" class="seg-btn active" data-value="pair" data-i18n="formatPairFull">شكلان 3D (نفس / مختلف)</button>
+                <button type="button" class="seg-btn" data-value="quad" data-i18n="formatQuadFull">اختيار من 4 (AZTest)</button>
+              </div>
+            </div>
+
+            <div class="field-block">
+              <label class="field-label" data-i18n="difficultyLabel">المستوى</label>
+              <div class="level-select-grid" id="testLevelGrid"></div>
+            </div>
+
+            <div class="field-row-2">
+              <div class="field-block">
+                <label class="field-label" data-i18n="questionCountLabel">عدد الأسئلة</label>
+                <div class="segmented segmented-full" id="testCountSeg">
+                  <button type="button" class="seg-btn num" dir="ltr" data-value="8">8</button>
+                  <button type="button" class="seg-btn active num" dir="ltr" data-value="12">12</button>
+                  <button type="button" class="seg-btn num" dir="ltr" data-value="16">16</button>
+                  <button type="button" class="seg-btn num" dir="ltr" data-value="20">20</button>
+                </div>
+              </div>
+
+              <div class="field-block">
+                <label class="field-label" data-i18n="timerLabel">الوقت</label>
+                <div class="segmented segmented-full" id="testTimerSeg">
+                  <button type="button" class="seg-btn active" data-value="0" data-i18n="timerNone">بلا وقت</button>
+                  <button type="button" class="seg-btn" data-value="180" data-i18n="timer3m">3 دقائق</button>
+                  <button type="button" class="seg-btn" data-value="300" data-i18n="timer5m">5 دقائق</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-row-2">
+              <div class="field-block">
+                <label class="field-label" for="testPlayerName" data-i18n="playerNameOptional">اسم المتدرب (اختياري)</label>
+                <input type="text" id="testPlayerName" class="text-input" maxlength="24" placeholder="اللاعب 1">
+              </div>
+
+              <div class="field-block">
+                <label class="field-label" for="testSeedInput" data-i18n="seedLabel">رمز مجموعة الأسئلة (Seed)</label>
+                <div class="input-with-action">
+                  <input type="text" id="testSeedInput" class="text-input num" dir="ltr" maxlength="16" placeholder="SM-4829">
+                  <button type="button" class="btn btn-outline btn-sm" id="btnTestNewSeed" data-i18n="newSeed">رمز جديد</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-footer">
+            <button type="button" class="btn btn-primary btn-lg" id="btnStartTest" data-i18n="startTest">ابدأ الاختبار</button>
+          </div>
+        </div>
+
+        <!-- Active Test Runner (shared for Test & Pass-and-Play rounds) -->
+        <div class="runner-card card hidden" id="testRunnerView">
+          <div class="runner-top">
+            <div class="runner-info">
+              <span class="badge badge-accent" id="runnerPlayerBadge"></span>
+              <span class="runner-progress-text" id="runnerProgressText"></span>
+              <span class="seed-chip num" dir="ltr" id="runnerSeedBadge"></span>
+            </div>
+            <div class="runner-right">
+              <span class="timer-pill num" dir="ltr" id="runnerTimerReadout">00:00</span>
+              <button type="button" class="btn btn-ghost btn-xs" id="btnCancelTest" data-i18n="exitTest">إنهاء</button>
+            </div>
+          </div>
+
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-fill" id="runnerProgressFill"></div>
+          </div>
+
+          <p class="arena-question" id="runnerQuestionPrompt"></p>
+
+          <!-- Runner Pair Grid -->
+          <div class="pair-grid" id="runnerPairGrid">
+            <div class="viewport-box">
+              <div class="viewport-label-row">
+                <span class="viewport-label" data-i18n="refFigure">الشكل المرجعي</span>
+              </div>
+              <div class="canvas-wrap">
+                <canvas id="runnerRefCanvas" aria-label="الشكل المرجعي للاختبار"></canvas>
+              </div>
+            </div>
+            <div class="viewport-box">
+              <div class="viewport-label-row">
+                <span class="viewport-label" data-i18n="targetFigure">الشكل المقارَن</span>
+              </div>
+              <div class="canvas-wrap">
+                <canvas id="runnerTargetCanvas" aria-label="الشكل المقارن للاختبار"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Runner Quad Layout -->
+          <div class="quad-layout hidden" id="runnerQuadLayout">
+            <div class="quad-ref-col">
+              <div class="viewport-box">
+                <div class="viewport-label-row">
+                  <span class="viewport-label" data-i18n="refFigure">الشكل المرجعي</span>
+                </div>
+                <div class="canvas-wrap canvas-wrap-quad-ref">
+                  <canvas id="runnerQuadRefCanvas" aria-label="الشكل المرجعي للاختبار"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="quad-options-grid" id="runnerQuadOptionsGrid"></div>
+          </div>
+
+          <!-- Runner Pair Decisions -->
+          <div class="decision-row" id="runnerDecisionRow">
+            <button type="button" class="btn-decision btn-same" id="btnRunnerSame">
+              <span class="decision-main" data-i18n="sameFigureBtn">نفس المجسم (دوران)</span>
+              <span class="decision-sub" data-i18n="sameFigureSub">يطابقه بالتدوير ثلاثي الأبعاد</span>
+              <kbd class="kbd-hint">1</kbd>
+            </button>
+            <button type="button" class="btn-decision btn-diff" id="btnRunnerDiff">
+              <span class="decision-main" data-i18n="diffFigureBtn">مختلف (معكوس مرآوياً)</span>
+              <span class="decision-sub" data-i18n="diffFigureSub">صورة مرآوية لا تطابقه بالدوران</span>
+              <kbd class="kbd-hint">2</kbd>
+            </button>
+          </div>
+        </div>
+
+        <!-- Test Results Dashboard -->
+        <div class="results-view hidden" id="testResultsView"></div>
+      </section>
+
+      <!-- TAB 3: 2-PLAYER COMPARISON -->
+      <section class="tab-panel hidden" id="panelCompare" role="tabpanel" aria-labelledby="tabBtnCompare">
+        <div class="compare-subtabs card">
+          <div class="segmented segmented-full" id="compareModeSeg">
+            <button type="button" class="seg-btn active" data-value="pass" data-i18n="comparePassMode">على نفس الهاتف (بالتناوب)</button>
+            <button type="button" class="seg-btn" data-value="remote" data-i18n="compareRemoteMode">على جهازَين (رابط + رمز النتيجة)</button>
+          </div>
+        </div>
+
+        <!-- Sub-mode A: Pass-and-Play Setup -->
+        <div class="setup-card card" id="comparePassSetup">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title" data-i18n="passSetupTitle">مقارنة مباشرة على نفس الجهاز</h2>
+              <p class="section-desc" data-i18n="passSetupDesc">يخوض اللاعبان نفس المجسمات ثلاثية الأبعاد وبنفس الزوايا والترتيب تماماً للمقارنة العادلة.</p>
+            </div>
+          </div>
+
+          <div class="config-grid">
+            <div class="field-row-2">
+              <div class="field-block">
+                <label class="field-label" for="p1NameInput" data-i18n="player1Label">اسم اللاعب 1</label>
+                <input type="text" id="p1NameInput" class="text-input" maxlength="24" value="اللاعب 1">
+              </div>
+              <div class="field-block">
+                <label class="field-label" for="p2NameInput" data-i18n="player2Label">اسم اللاعب 2</label>
+                <input type="text" id="p2NameInput" class="text-input" maxlength="24" value="اللاعب 2">
+              </div>
+            </div>
+
+            <div class="field-block">
+              <label class="field-label" data-i18n="formatLabel">النمط</label>
+              <div class="segmented segmented-full" id="cmpFormatSeg">
+                <button type="button" class="seg-btn active" data-value="pair" data-i18n="formatPairFull">شكلان 3D (نفس / مختلف)</button>
+                <button type="button" class="seg-btn" data-value="quad" data-i18n="formatQuadFull">اختيار من 4 (AZTest)</button>
+              </div>
+            </div>
+
+            <div class="field-row-2">
+              <div class="field-block">
+                <label class="field-label" data-i18n="difficultyLabel">المستوى</label>
+                <div class="level-pills" id="cmpLevelPills">
+                  <button type="button" class="pill-btn" data-value="adaptive" data-i18n="adaptiveShort">تكيّفي</button>
+                  <button type="button" class="pill-btn num" dir="ltr" data-value="1">1</button>
+                  <button type="button" class="pill-btn num" dir="ltr" data-value="2">2</button>
+                  <button type="button" class="pill-btn active num" dir="ltr" data-value="3">3</button>
+                  <button type="button" class="pill-btn num" dir="ltr" data-value="4">4</button>
+                  <button type="button" class="pill-btn num" dir="ltr" data-value="5">5</button>
+                </div>
+              </div>
+
+              <div class="field-block">
+                <label class="field-label" data-i18n="questionCountLabel">عدد الأسئلة</label>
+                <div class="segmented segmented-full" id="cmpCountSeg">
+                  <button type="button" class="seg-btn active num" dir="ltr" data-value="8">8</button>
+                  <button type="button" class="seg-btn num" dir="ltr" data-value="12">12</button>
+                  <button type="button" class="seg-btn num" dir="ltr" data-value="16">16</button>
+                  <button type="button" class="seg-btn num" dir="ltr" data-value="20">20</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-row-2">
+              <div class="field-block">
+                <label class="field-label" data-i18n="timerLabel">الوقت</label>
+                <div class="segmented segmented-full" id="cmpTimerSeg">
+                  <button type="button" class="seg-btn active" data-value="0" data-i18n="timerNone">بلا وقت</button>
+                  <button type="button" class="seg-btn" data-value="180" data-i18n="timer3m">3 دقائق</button>
+                  <button type="button" class="seg-btn" data-value="300" data-i18n="timer5m">5 دقائق</button>
+                </div>
+              </div>
+
+              <div class="field-block">
+                <label class="field-label" for="cmpSeedInput" data-i18n="seedLabel">رمز مجموعة الأسئلة (Seed)</label>
+                <div class="input-with-action">
+                  <input type="text" id="cmpSeedInput" class="text-input num" dir="ltr" maxlength="16" placeholder="SM-4829">
+                  <button type="button" class="btn btn-outline btn-sm" id="btnCmpNewSeed" data-i18n="newSeed">رمز جديد</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-footer">
+            <button type="button" class="btn btn-primary btn-lg" id="btnStartPassP1">ابدأ جولة اللاعب 1</button>
+          </div>
+        </div>
+
+        <!-- Privacy Handoff Screen (Between Player 1 and Player 2) -->
+        <div class="handoff-card card hidden" id="compareHandoffView">
+          <div class="handoff-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="M9 12l2 2 4-4"></path>
+            </svg>
+          </div>
+          <h2 class="handoff-title" id="handoffTitle"></h2>
+          <p class="handoff-desc" id="handoffDesc"></p>
+          <div class="handoff-meta" id="handoffMeta"></div>
+          <div class="handoff-actions">
+            <button type="button" class="btn btn-primary btn-lg" id="btnStartPassP2"></button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnAbortHandoff" data-i18n="cancelMatch">إلغاء المقارنة</button>
+          </div>
+        </div>
+
+        <!-- Sub-mode B: Two-Device Sync (Link + Result Code) -->
+        <div class="remote-grid hidden" id="compareRemoteView">
+          <div class="card">
+            <h3 class="card-title" data-i18n="remoteStep1Title">1. شارك رابط نفس التحدي</h3>
+            <p class="section-desc" data-i18n="remoteStep1Desc">أرسل هذا الرابط إلى الجهاز الثاني ليحصل كلاكما على نفس المجسمات والزوايا بالضبط.</p>
+            <div class="share-url-box">
+              <code class="share-url-code num" dir="ltr" id="remoteShareUrl"></code>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="btnCopyRemoteUrl" data-i18n="copyChallengeLink">نسخ رابط التحدي</button>
+              <button type="button" class="btn btn-outline" id="btnPlayRemoteSelf" data-i18n="playThisChallenge">ابدأ جولتي الآن</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btnRemoteNewSeed" data-i18n="newSeed">رمز جديد</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title" data-i18n="remoteStep2Title">2. الصق رمزَي النتيجة للمقارنة</h3>
+            <p class="section-desc" data-i18n="remoteStep2Desc">بعد إنهاء الاختبار على كل جهاز، انسخ رمز النتيجة (<span class="num" dir="ltr">M3D-...</span>) وألصقه هنا.</p>
+            <div class="config-grid">
+              <div class="field-block">
+                <label class="field-label" for="codeInputA" data-i18n="codeALabel">رمز نتيجة اللاعب الأول</label>
+                <textarea id="codeInputA" class="code-textarea num" dir="ltr" rows="2" placeholder="M3D-..."></textarea>
+              </div>
+              <div class="field-block">
+                <label class="field-label" for="codeInputB" data-i18n="codeBLabel">رمز نتيجة اللاعب الثاني</label>
+                <textarea id="codeInputB" class="code-textarea num" dir="ltr" rows="2" placeholder="M3D-..."></textarea>
+              </div>
+              <p class="error-inline hidden" id="remoteCodeError"></p>
+              <div class="btn-row">
+                <button type="button" class="btn btn-primary" id="btnCompareCodes" data-i18n="compareNow">عرض المقارنة المباشرة</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="btnUseLastTestCode" data-i18n="fillMyLastResult">تعبئة آخر اختبار لي</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Head-to-Head Comparison Dashboard -->
+        <div class="results-view hidden" id="compareResultsView"></div>
+      </section>
+
+      <!-- TAB 4: HISTORY -->
+      <section class="tab-panel hidden" id="panelHistory" role="tabpanel" aria-labelledby="tabBtnHistory">
+        <div id="historyContent"></div>
+      </section>
+    </main>
+
+    <!-- 3D Replay Modal (used in Test Review & Head-to-Head Comparison) -->
+    <div class="modal-backdrop hidden" id="replayModal" role="dialog" aria-modal="true" aria-labelledby="replayModalTitle">
+      <div class="modal-sheet card">
+        <div class="modal-head">
+          <div>
+            <h3 class="modal-title" id="replayModalTitle"></h3>
+            <p class="modal-subtitle" id="replayModalSubtitle"></p>
+          </div>
+          <button type="button" class="icon-pill" id="btnCloseReplayModal" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-verdict-strip" id="replayVerdictStrip"></div>
+
+        <div class="pair-grid" id="replayPairGrid">
+          <div class="viewport-box">
+            <div class="viewport-label-row">
+              <span class="viewport-label" data-i18n="refFigure">الشكل المرجعي</span>
+              <span class="viewport-hint" data-i18n="dragHint">اسحب للتدوير</span>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="replayRefCanvas"></canvas>
+            </div>
+          </div>
+          <div class="viewport-box">
+            <div class="viewport-label-row">
+              <span class="viewport-label" data-i18n="targetFigure">الشكل المقارَن</span>
+              <span class="viewport-hint" data-i18n="dragHint">اسحب للتدوير</span>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="replayTargetCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="quad-layout hidden" id="replayQuadLayout">
+          <div class="quad-ref-col">
+            <div class="viewport-box">
+              <div class="viewport-label-row">
+                <span class="viewport-label" data-i18n="refFigure">الشكل المرجعي</span>
+                <span class="viewport-hint" data-i18n="dragHint">اسحب للتدوير</span>
+              </div>
+              <div class="canvas-wrap canvas-wrap-quad-ref">
+                <canvas id="replayQuadRefCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="quad-options-grid" id="replayQuadOptionsGrid"></div>
+        </div>
+
+        <div class="reveal-controls modal-controls">
+          <button type="button" class="btn btn-primary" id="btnReplayAnimate">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span data-i18n="watchLiveRotation">شاهد الدوران الحي</span>
+          </button>
+          <button type="button" class="btn btn-outline toggle-chip active" id="btnReplayAnchor" aria-pressed="true">
+            <span class="anchor-dot" aria-hidden="true"></span>
+            <span data-i18n="toggleAnchor">تمييز الطرف المرجعي</span>
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnReplayReset" data-i18n="resetView">إعادة الزاوية</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast hidden" id="appToast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="./engine3d.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
