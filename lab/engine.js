@@ -292,8 +292,12 @@
     sessionState.tabInterruptions = 0;
     bindVisibilityGuard();
     calibrateDisplayRefresh();
+    if (domRefs.stage && domRefs.stage.parentElement && domRefs.stage.parentElement.classList) {
+      domRefs.stage.parentElement.classList.remove("is-canvas-stage");
+    }
     if (domRefs.overlay) {
       domRefs.overlay.hidden = false;
+      domRefs.overlay.scrollTop = 0;
     }
   }
 
@@ -302,6 +306,7 @@
     unbindVisibilityGuard();
     resolveDom();
     if (domRefs.overlay) {
+      domRefs.overlay.scrollTop = 0;
       domRefs.overlay.hidden = true;
     }
     if (domRefs.stage) {
@@ -521,10 +526,41 @@
   }
 
   function formatProgressPrefix(trialText) {
+    var cleanTrial = String(trialText || "").replace(/^Trial\s+/i, "");
     if (sessionState.isBattery) {
-      return "M" + (sessionState.batteryIndex + 1) + "/6 · " + trialText;
+      return "مسبار " + (sessionState.batteryIndex + 1) + "/6 · " + cleanTrial;
     }
-    return trialText;
+    return cleanTrial;
+  }
+
+  function formatInlineTechHtml(rawStr) {
+    var s = esc(rawStr);
+    var slots = [];
+    function keep(html) {
+      var id = slots.length;
+      slots.push(html);
+      return "\uE000" + id + "\uE001";
+    }
+    s = s.replace(/\((Space|Enter)\)/g, function (_m, k) {
+      return keep('<kbd class="kbd-chip ltr-iso">' + k + "</kbd>");
+    });
+    s = s.replace(/\(([^()\uE000\uE001]+)\)/g, function (full, inner) {
+      if (/[\u0600-\u06FF]/.test(inner)) return full;
+      if (/^\d+\s*[–-]\s*\d+$/.test(inner.trim())) {
+        return keep('<kbd class="kbd-chip ltr-iso">' + inner.trim() + "</kbd>");
+      }
+      if (/^\d+$/.test(inner.trim())) return full;
+      return keep('<span class="ltr-iso">' + full + "</span>");
+    });
+    s = s.replace(/(?:\b(?:p|RCI)\s*(?:&lt;|&gt;|=|≥|≤)\s*[±+-]?\d+(?:\.\d+)?|(?:&lt;|&gt;|≥|≤)\s*[±+-]?\d+(?:\.\d+)?%?)/g, function (m) {
+      return keep('<span class="ltr-iso">' + m + "</span>");
+    });
+    s = s.replace(/(?:~?\d+(?:\.\d+)?\s*(?:ms|s)\b|~?\d+(?:\.\d+)?%|[±+-]\d+(?:\.\d+)?%?|\b\d+\s*[–-]\s*\d+\b|\bZ2×Z2\b|\b2D\b|\bMAP-MLE(?:\s+Tau)?\b|\bABBA\b|\bTBRS\b|\bDLPFC\b|\bLeft\s+IFS\b|\bRLPFC\b|\brAI\b|\bIFG\b|\bDMN\b|\bTau\b|\bMu\b|\bLag\s*(?:0|≥\s*1)\b)/g, function (m) {
+      return keep('<span class="ltr-iso">' + m + "</span>");
+    });
+    return s.replace(/\uE000(\d+)\uE001/g, function (_m, idx) {
+      return slots[Number(idx)];
+    }).replace(/<\/kbd>\s*\.\s*$/, "</kbd>");
   }
 
   function launchProbeIntro(probeId, warmupDoneNote) {
@@ -532,37 +568,68 @@
     sessionState.currentProbeId = probeId;
     sessionState.tabInterruptions = 0;
     var meta = findProbeMeta(probeId);
+    var shortCode = String(meta.code || probeId.toUpperCase()).split("·")[0].trim();
     setHeader(
-      meta.code + " — " + meta.title,
-      sessionState.isBattery ? "Battery " + (sessionState.batteryIndex + 1) + "/6" : "Ready"
+      shortCode + " — " + meta.title,
+      sessionState.isBattery ? "البطارية " + (sessionState.batteryIndex + 1) + " / 6" : "جاهز للبدء"
     );
 
     var stepsHtml = "";
     var steps = Array.isArray(meta.instructions) ? meta.instructions : [];
     for (var i = 0; i < steps.length; i += 1) {
-      stepsHtml += "<li>" + esc(steps[i]) + "</li>";
+      var stLine = formatInlineTechHtml(steps[i]);
+      var colonPos = stLine.indexOf(":");
+      if (colonPos > 0 && colonPos < 28) {
+        stLine = "<strong>" + stLine.slice(0, colonPos + 1) + "</strong>" + stLine.slice(colonPos + 1);
+      }
+      stepsHtml += "<li>" + stLine + "</li>";
     }
 
     var warmupBanner = warmupDoneNote
       ? '<div class="warmup-feedback">' + esc(warmupDoneNote) + "</div>"
       : "";
 
+    var flowHtml = "";
+    if (Array.isArray(meta.flowSteps) && meta.flowSteps.length > 0) {
+      flowHtml =
+        '<div class="probe-flow-box" aria-label="مسار الجولة">' +
+        '<span class="probe-flow-label">مسار الجولة</span>' +
+        '<div class="probe-flow-track">' +
+        meta.flowSteps.map(function (fs, idx) {
+          var stepHtml = '<span class="flow-step">' + formatInlineTechHtml(fs) + "</span>";
+          return idx === 0
+            ? stepHtml
+            : '<span class="flow-step-unit"><span class="flow-arrow" aria-hidden="true">←</span>' + stepHtml + "</span>";
+        }).join("") +
+        "</div></div>";
+    } else if (meta.example) {
+      flowHtml = '<div class="probe-example-box">' + esc(meta.example) + "</div>";
+    }
+
+    var domainTag = meta.domainTag || meta.shortTitle || meta.region;
+    var metaChip = meta.metaChip || (meta.durationSec ? "~" + Math.max(1, Math.round((meta.durationSec / 60) * 10) / 10) + " د" : "");
+    var isCtrlCls = meta.isControl || probeId === "control" ? " is-control" : "";
+
     domRefs.stage.innerHTML =
-      '<div class="probe-intro">' +
-      '<div class="probe-region-badge">' +
-      esc(meta.region) +
+      '<div class="probe-intro' + isCtrlCls + '">' +
+      '<div class="probe-intro-top">' +
+      '<div class="probe-intro-badges">' +
+      '<span class="probe-code ltr-iso">' + esc(shortCode) + "</span>" +
+      '<span class="probe-domain-tag">' + formatInlineTechHtml(domainTag) + "</span>" +
       "</div>" +
-      '<h2 class="probe-title" style="font-size:1.3rem;margin:0;">' +
+      (metaChip ? '<div class="probe-intro-meta"><span class="intro-meta-chip">' + formatInlineTechHtml(metaChip) + "</span></div>" : "") +
+      "</div>" +
+      '<h2 class="probe-intro-title">' +
       esc(meta.title) +
       "</h2>" +
       warmupBanner +
       '<ol class="probe-steps">' +
       stepsHtml +
       "</ol>" +
-      (meta.example ? '<div class="probe-example-box">' + esc(meta.example) + "</div>" : "") +
+      flowHtml +
       '<div class="result-actions">' +
       '<button id="btnWarmupProbe" type="button" class="btn-ghost">تجربة سريعة (غير محسوبة)</button>' +
-      '<button id="btnStartProbeNow" type="button" class="btn-primary">ابدأ الآن (Enter)</button>' +
+      '<button id="btnStartProbeNow" type="button" class="btn-primary"><span>ابدأ الآن</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>' +
       "</div>" +
       "</div>";
 
@@ -598,7 +665,7 @@
     var S = getStimuli();
     var meta = findProbeMeta(probeId);
     var sample = typeof S.generateWarmupTrial === "function" ? S.generateWarmupTrial(probeId) : null;
-    setHeader(meta.title + " — تجربة سريعة", "Practice");
+    setHeader(meta.title + " — تجربة سريعة", "تدريب غير محسوب");
 
     if (probeId === "isolation" && sample) {
       var wIdx = 0;
@@ -1378,7 +1445,7 @@
         '<div class="stim-step-text">' +
         initParts.join(" &nbsp;|&nbsp; ") +
         "</div>" +
-        '<button id="btnBeginSteps" type="button" class="btn-primary">ابدأ (مسافة)</button>' +
+        '<button id="btnBeginSteps" type="button" class="btn-primary"><span>ابدأ</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button>' +
         "</div>";
 
       startCountdownBar(document.getElementById("updInitBar"), initCapMs);
@@ -1421,7 +1488,7 @@
           esc(stepObj.text) +
           "</div>" +
           renderDots(tr.steps.length, sIdx) +
-          '<button id="btnNextUpdateStep" type="button" class="btn-primary">التالي (مسافة)</button>' +
+          '<button id="btnNextUpdateStep" type="button" class="btn-primary"><span>التالي</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button>' +
           "</div>";
 
         onNextFramePaint(function (paintTs) {
@@ -2025,9 +2092,9 @@
           esc(tr.premises[pIdx]) +
           "</div>" +
           renderDots(totalP, pIdx) +
-          '<button id="btnNextPremise" type="button" class="btn-primary">' +
-          (pIdx < totalP - 1 ? "التالي (مسافة)" : "السؤال (مسافة)") +
-          "</button>" +
+          '<button id="btnNextPremise" type="button" class="btn-primary"><span>' +
+          (pIdx < totalP - 1 ? "التالي" : "السؤال") +
+          '</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button>' +
           "</div>";
 
         onNextFramePaint(function (pTs) {
@@ -2300,16 +2367,16 @@
     var S = getStimuli();
     var cfg = S.generateVigilanceConfig();
     var meta = findProbeMeta("vigilance");
-    setHeader(meta.title, sessionState.isBattery ? "Battery 5/6 · Continuous" : "Continuous");
+    setHeader(meta.title, sessionState.isBattery ? "مسبار 5/6 · متصل" : "متصل · 36 ومضة");
 
     domRefs.stage.innerHTML =
       '<div class="vigilance-pad">' +
       '<div class="probe-bar-track" style="max-width:340px;"><div id="vigProgFill" class="probe-bar-fill" style="width:0%"></div></div>' +
       '<div id="vigPulseRing" class="pulse-ring">●</div>' +
-      '<p id="vigStatusMsg" class="vig-status-msg">ضغطة واحدة لكل ضوء: ثلاث بـ (1–3) ورابعتها بـ (4 فقط)</p>' +
+      '<p id="vigStatusMsg" class="vig-status-msg">ضغطة واحدة لكل ضوء: ثلاث بالأول ورابعتها بالثاني</p>' +
       '<div class="vig-actions">' +
-      '<button id="btnVigStep" type="button" class="vig-btn-step">ومضة 1 أو 2 أو 3 (مسافة)</button>' +
-      '<button id="btnVigClose" type="button" class="vig-btn-close">الومضة 4 فقط (Enter)</button>' +
+      '<button id="btnVigStep" type="button" class="vig-btn-step"><span>ومضة 1 أو 2 أو 3</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button>' +
+      '<button id="btnVigClose" type="button" class="vig-btn-close"><span>الومضة 4 فقط</span><kbd class="kbd-chip ltr-iso">Enter</kbd></button>' +
       "</div>" +
       '<div class="arena-utility-row">' +
       '<button id="btnVigReset" type="button" class="vig-btn-reset">ضاع العدّ — أعد من 1</button>' +
@@ -2399,7 +2466,7 @@
       // Basner & Dinges (2011) PVT standard: RT < 120ms is an anticipatory false start, not a true visual response
       if (rt < (cfg.anticipationMs || 120)) {
         falseStarts += 1;
-        if (msgEl) msgEl.textContent = "استباقي مبكر (" + rt + " ms < 120 ms)";
+        if (msgEl) msgEl.innerHTML = 'استباقي مبكر (<span class="ltr-iso">' + rt + " ms &lt; 120 ms</span>)";
         return;
       }
 
@@ -2448,7 +2515,7 @@
 
       halfPulseScores.push(pulseHit);
       if (msgEl) {
-        msgEl.textContent = rt + " ms";
+        msgEl.innerHTML = '<span class="ltr-iso">' + rt + " ms</span>";
       }
     }
 
@@ -2724,9 +2791,9 @@
 
     function runStackTrial(tr) {
       var frames = [
-        { label: "1 / 3", text: tr.frame1Text, btn: "التالي (مسافة)" },
-        { label: "2 / 3", text: tr.frame2Text, btn: "التالي (مسافة)" },
-        { label: "3 / 3", text: tr.frame3Text, btn: "احسب الناتج (مسافة)" }
+        { label: "1 / 3", text: tr.frame1Text, btn: "التالي" },
+        { label: "2 / 3", text: tr.frame2Text, btn: "التالي" },
+        { label: "3 / 3", text: tr.frame3Text, btn: "احسب الناتج" }
       ];
 
       function showFrame(fIdx) {
@@ -2797,9 +2864,9 @@
           esc(fr.text) +
           "</span></div>" +
           renderDots(3, fIdx) +
-          '<button id="btnNextStackFrame" type="button" class="btn-primary">' +
+          '<button id="btnNextStackFrame" type="button" class="btn-primary"><span>' +
           esc(fr.btn) +
-          "</button>" +
+          '</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button>' +
           "</div>";
 
         var adv = function (ev) {
@@ -2830,7 +2897,7 @@
           '<div class="stim-label">الشرط (<span class="ltr-iso">1 / 3</span>)</div>' +
           '<div class="stim-step-text">' + esc(tr.ruleText) + "</div>" +
           renderDots(3, 0) +
-          '<button id="btnRuleNext1" type="button" class="btn-primary">التالي (مسافة)</button>' +
+          '<button id="btnRuleNext1" type="button" class="btn-primary"><span>التالي</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button>' +
           "</div>";
         var go = function (ev) {
           var curTs = nowMs();
@@ -2852,7 +2919,7 @@
           '<div class="stim-label">العدد (<span class="ltr-iso">2 / 3</span>)</div>' +
           '<div class="stim-step-text">' + esc(tr.calcText) + "</div>" +
           renderDots(3, 1) +
-          '<button id="btnRuleNext2" type="button" class="btn-primary">التالي (مسافة)</button>' +
+          '<button id="btnRuleNext2" type="button" class="btn-primary"><span>التالي</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button>' +
           "</div>";
         var go = function (ev) {
           var curTs = nowMs();
@@ -3091,7 +3158,7 @@
     var diag =
       "مكدس الاستدعاء والقاعدة الشرطية تحت المقاطعة سجلا " +
       stackAccPct +
-      "%، والمخزن البصري الصامت (0.8s + فجوة 3.2s بتناظر Z2×Z2) سجل " +
+      "%، والمخزن البصري الصامت (ومضة 0.8s ثم فجوة 3.2s بتناظر Z2×Z2) سجل " +
       visual2dAccPct +
       "%؛ " +
       (score >= 82
@@ -3113,9 +3180,9 @@
       [
         { label: "المكدس والقاعدة الشرطية", val: stackAccPct + "%" },
         { label: "صمود القاعدة بعد المقاطعة", val: ruleInterruptAccPct + "%" },
-        { label: "المخزن البصري 2D (3.2s)", val: visual2dAccPct + "%" },
+        { label: "المخزن البصري (2D · 3.2s)", val: visual2dAccPct + "%" },
         { label: "زمن حل المكدس والشرط", val: stackRtMs + " ms" },
-        { label: "زمن مطابقة التناسب 2D", val: visual2dRtMs + " ms" },
+        { label: "زمن مطابقة التناسب (2D)", val: visual2dRtMs + " ms" },
         { label: "اتساق الجلسة النصفي", val: splitHalfPct + "%" }
       ],
       diag
@@ -3188,7 +3255,7 @@
       cardsHtml +=
         '<div class="submetric-card">' +
         '<span class="stim-label">' +
-        esc(displayCards[i].label) +
+        formatInlineTechHtml(displayCards[i].label) +
         "</span>" +
         '<strong style="font-size:1.06rem;"><span class="ltr-iso">' +
         esc(displayCards[i].val) +
@@ -3212,16 +3279,16 @@
     if (sessionState.isBattery && !isLastBatteryStep) {
       var nextMeta = findProbeMeta(sessionState.batteryQueue[sessionState.batteryIndex + 1]);
       actionsHtml =
-        '<button id="btnNextBatteryProbe" type="button" class="btn-primary">المسبار التالي: ' +
+        '<button id="btnNextBatteryProbe" type="button" class="btn-primary"><span>المسبار التالي: ' +
         esc(nextMeta.shortTitle || nextMeta.title) +
-        " (Enter)</button>";
+        '</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     } else if (isLastBatteryStep) {
       actionsHtml =
-        '<button id="btnFinishFullBattery" type="button" class="btn-primary">عرض الحصيلة الجراحية للبطارية الكاملة (Enter)</button>';
+        '<button id="btnFinishFullBattery" type="button" class="btn-primary"><span>عرض الحصيلة الجراحية للبطارية الكاملة</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     } else {
       actionsHtml =
         '<button id="btnRetryProbe" type="button" class="btn-ghost">إعادة فحص المنطقة</button>' +
-        '<button id="btnDoneProbe" type="button" class="btn-primary">حفظ والعودة للوحة القيادة (Enter)</button>';
+        '<button id="btnDoneProbe" type="button" class="btn-primary"><span>حفظ والعودة للوحة القيادة</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     }
 
     domRefs.stage.innerHTML =
@@ -3242,11 +3309,11 @@
       '<span class="delta-pill ' +
       rciCls +
       '">' +
-      esc(rciInfo.statusAr) +
-      ' (<span class="ltr-iso">RCI ' +
+      formatInlineTechHtml(rciInfo.statusAr) +
+      ' <span class="ltr-iso">(RCI ' +
       (rciInfo.rci > 0 ? "+" : "") +
       rciInfo.rci +
-      "</span>)</span>" +
+      ")</span></span>" +
       '<span class="delta-pill is-neutral">الهدف السليم: <span class="ltr-iso">' +
       (meta.normScore || 85) +
       "%</span></span>" +
@@ -3257,7 +3324,7 @@
       cardsHtml +
       "</div>" +
       '<div class="diagnosis-callout">' +
-      esc(diagnosisText) +
+      formatInlineTechHtml(diagnosisText) +
       "</div>" +
       '<div class="result-actions">' +
       actionsHtml +
@@ -3332,7 +3399,7 @@
       : { rci: 0, statusAr: "معاير", ci95Pts: 10.7 };
     var ctrlValid = ctrl >= 82;
 
-    setHeader("الحصيلة الجراحية للبطارية الكاملة", "6/6 Completed");
+    setHeader("الحصيلة الجراحية للبطارية الكاملة", "اكتملت 6 / 6");
 
     domRefs.stage.innerHTML =
       '<div class="result-report">' +
@@ -3344,18 +3411,18 @@
       '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">' +
       '<span class="delta-pill ' +
       (deltaComp >= 0 ? "is-up" : "is-down") +
-      '">عن خط الأساس (36%): <span class="ltr-iso">' +
+      '">عن خط الأساس (<span class="ltr-iso">36%</span>): <span class="ltr-iso">' +
       (deltaComp >= 0 ? "+" : "") +
       deltaComp +
       "%</span></span>" +
       '<span class="delta-pill ' +
       (compRciObj.rci >= 1.96 ? "is-up" : compRciObj.rci <= -1.96 ? "is-down" : "is-neutral") +
       '">' +
-      esc(compRciObj.statusAr) +
-      ' (<span class="ltr-iso">RCI ' +
+      formatInlineTechHtml(compRciObj.statusAr) +
+      ' <span class="ltr-iso">(RCI ' +
       (compRciObj.rci > 0 ? "+" : "") +
       compRciObj.rci +
-      "</span>)</span>" +
+      ")</span></span>" +
       '<span class="delta-pill ' +
       (ctrlValid ? "is-neutral" : "is-down") +
       '">مرساة الضبط: <span class="ltr-iso">' +
@@ -3363,18 +3430,20 @@
       "%</span></span>" +
       '<span class="delta-pill is-neutral">فجوة التباين: <span class="ltr-iso">' +
       gap +
-      " نقطة</span></span>" +
+      "</span> نقطة</span>" +
       "</div>" +
       "</div>" +
       '<div class="diagnosis-callout">' +
-      (ctrlValid
-        ? "اكتمل توثيق المسبارات الستة بثبات سليم لمرساة الضبط (≥82%)؛ تبلغ عتبة التحسن المركب الموثوق إحصائيا عند p<0.05 مقدار +" +
-          compRciObj.ci95Pts +
-          " نقطة فوق خط الأساس. راجع تبويب المنحنيات لمعاينة التحليل الإحصائي الشامل."
-        : "تنبيه منهجي: سجلت مرساة الضبط هبوطا دون 82% مما يشير إلى إرهاق عام أو نعاس عارض في هذه الجلسة؛ راجع تبويب المنحنيات لمقارنة الجلسة بالسجل الطولي.") +
+      formatInlineTechHtml(
+        ctrlValid
+          ? "اكتمل توثيق المسبارات الستة بثبات سليم لمرساة الضبط (≥82%)؛ تبلغ عتبة التحسن المركب الموثوق إحصائيا عند p<0.05 مقدار +" +
+            compRciObj.ci95Pts +
+            " نقطة فوق خط الأساس. راجع تبويب المنحنيات لمعاينة التحليل الإحصائي الشامل."
+          : "تنبيه منهجي: سجلت مرساة الضبط هبوطا دون 82% مما يشير إلى إرهاق عام أو نعاس عارض في هذه الجلسة؛ راجع تبويب المنحنيات لمقارنة الجلسة بالسجل الطولي."
+      ) +
       "</div>" +
       '<div class="result-actions">' +
-      '<button id="btnCloseBatterySummary" type="button" class="btn-primary">العودة إلى لوحة القيادة والمنحنيات (Enter)</button>' +
+      '<button id="btnCloseBatterySummary" type="button" class="btn-primary"><span>العودة إلى لوحة القيادة والمنحنيات</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>' +
       "</div>" +
       "</div>";
 

@@ -326,10 +326,10 @@
     if (!a.stage) return;
     a.stage.innerHTML =
       '<div class="task-box">' +
-      '<div class="probe-region-badge">حارس ثبات النافذة (Visibility Guard)</div>' +
+      '<div class="probe-region-badge">حارس ثبات النافذة</div>' +
       '<p class="task-question">توقف القياس مؤقتا بسبب مغادرة النافذة منعا لتلوث زمن الاستجابة.</p>' +
       '<div class="result-actions">' +
-      '<button id="btnResumeVis" type="button" class="btn-primary">استئناف من المحاولة الحالية (Enter)</button>' +
+      '<button id="btnResumeVis" type="button" class="btn-primary"><span>استئناف من المحاولة الحالية</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>' +
       '</div></div>';
 
     var doResume = function () {
@@ -361,19 +361,19 @@
   function getCanvasPalette() {
     var dark = isDarkTheme();
     return {
-      bg: dark ? "#151922" : "#f8fafc",
-      surface: dark ? "#1e2430" : "#ffffff",
-      border: dark ? "#334155" : "#cbd5e1",
-      borderStrong: dark ? "#64748b" : "#64748b",
-      ink: dark ? "#f1f5f9" : "#0f172a",
-      muted: dark ? "#94a3b8" : "#64748b",
-      accent: dark ? "#38bdf8" : "#0284c7",
-      accentSoft: dark ? "rgba(56, 189, 248, 0.16)" : "rgba(2, 132, 199, 0.12)",
-      glyphFill: dark ? "rgba(241, 245, 249, 0.16)" : "rgba(15, 23, 42, 0.12)",
-      gateRed: "#dc2626",
-      gateRedSoft: "rgba(220, 38, 38, 0.13)",
-      gateBlue: "#2563eb",
-      gateBlueSoft: "rgba(37, 99, 235, 0.13)",
+      bg: dark ? "#0c1110" : "#f5f7f5",
+      surface: dark ? "#161f1c" : "#ffffff",
+      border: dark ? "#2a3934" : "#d8e0db",
+      borderStrong: dark ? "#5b736b" : "#667570",
+      ink: dark ? "#ebf1ef" : "#111816",
+      muted: dark ? "#8fa19a" : "#667570",
+      accent: dark ? "#25c49a" : "#0d6652",
+      accentSoft: dark ? "rgba(37, 196, 154, 0.15)" : "rgba(13, 102, 82, 0.11)",
+      glyphFill: dark ? "rgba(235, 241, 239, 0.15)" : "rgba(17, 24, 22, 0.11)",
+      gateRed: dark ? "#f87171" : "#dc2626",
+      gateRedSoft: dark ? "rgba(248, 113, 113, 0.15)" : "rgba(220, 38, 38, 0.12)",
+      gateBlue: dark ? "#60a5fa" : "#2563eb",
+      gateBlueSoft: dark ? "rgba(96, 165, 250, 0.15)" : "rgba(37, 99, 235, 0.12)",
       baysBg: dark ? "#262a33" : "#808080",
       baysRing: dark ? "#cbd5e1" : "#1e293b",
       baysBar: dark ? "#f8fafc" : "#0b1120"
@@ -577,7 +577,8 @@
     if (o.gateKind === "update_red" || o.gateKind === "compare_blue") {
       var pad = 7;
       var isRed = o.gateKind === "update_red";
-      ctx.strokeStyle = isRed ? "#dc2626" : "#2563eb";
+      var darkMode = isDarkTheme();
+      ctx.strokeStyle = isRed ? (darkMode ? "#f87171" : "#dc2626") : (darkMode ? "#60a5fa" : "#2563eb");
       ctx.lineWidth = 3.2;
       if (!isRed) ctx.setLineDash([7, 5]);
       ctx.strokeRect(cx - hs - pad, cy - hs - pad, (hs + pad) * 2, (hs + pad) * 2);
@@ -639,19 +640,35 @@
     if (a.prog) a.prog.textContent = Core ? Core.toAsciiDigits(prog || "") : (prog || "");
   }
 
+  function setCanvasStageMode(enabled) {
+    var a = domArena();
+    var wrap = a.stage && a.stage.parentElement;
+    if (wrap && wrap.classList) {
+      wrap.classList.toggle("is-canvas-stage", Boolean(enabled));
+    }
+  }
+
   function openArena() {
     ensureVisibilityListener();
     clearActiveRun();
+    setCanvasStageMode(false);
     var a = domArena();
-    if (a.overlay) a.overlay.hidden = false;
+    if (a.overlay) {
+      a.overlay.hidden = false;
+      a.overlay.scrollTop = 0;
+    }
   }
 
   function closeArena() {
     activeProbeGuard = null;
     isFamiliarizationRun = false;
     clearActiveRun();
+    setCanvasStageMode(false);
     var a = domArena();
-    if (a.overlay) a.overlay.hidden = true;
+    if (a.overlay) {
+      a.overlay.scrollTop = 0;
+      a.overlay.hidden = true;
+    }
     if (a.stage) a.stage.innerHTML = "";
     render();
   }
@@ -661,8 +678,12 @@
     isFamiliarizationRun = false;
     activeProbeGuard = null;
     clearActiveRun();
+    setCanvasStageMode(false);
     var a = domArena();
-    if (a.overlay) a.overlay.hidden = true;
+    if (a.overlay) {
+      a.overlay.scrollTop = 0;
+      a.overlay.hidden = true;
+    }
     if (a.stage) a.stage.innerHTML = "";
     render();
   }
@@ -719,43 +740,168 @@
     });
   }
 
+  function formatDeepStepHtml(rawStr) {
+    var s = esc(rawStr);
+    var colonIdx = s.indexOf(":");
+    if (colonIdx > 0 && colonIdx < 36 && s.charAt(0) !== "[") {
+      s = "<strong>" + s.slice(0, colonIdx + 1) + "</strong>" + s.slice(colonIdx + 1);
+    }
+    var slots = [];
+    function keep(html) {
+      var id = slots.length;
+      slots.push(html);
+      return "\uE000" + id + "\uE001";
+    }
+    s = s
+      .replace(/\[أحمر · تحديث\]/g, function () { return keep('<span class="inline-gate is-red">أحمر · تحديث</span>'); })
+      .replace(/\[أزرق · مقارنة فقط\]/g, function () { return keep('<span class="inline-gate is-blue">أزرق · مقارنة فقط</span>'); })
+      .replace(/\(؟\)/g, function () { return keep('<strong class="intro-q-mark">؟</strong>'); })
+      .replace(/\(\+\)/g, function () { return keep('<kbd class="kbd-chip ltr-iso">+</kbd>'); })
+      .replace(/\((W · ↑|S · ↓|J · →|F · ←|Space|Enter|1–4|1–6)\)/g, function (_m, inner) {
+        return keep('<kbd class="kbd-chip ltr-iso">' + inner + "</kbd>");
+      })
+      .replace(/\(([^()\uE000\uE001]+)\)/g, function (full, inner) {
+        if (/[\u0600-\u06FF]/.test(inner)) return full;
+        return keep('<span class="ltr-iso" style="white-space:nowrap;">' + full + "</span>");
+      })
+      .replace(/(?:~?\d+(?:,\d+)?(?:\.\d+)?\s*(?:ms|s|Hz)(?![A-Za-z])|~?\d+\s*[–-]\s*\d+|~?\d+\.\d+)/g, function (m) {
+        return keep('<span class="ltr-iso">' + m + "</span>");
+      });
+    return s.replace(/\uE000(\d+)\uE001/g, function (_m, idx) {
+      return slots[Number(idx)];
+    }).replace(/<\/kbd>\s*\.\s*$/, "</kbd>");
+  }
+
+  function isolateDeepTechSpans(escapedStr) {
+    var s = String(escapedStr == null ? "" : escapedStr);
+    var slots = [];
+    function keep(html) {
+      var id = slots.length;
+      slots.push(html);
+      return "\uE000" + id + "\uE001";
+    }
+    s = s.replace(/\(([^()\uE000\uE001]+)\)/g, function (full, inner) {
+      if (/[\u0621-\u064A\u0671-\u06D3]/.test(inner) || inner.indexOf("←") !== -1 || /^\d+$/.test(inner.trim())) {
+        return full;
+      }
+      return keep('<span class="ltr-iso">(' + inner.replace(/،/g, ",") + ")</span>");
+    });
+    s = s.replace(/(?:(?:Chrome|Safari|Firefox|Edge|Browser)\s*\/\s*(?:macOS|iOS|Windows|Android|Linux|OS)|\bRCI\s*90%[+-]?|\bForm\s+[ABC]\b|\bPVT-5\b|\b2-AFC\b|\bReference-Back\b|\bMAP(?:\s+Ex-Gaussian|\s+β)?\b|\bEx-Gaussian\b|\bSlow-ISI(?:\s+Tau|\s*τ)?\b|\bFast-ISI(?:\s*τ)?\b|\bHigh-CL\b|\bLow-CL\b|\bBays(?:\s+2016)?\b|\bM3(?:-RB)?\b|\bSOA75\b|\bD[1-5]\b|\bTBRS\b|\bT0\b|\bSWS\b)/g, function (m) {
+      return keep('<span class="ltr-iso">' + m + "</span>");
+    });
+    s = s.replace(/(?:(?:0\.9s:|3\.8s:)\s*[±+-]?\d+(?:\.\d+)?%|(?:P_target|P_swap(?:,corr)?|P_stale(?:,corr)?|P_guess|Δ_TBRS|Δγ(?:_delay)?|SOA_75|AUC(?:_cons)?|Mean 1\/RT|1\/RT|β_ToT|β_0\.9s|σ_θ|cMAE|L_500|L_355|ISI|ICC|SEM|SE_diff|FS|CL|K|α|β|γ|μ|σ|τ|z|Δ)(?:\s*(?:=|:|≥|≤|&lt;|&gt;)\s*(?:&gt;|&lt;|[>≥≤])?[±+-]?\d+(?:,\d+)?(?:\.\d+)?(?:\s*(?:ms|%|°|Hz|s⁻¹(?:\/min)?|s(?![A-Za-z])))?)?)/g, function (m) {
+      return keep('<span class="ltr-iso">' + m + "</span>");
+    });
+    s = s.replace(/(?:[±+-]?\d+(?:\.\d+)?[%°]?(?:\s*[\/–:-]\s*\d+(?:\.\d+)?[%°]?)+(?:\s*(?:ms|%|°|Hz|s(?![A-Za-z])))?)/g, function (m) {
+      return keep('<span class="ltr-iso">' + m + "</span>");
+    });
+    s = s.replace(/(?:(?:&gt;|&lt;|[>≥≤~])?[±+-]?\d+(?:,\d+)?(?:\.\d+)?(?:\s*(?:ms|%|°|Hz|s⁻¹(?:\/min)?|s(?![A-Za-z])))|[±+-]\d+(?:\.\d+)?|~?\d+\.\d+)/g, function (m) {
+      return keep('<span class="ltr-iso">' + m + "</span>");
+    });
+    return s.replace(/\uE000(\d+)\uE001/g, function (_m, idx) {
+      return slots[Number(idx)];
+    });
+  }
+
+  function formatDeepRichHtml(rawStr) {
+    var s = esc(rawStr);
+    var tags = [];
+    s = s.replace(/\[([^\]]+)\]/g, function (_m, inner) {
+      var id = tags.length;
+      tags.push('<span class="verdict-tag">' + isolateDeepTechSpans(inner) + "</span>");
+      return "\uE002" + id + "\uE003";
+    });
+    s = isolateDeepTechSpans(s);
+    return s.replace(/\uE002(\d+)\uE003/g, function (_m, idx) {
+      return tags[Number(idx)];
+    });
+  }
+
+  function formatMetricValHtml(rawVal) {
+    var str = String(rawVal == null ? "" : rawVal);
+    if (str.indexOf("←") !== -1) {
+      return str.split("←").map(function (part) {
+        return formatMetricValHtml(part.trim());
+      }).join(" ← ");
+    }
+    if (!/[\u0600-\u06FF]/.test(str)) {
+      return '<span class="ltr-iso">' + esc(str) + "</span>";
+    }
+    return formatDeepRichHtml(str);
+  }
+
   function showExperimentIntro(expId) {
     clearActiveRun();
     activeProbeGuard = null;
+    setCanvasStageMode(false);
     var Core = getCore();
     var st = Core.loadState();
     var meta = findMeta(expId);
     var a = domArena();
+    if (a.overlay) a.overlay.scrollTop = 0;
+    var shortCode = meta.shortCode || String(meta.code || "").split("·")[0].trim();
 
     var modeBadge = isFamiliarizationRun
-      ? "تهيئة تمهيدية مستبعدة · " + (batteryIdx + 1) + "/5"
-      : (isBattery ? "البطارية العميقة · " + (batteryIdx + 1) + "/5 · Form " + st.activeForm : "Form " + st.activeForm + " · " + displayCalib.refreshHz + "Hz");
+      ? "تهيئة " + (batteryIdx + 1) + " / 5"
+      : (isBattery ? "البطارية " + (batteryIdx + 1) + " / 5" : "جاهز للبدء");
 
-    setHeader(meta.code + " — " + meta.title, modeBadge);
+    setHeader(shortCode + " — " + meta.shortTitle, modeBadge);
 
     var stepsHtml = meta.instructions.map(function (s) {
-      return "<li>" + esc(s) + "</li>";
+      return "<li>" + formatDeepStepHtml(s) + "</li>";
     }).join("");
+
+    var flowHtml = "";
+    if (Array.isArray(meta.flowSteps) && meta.flowSteps.length > 0) {
+      flowHtml =
+        '<div class="probe-flow-box" aria-label="مسار الجولة">' +
+        '<span class="probe-flow-label">مسار الجولة</span>' +
+        '<div class="probe-flow-track">' +
+        meta.flowSteps.map(function (fs, idx) {
+          var stepHtml = '<span class="flow-step">' + formatDeepStepHtml(fs) + "</span>";
+          return idx === 0
+            ? stepHtml
+            : '<span class="flow-step-unit"><span class="flow-arrow" aria-hidden="true">←</span>' + stepHtml + "</span>";
+        }).join("") +
+        "</div></div>";
+    } else if (meta.example) {
+      flowHtml = '<div class="probe-example-box">' + esc(meta.example) + "</div>";
+    }
+
+    var domainTag = meta.domainTag || meta.shortTitle;
+    var metaChip = isFamiliarizationRun
+      ? (meta.famMetaChip || "تهيئة تمهيدية")
+      : (meta.metaChip || ("~" + meta.durationMin + " د"));
+    var usesForm = expId === "d1_tbrs" || expId === "d2_refback_m3" || expId === "d4_consolidation_soa";
+    var techChip = (usesForm ? "Form " + st.activeForm + " · " : "") + displayCalib.refreshHz + "Hz";
 
     a.stage.innerHTML =
       '<div class="probe-intro">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
-      '<span class="probe-region-badge">' + esc(meta.code) + "</span>" +
-      '<span class="stim-label ltr-iso">' + esc(displayCalib.refreshHz + "Hz (" + displayCalib.frameMs + " ms/frame) · Form " + st.activeForm) + "</span>" +
+      '<div class="probe-intro-top">' +
+      '<div class="probe-intro-badges">' +
+      '<span class="probe-code ltr-iso">' + esc(shortCode) + "</span>" +
+      '<span class="probe-domain-tag">' + formatDeepRichHtml(domainTag) + "</span>" +
       "</div>" +
-      '<h2 class="probe-title" style="font-size:1.18rem;margin:0;">' + esc(meta.title) + "</h2>" +
+      '<div class="probe-intro-meta">' +
+      '<span class="intro-meta-chip">' + formatDeepStepHtml(metaChip) + "</span>" +
+      '<span class="intro-meta-chip ltr-iso">' + esc(techChip) + "</span>" +
+      "</div>" +
+      "</div>" +
+      '<h2 class="probe-intro-title">' + formatDeepRichHtml(meta.title) + "</h2>" +
       (isFamiliarizationRun
-        ? '<div class="probe-example-box" style="margin:0;">وضع التهيئة التمهيدية (~2 د إجمالا): تدريب مختصر على الأزرار والإيقاع يُستبعد تلقائيا من السجل الطولي.</div>'
+        ? '<div class="warmup-feedback" style="margin:0;">وضع التهيئة التمهيدية (~2 د إجمالا): تدريب مختصر على الأزرار والإيقاع يُستبعد تلقائيا من السجل الطولي.</div>'
         : "") +
       '<ol class="probe-steps">' + stepsHtml + "</ol>" +
-      '<div class="probe-example-box">' + esc(meta.example) + "</div>" +
+      flowHtml +
       '<div class="result-actions">' +
-      '<button id="btnDeepStart" type="button" class="btn-primary">ابدأ الآن (Enter)</button>' +
+      '<button id="btnDeepStart" type="button" class="btn-primary"><span>ابدأ الآن</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>' +
       "</div>" +
       "</div>";
 
     var go = function () {
       clearActiveRun();
+      setCanvasStageMode(true);
+      if (a.overlay) a.overlay.scrollTop = 0;
       if (expId === "d1_tbrs") return runD1();
       if (expId === "d2_refback_m3") return runD2();
       if (expId === "d3_bays_analog") return runD3();
@@ -774,9 +920,11 @@
   function showExperimentResult(expId, headlineScore, cards, summaryText) {
     activeProbeGuard = null;
     clearActiveRun();
+    setCanvasStageMode(false);
     var Core = getCore();
     var meta = findMeta(expId);
     var a = domArena();
+    if (a.overlay) a.overlay.scrollTop = 0;
 
     if (isFamiliarizationRun) {
       var isLastFam = batteryIdx >= batteryQueue.length - 1;
@@ -790,11 +938,11 @@
       setHeader("اكتملت جولة التهيئة التمهيدية", "مستبعدة من السجل");
       a.stage.innerHTML =
         '<div class="result-report">' +
-        '<div class="probe-region-badge">تم امتصاص أثر تعلّم الواجهة (Pre-Baseline Familiarization)</div>' +
-        '<div class="diagnosis-callout">اكتملت التهيئة التمهيدية للمسابير الخمسة بنجاح واستُبعدت بياناتها بالكامل من السجل الطولي. يمكنك الآن تسجيل خط الأساس المرجعي (T0) بأعلى ثبات سيكومتري.</div>' +
+        '<div class="probe-region-badge">تم امتصاص أثر تعلّم الواجهة</div>' +
+        '<div class="diagnosis-callout">اكتملت التهيئة التمهيدية للمسابير الخمسة بنجاح واستُبعدت بياناتها بالكامل من السجل الطولي. يمكنك الآن تسجيل خط الأساس المرجعي <span class="ltr-iso">T0</span> بأعلى ثبات سيكومتري.</div>' +
         '<div class="result-actions">' +
         '<button id="btnStartScoredAfterFam" type="button" class="btn-primary">بدء البطارية الرسمية المعتمدة T0</button>' +
-        '<button id="btnCloseFamDone" type="button" class="btn-ghost">العودة للوحة القياس (Enter)</button>' +
+        '<button id="btnCloseFamDone" type="button" class="btn-ghost"><span>العودة للوحة القياس</span><kbd class="kbd-chip ltr-iso">Enter</kbd></button>' +
         '</div></div>';
 
       document.getElementById("btnStartScoredAfterFam").addEventListener("click", function () {
@@ -820,8 +968,8 @@
     var cardsHtml = cards.map(function (c) {
       return (
         '<div class="submetric-card">' +
-        '<span class="stim-label">' + esc(c.label) + "</span>" +
-        '<strong style="font-size:1.02rem;"><span class="ltr-iso">' + esc(c.val) + "</span></strong>" +
+        '<span class="stim-label">' + formatDeepRichHtml(c.label) + "</span>" +
+        '<strong style="font-size:1.02rem;">' + formatMetricValHtml(c.val) + "</strong>" +
         "</div>"
       );
     }).join("");
@@ -830,18 +978,18 @@
     var nextBtnHtml = "";
     if (isBattery && !isLast) {
       var nxt = findMeta(batteryQueue[batteryIdx + 1]);
-      nextBtnHtml = '<button id="btnDeepNext" type="button" class="btn-primary">المسبار التالي: ' + esc(nxt.shortTitle) + " (Enter)</button>";
+      nextBtnHtml = '<button id="btnDeepNext" type="button" class="btn-primary"><span>المسبار التالي: ' + esc(nxt.shortTitle) + '</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     } else {
       nextBtnHtml =
         '<button id="btnDeepRetryOne" type="button" class="btn-ghost">إعادة هذا المسبار</button>' +
-        '<button id="btnDeepDone" type="button" class="btn-primary">عرض لوحة القياس العميق (Enter)</button>';
+        '<button id="btnDeepDone" type="button" class="btn-primary"><span>عرض لوحة القياس العميق</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     }
 
     a.stage.innerHTML =
       '<div class="result-report">' +
       '<div class="score-hero"><div class="score-ring-val"><span class="ltr-iso">' + esc(headlineScore) + "</span></div></div>" +
       '<div class="submetrics-grid">' + cardsHtml + "</div>" +
-      '<div class="diagnosis-callout">' + esc(summaryText) + "</div>" +
+      '<div class="diagnosis-callout">' + formatDeepRichHtml(summaryText) + "</div>" +
       '<div class="result-actions">' + nextBtnHtml + "</div>" +
       "</div>";
 
@@ -924,7 +1072,7 @@
           "d1_tbrs",
           scored.pTargetHighPct + "%",
           [
-            { label: "صمود الربط (Low-CL مقابل High-CL)", val: scored.pTargetLowPct + "% ← " + scored.pTargetHighPct + "%" },
+            { label: "صمود الربط (حمل منخفض ← عالٍ)", val: scored.pTargetLowPct + "% ← " + scored.pTargetHighPct + "%" },
             { label: "الحمل الفعلي المقاس (CL Low / High)", val: scored.clLow + " / " + scored.clHigh },
             { label: "ميل التلاشي بالزمن (Δ_TBRS)", val: String(scored.deltaTbrs) },
             { label: "تبديل High-CL مقابل تلاشي/تخمين", val: scored.pSwapHighCorrPct + "% / " + scored.pGuessHighPct + "%" },
@@ -938,7 +1086,7 @@
       var tr = trials[idx];
       var pal = getCanvasPalette();
       setHeader(
-        "D1 · TBRS (" + (tr.cond === "high" ? "حمل عالٍ: 4/4.0s" : "حمل منخفض: 2/4.0s") + ")",
+        "D1 — تلاشي الربط · " + (tr.cond === "high" ? "حمل عالٍ" : "حمل منخفض"),
         (idx + 1) + " / " + trials.length
       );
 
@@ -985,7 +1133,7 @@
 
       a.stage.innerHTML =
         '<div class="task-box deep-canvas-box">' +
-        '<div id="d1SubLabel" class="stim-label">احفظ مواقع الرموز الثلاثة معا (900 ms)</div>' +
+        '<div id="d1SubLabel" class="stim-label">احفظ مواقع الرموز الثلاثة معا <span class="ltr-iso">(900 ms)</span></div>' +
         '<div id="d1CanvasMount" class="deep-canvas-wrap"></div>' +
         '<div id="d1ControlsMount"></div>' +
         '</div>';
@@ -999,8 +1147,8 @@
         if (!document.getElementById("d1BtnTop")) {
           controlsMount.innerHTML =
             '<div class="nback-actions">' +
-            '<button id="d1BtnTop" type="button" class="opt-btn">فوق (↑ / W)</button>' +
-            '<button id="d1BtnBot" type="button" class="opt-btn">تحت (↓ / S)</button>' +
+            '<button id="d1BtnTop" type="button" class="opt-btn"><span>▲ فوق</span><kbd class="kbd-chip ltr-iso">W · ↑</kbd></button>' +
+            '<button id="d1BtnBot" type="button" class="opt-btn"><span>▼ تحت</span><kbd class="kbd-chip ltr-iso">S · ↓</kbd></button>' +
             '</div>';
         }
       }
@@ -1056,7 +1204,7 @@
               runFramePhase(tr.maskMs, {
                 onStart: function () { blitBuffer(stageObj, bufMask); },
                 onComplete: function () {
-                  subLabel.textContent = "استعد للمربع المركزي: فوق (↑ / W) أم تحت (↓ / S)";
+                  subLabel.textContent = "استعد للشريط المركزي: فوق أم تحت";
                   mountD1VerticalButtons();
                   drawTbrsCanvasFrame(0, false, "top", -1, tr.judgements.length);
                   runFramePhase(tr.postMaskPrepMs || 350, {
@@ -1075,7 +1223,7 @@
       });
 
       function runFixedTbrsWindow() {
-        subLabel.textContent = "نافذة احتفاظ ثابتة (4.0s) — حدّد موضع الشريط المركزي فورا";
+        subLabel.innerHTML = 'نافذة الاحتفاظ <span class="ltr-iso">(4.0s)</span> — حدّد موضع الشريط فورا';
         mountD1VerticalButtons();
 
         var procResults = tr.judgements.map(function (j) {
@@ -1345,7 +1493,7 @@
 
       a.stage.innerHTML =
         '<div class="task-box deep-canvas-box">' +
-        '<div id="d2SubLabel" class="stim-label">احفظ الرموز الثلاثة داخل إطاراتها (900 ms)</div>' +
+        '<div id="d2SubLabel" class="stim-label">احفظ الرموز الثلاثة داخل إطاراتها <span class="ltr-iso">(900 ms)</span></div>' +
         '<div id="d2CanvasMount" class="deep-canvas-wrap"></div>' +
         '<div id="d2ControlsMount"></div>' +
         '</div>';
@@ -1385,7 +1533,7 @@
           return runRefBackStep(0);
         }
         var mut = tr.rapidMutations[mIdx];
-        subLabel.textContent = "تحديث تلقائي بلا ضغط (" + (mIdx + 1) + "/2 · 500ms) — احفظ الرمز الجديد مكان القديم";
+        subLabel.innerHTML = 'تحديث تلقائي بلا ضغط <span class="ltr-iso">(' + (mIdx + 1) + '/2 · 500 ms)</span> — احفظ الرمز الجديد';
         runFramePhase(mut.exposureMs, {
           isCriticalExposure: true,
           onStart: function () { blitBuffer(stageObj, mutBuffers[mIdx]); },
@@ -1407,13 +1555,13 @@
         var stp = tr.refBackSteps[rbIdx];
         var isRed = stp.gateKind === "update_red";
         subLabel.innerHTML = isRed
-          ? '<span class="gate-pill is-red">أحمر · تحديث: هل يطابق آخر رمز محفوظ؟ ثم احفظ الجديد</span>'
-          : '<span class="gate-pill is-blue">أزرق · مقارنة فقط: هل يطابق آخر رمز محفوظ؟ دون تغيير</span>';
+          ? '<span class="gate-pill is-red">أحمر · تحديث: قارن بالمحفوظ ثم احفظ الجديد</span>'
+          : '<span class="gate-pill is-blue">أزرق · مقارنة فقط: قارن دون تغيير المحفوظ</span>';
 
         controlsMount.innerHTML =
           '<div class="nback-actions">' +
-          '<button id="d2MatchBtn" type="button" class="opt-btn">طابق (J / →)</button>' +
-          '<button id="d2DiffBtn" type="button" class="opt-btn">مختلف (F / ←)</button>' +
+          '<button id="d2MatchBtn" type="button" class="opt-btn"><span>طابق</span><kbd class="kbd-chip ltr-iso">J · →</kbd></button>' +
+          '<button id="d2DiffBtn" type="button" class="opt-btn"><span>مختلف</span><kbd class="kbd-chip ltr-iso">F · ←</kbd></button>' +
           '</div>';
 
         var shownArr = [null, null, null];
@@ -1469,7 +1617,7 @@
       }
 
       function runFinal6AfcProbe() {
-        subLabel.textContent = "اختر الرمز النشط حاليا للإطار المميز بـ (؟) (1–6):";
+        subLabel.innerHTML = 'اختر الرمز النشط حاليا للإطار المميز بـ (؟) <span class="ltr-iso">(1–6)</span>:';
         controlsMount.innerHTML = "";
         var doneProbe = false;
         var probeStart = nowMs();
@@ -1610,7 +1758,7 @@
             { label: "احتمال الهدف والسعة (α · K=4α)", val: scored.alphaPct + "% · K=" + scored.K },
             { label: "معدل التبديل (MAP β / Bays 2016)", val: scored.betaPct + "% / " + scored.bays2016SwapPct + "%" },
             { label: "معدل التخمين الكلي (γ)", val: scored.gammaPct + "%" },
-            { label: "قفزة الفقد بالتأخير (Δγ_delay)", val: Core.fmtSigned(scored.deltaGammaDelayPct, "%") + " (" + scored.gammaShortPct + "%←" + scored.gammaLongPct + "%)" },
+            { label: "قفزة الفقد بالتأخير (0.9s ← 3.8s)", val: Core.fmtSigned(scored.deltaGammaDelayPct, "%") + " · " + scored.gammaShortPct + "% ← " + scored.gammaLongPct + "%" },
             { label: "الانحراف الدائري والخطأ (σ_θ · cMAE)", val: scored.sigmaDeg + "° · " + scored.cMAE + "°" },
             { label: "تبديل التأخير القصير 0.9s (β_0.9s)", val: scored.betaShortPct + "%" }
           ],
@@ -1621,7 +1769,7 @@
       var tr = trials[idx];
       var pal = getCanvasPalette();
       setHeader(
-        "D3 · خليط Bays (N=4 · " + (tr.isLong ? "3.8s" : "0.9s") + ")",
+        "D3 — خليط الزوايا · " + (tr.isLong ? "تأخير\u00A03.8s" : "تأخير\u00A00.9s"),
         (idx + 1) + " / " + trials.length
       );
 
@@ -1798,14 +1946,14 @@
         }
 
         respMount.innerHTML =
-          '<div id="d3ScrubTrack" class="d3-scrub-track" role="slider" aria-label="شريط تدوير الميل باللمس دون حجب الحلقة">' +
+          '<div id="d3ScrubTrack" class="d3-scrub-track" role="slider" aria-valuemin="0" aria-valuemax="180" aria-valuenow="' + Math.round(curAngle) + '" aria-label="شريط تدوير الميل باللمس دون حجب الحلقة">' +
           '<span id="d3ScrubThumb" class="d3-scrub-thumb"></span>' +
           '<span class="d3-scrub-hint">اسحب أفقيا لتدوير الميل دون حجب الحلقة</span>' +
           '</div>' +
           '<div class="orient-fine-row">' +
           '<button type="button" class="btn-ghost d3-rot-btn" data-delta="-6" aria-label="تدوير عكس عقارب الساعة">⟲</button>' +
           '<button type="button" class="btn-ghost d3-rot-btn" data-delta="-1.5" aria-label="تدوير دقيق لليسار">‹</button>' +
-          '<button id="d3ConfirmBtn" type="button" class="btn-primary" disabled>حرّك الميل ثم أكّد (Enter)</button>' +
+          '<button id="d3ConfirmBtn" type="button" class="btn-primary" disabled>حرّك الميل أولا للتأكيد</button>' +
           '<button type="button" class="btn-ghost d3-rot-btn" data-delta="1.5" aria-label="تدوير دقيق لليمين">›</button>' +
           '<button type="button" class="btn-ghost d3-rot-btn" data-delta="6" aria-label="تدوير مع عقارب الساعة">⟳</button>' +
           '</div>';
@@ -1818,6 +1966,9 @@
           if (!scrubThumb) return;
           var pct = Math.max(4, Math.min(96, (curAngle / 180) * 100));
           scrubThumb.style.left = pct.toFixed(1) + "%";
+          if (scrubTrack) {
+            scrubTrack.setAttribute("aria-valuenow", String(Math.round(curAngle)));
+          }
         }
 
         function markAdjusted(newAngle) {
@@ -1825,8 +1976,11 @@
           syncScrubThumb();
           if (!touched) {
             touched = true;
+            if (scrubTrack && scrubTrack.classList) {
+              scrubTrack.classList.add("is-touched");
+            }
             confirmBtn.disabled = false;
-            confirmBtn.textContent = "تأكيد الميل (Enter)";
+            confirmBtn.innerHTML = '<span>تأكيد الميل</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd>';
           }
         }
         syncScrubThumb();
@@ -2031,7 +2185,7 @@
       var pal = getCanvasPalette();
       var roles = Core.ROLE_FRAMES_3;
       setHeader(
-        "D4 · التوطيد الباليستي (SOA=" + tr.soaMs + "ms)",
+        "D4 — التوطيد الباليستي",
         (idx + 1) + " / " + trials.length
       );
 
@@ -2113,11 +2267,11 @@
       }
 
       function runRetroactive2AfcInterrupt() {
-        subLabel.textContent = "حدّد فورا اتجاه السهم المزدوج (1.5s): يمين أم يسار؟";
+        subLabel.textContent = "حدّد فورا اتجاه السهم المزدوج: يمين أم يسار؟";
         controlsMount.innerHTML =
           '<div class="nback-actions">' +
-          '<button id="d4RightBtn" type="button" class="opt-btn">يمين » (J / →)</button>' +
-          '<button id="d4LeftBtn" type="button" class="opt-btn">« يسار (F / ←)</button>' +
+          '<button id="d4RightBtn" type="button" class="opt-btn"><span>يمين »</span><kbd class="kbd-chip ltr-iso">J · →</kbd></button>' +
+          '<button id="d4LeftBtn" type="button" class="opt-btn"><span>« يسار</span><kbd class="kbd-chip ltr-iso">F · ←</kbd></button>' +
           '</div>';
 
         var doneInt = false;
@@ -2174,7 +2328,7 @@
       }
 
       function runBindingRecall4AFC(interruptRtMs, interruptCorrect) {
-        subLabel.textContent = "اختر الرمز الذي ارتبط بهذا الإطار (1–4):";
+        subLabel.innerHTML = 'اختر الرمز الذي ارتبط بهذا الإطار <span class="ltr-iso">(1–4)</span>:';
         controlsMount.innerHTML = "";
         var doneRec = false;
         var recStart = nowMs();
@@ -2290,7 +2444,7 @@
           { label: "أسرع 10% / أبطأ 10%", val: scored.fastest10RtMs + " ms / " + scored.slowest10RtMs + " ms" },
           { label: "الهفوات (L_500 / L_355) والاستباق", val: scored.lapses500Pct + "% / " + scored.lapses355Pct + "% · FS=" + scored.falseStarts },
           { label: "تفكيك MAP Ex-Gaussian (μ · σ · τ)", val: scored.muMs + " · " + scored.sigmaMs + " · " + scored.tauMs + " ms" },
-          { label: "Slow-ISI τ (≥4.5s) / Fast (<3.5s) / د1–2", val: scored.slowIsiTauMs + " / " + scored.fastIsiTauMs + " / " + scored.earlySlowIsiTauMs + " ms" },
+          { label: "ذيل الشرود: بطيء / سريع / د1–2", val: scored.slowIsiTauMs + " / " + scored.fastIsiTauMs + " / " + scored.earlySlowIsiTauMs + " ms" },
           { label: "ميل التدهور عبر الدقائق الخمس (β_ToT)", val: Core.fmtSigned(scored.betaToTRecipPerMin, " s⁻¹/min", 2) }
         ],
         sumText
@@ -2305,7 +2459,7 @@
         '<div class="stim-label">فور انطلاق عدّاد المللي ثانية اضغط Space أو انقر اللوحة مباشرة</div>' +
         '<div id="d5CanvasMount" class="deep-canvas-wrap"></div>' +
         '<div class="result-actions">' +
-        '<button id="d5TapBtn" type="button" class="btn-primary pvt-tap-btn">استجابة فورية (Space / نقر)</button>' +
+        '<button id="d5TapBtn" type="button" class="btn-primary pvt-tap-btn"><span>استجابة فورية (أو نقر اللوحة)</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button>' +
         '</div></div>';
 
       var stageObj = createStageCanvas(W, H, "pvt-canvas-stage");
@@ -2459,8 +2613,8 @@
         if (curMinDisplay !== lastHeaderMin) {
           lastHeaderMin = curMinDisplay;
           setHeader(
-            isFamiliarizationRun ? "D5 · تهيئة PVT" : "D5 · PVT-5 المعياري (5.0 دقائق)",
-            isFamiliarizationRun ? "تهيئة (24s)" : "الدقيقة " + curMinDisplay + " / 5"
+            isFamiliarizationRun ? "D5 — تهيئة التيقظ" : "D5 — اليقظة المستدامة",
+            isFamiliarizationRun ? "تهيئة 24s" : "الدقيقة " + curMinDisplay + " / 5"
           );
         }
 
@@ -2644,7 +2798,7 @@
       envAlertsHtml =
         '<div class="env-alert-banner" role="alert">' +
         summary.envAlerts.map(function (al, idx) {
-          return "<div>" + esc((idx + 1) + ". " + al) + "</div>";
+          return "<div>" + formatDeepRichHtml((idx + 1) + ". " + al) + "</div>";
         }).join("") +
         "</div>";
     }
@@ -2653,10 +2807,10 @@
     if (summary.differentialSignatures && summary.differentialSignatures.length > 0) {
       diffSigHtml =
         '<section class="card verdict-box">' +
-        '<h3 class="section-title" style="margin-bottom:6px;">مصفوفة البصمات التفريقية الأربع من الأرقام المقاسة</h3>' +
+        '<h3 class="section-title" style="margin-bottom:4px;">مصفوفة البصمات التفريقية الأربع من الأرقام المقاسة</h3>' +
         '<ol class="verdict-list">' +
         summary.differentialSignatures.map(function (sig) {
-          return "<li><strong>" + esc(sig.title) + ":</strong> " + esc(sig.body) + "</li>";
+          return "<li><strong>" + formatDeepRichHtml(sig.title) + ":</strong> " + formatDeepRichHtml(sig.body) + "</li>";
         }).join("") +
         "</ol></section>";
     }
@@ -2665,52 +2819,64 @@
     if (summary.rciItems && summary.rciItems.length > 0) {
       rciHtml =
         '<section class="card">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">' +
         '<div>' +
-        '<h3 class="section-title">معيار التغير الموثوق الطولي (RCI 90% = ±1.64 × SE_diff · للمقاييس ذات ICC ≥ 0.75 فقط)</h3>' +
-        '<p class="section-sub">تُستبعد الفروق الطرحية ذات الموثوقية الصفرية (ICC = 0.00) وتُقارن القيم المطلقة بمرجع T0</p>' +
+        '<h3 class="section-title">معيار التغير الموثوق الطولي (<span class="ltr-iso">RCI 90% = ±1.64 × SE_diff</span> · للمقاييس ذات <span class="ltr-iso">ICC ≥ 0.75</span>)</h3>' +
+        '<p class="section-sub">تُستبعد الفروق الطرحية ذات الموثوقية الصفرية وتُقارن القيم المطلقة بمرجع <span class="ltr-iso">T0</span></p>' +
         '</div>' +
-        '<button id="btnReanchorT0" type="button" class="btn-ghost">تثبيت النتائج الحالية كمرجع T0 جديد</button>' +
+        '<button id="btnReanchorT0" type="button" class="btn-ghost">تثبيت الحالي كمرجع T0 جديد</button>' +
         '</div>' +
         '<ol class="verdict-list">' +
         summary.rciItems.map(function (it, idx) {
           var dec = it.unit === " s⁻¹" || it.unit === "" ? 2 : 1;
-          var ctxSpan = it.hasFollowup && it.phaseT0Label && it.phaseT1Label
-            ? " [" + it.phaseT0Label + " · Form " + (it.formT0 || "A") + " ← " + it.phaseT1Label + " · Form " + (it.formT1 || "A") + "]"
-            : (it.phaseT0Label ? " [" + it.phaseT0Label + " · Form " + (it.formT0 || "A") + "]" : "");
+          var shortT0 = Core.getPhaseShortAr ? Core.getPhaseShortAr(it.phaseT0 || "baseline") : (it.phaseT0Label || "خط الأساس");
+          var shortT1 = it.hasFollowup
+            ? (Core.getPhaseShortAr ? Core.getPhaseShortAr(it.phaseT1 || "baseline") : (it.phaseT1Label || "الحالي"))
+            : null;
+          var ctxBadgeHtml = it.hasFollowup && shortT1
+            ? '<span class="verdict-tag is-context">' + formatDeepRichHtml(shortT0 + " · Form " + (it.formT0 || "A") + " ← " + shortT1 + " · Form " + (it.formT1 || "A")) + "</span> "
+            : '<span class="verdict-tag is-context">' + formatDeepRichHtml(shortT0 + " · Form " + (it.formT0 || "A")) + "</span> ";
           var line = it.hasFollowup
             ? "مرجع T0: " + it.valT0 + it.unit + " ← الحالي: " + it.valT1 + it.unit +
-              " (Δ=" + Core.fmtSigned(it.delta, it.unit, dec) + "، z=" + Core.fmtSigned(it.zRci, "", 2) +
-              "، عتبة RCI 90%: ±" + it.rci90Threshold + it.unit + ") — " + it.statusAr
+              " (Δ=" + Core.fmtSigned(it.delta, it.unit, dec) + " · z=" + Core.fmtSigned(it.zRci, "", 2) +
+              " · عتبة RCI 90%: ±" + it.rci90Threshold + it.unit + ") — " + it.statusAr
             : "قيمة T0: " + it.valT0 + it.unit + " · ICC=" + it.icc + " · SEM=" + it.sem + it.unit + " · " + it.statusAr;
-          return "<li><strong>" + esc((idx + 1) + ". " + it.labelAr) + ":</strong> " + esc(ctxSpan) + " <span class=\"ltr-iso\">" + esc(line) + "</span></li>";
+          return "<li><strong>" + formatDeepRichHtml((idx + 1) + ". " + it.labelAr) + ":</strong> " + ctxBadgeHtml + formatDeepRichHtml(line) + "</li>";
         }).join("") +
         "</ol></section>";
     }
 
     var vListHtml = summary.verdicts.map(function (v) {
-      return "<li>" + esc(v) + "</li>";
+      return "<li>" + formatDeepRichHtml(v) + "</li>";
     }).join("");
 
     var cardsHtml = Core.EXPERIMENTS.map(function (exp) {
       var r = res[exp.id];
-      var badge = "غير منفذ · ~" + exp.durationMin + " د";
+      var shortCode = exp.shortCode || String(exp.code || "").split("·")[0].trim();
+      var statusHtml = '<span class="probe-status-pill">' + formatDeepStepHtml(exp.metaChip || ("~" + exp.durationMin + " د")) + "</span>";
       if (r) {
-        if (exp.id === "d1_tbrs") badge = "High-CL: " + r.pTargetHighPct + "% | Δ_TBRS=" + r.deltaTbrs;
-        else if (exp.id === "d2_refback_m3") badge = "M3 P_target: " + r.pTargetPct + "% | Swap: " + r.pSwapCorrPct + "%";
-        else if (exp.id === "d3_bays_analog") badge = "K=" + r.K + " | β=" + r.betaPct + "% | σ=" + r.sigmaDeg + "°";
-        else if (exp.id === "d4_consolidation_soa") badge = "SOA_75=" + Core.formatD4Soa75(r, true) + " | AUC=" + r.aucConsPct + "%";
-        else if (exp.id === "d5_pvt5") badge = "1/RT=" + r.meanReciprocalSpeed + "s⁻¹ | τ=" + r.tauMs + "ms";
+        var mBadge = "";
+        if (exp.id === "d1_tbrs") mBadge = "High-CL: " + r.pTargetHighPct + "% · Δ=" + r.deltaTbrs;
+        else if (exp.id === "d2_refback_m3") mBadge = "P_target: " + r.pTargetPct + "% · Swap: " + r.pSwapCorrPct + "%";
+        else if (exp.id === "d3_bays_analog") mBadge = "K=" + r.K + " · β=" + r.betaPct + "% · σ=" + r.sigmaDeg + "°";
+        else if (exp.id === "d4_consolidation_soa") mBadge = "SOA_75=" + Core.formatD4Soa75(r, true) + " · AUC=" + r.aucConsPct + "%";
+        else if (exp.id === "d5_pvt5") mBadge = "1/RT=" + r.meanReciprocalSpeed + "s⁻¹ · τ=" + r.tauMs + "ms";
+        statusHtml = '<span class="probe-status-pill is-done"><span class="ltr-iso">' + esc(mBadge) + "</span></span>";
       }
       return (
         '<article class="probe-card">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
-        '<span class="probe-region-badge">' + esc(exp.code) + "</span>" +
-        '<span class="stim-label"><span class="ltr-iso">' + esc(badge) + "</span></span>" +
+        '<div class="probe-badges">' +
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+        '<span class="probe-code ltr-iso">' + esc(shortCode) + "</span>" +
+        (exp.domainTag ? '<span class="probe-role-tag">' + formatDeepRichHtml(exp.domainTag) + "</span>" : "") +
         "</div>" +
-        '<h3 class="card-title">' + esc(exp.title) + "</h3>" +
-        '<p class="card-subtitle">' + esc(exp.targetQuestion) + "</p>" +
-        '<button type="button" class="btn-ghost btn-run-deep-one" data-d-id="' + esc(exp.id) + '">تشغيل هذا المسبار منفردا</button>' +
+        statusHtml +
+        "</div>" +
+        '<h3 class="card-title">' + formatDeepRichHtml(exp.title) + "</h3>" +
+        '<p class="card-subtitle">' + formatDeepRichHtml(exp.targetQuestion) + "</p>" +
+        '<button type="button" class="btn-start-probe btn-run-deep-one" data-d-id="' + esc(exp.id) + '">' +
+        (r ? "إعادة تشغيل هذا المسبار" : "بدء هذا المسبار منفردا") +
+        "</button>" +
         "</article>"
       );
     }).join("");
@@ -2740,7 +2906,7 @@
           '<div class="history-item-head">' +
           '<div class="probe-metrics-row">' +
           '<span class="probe-code">#' + esc(orderNum) + '</span>' +
-          '<strong>' + esc(meta.code + " — " + meta.shortTitle) + '</strong>' +
+          '<strong>' + esc((meta.shortCode || meta.code) + " — " + meta.shortTitle) + '</strong>' +
           '<span class="metric-pill">' + esc(phLabel) + '</span>' +
           '<span class="metric-pill ltr-iso">Form ' + esc(rec.formId || "A") + '</span>' +
           '</div>' +
@@ -2759,57 +2925,63 @@
         '</section>';
     }
 
-    var famStatusTxt = st.familiarization && st.familiarization.completed
-      ? "التهيئة التمهيدية: مكتملة (" + st.familiarization.runsCount + ")"
-      : "التهيئة التمهيدية: مستحسنة قبل T0";
+    var famStatusHtml = st.familiarization && st.familiarization.completed
+      ? 'التهيئة: مكتملة (<span class="ltr-iso">' + esc(st.familiarization.runsCount) + "</span>)"
+      : 'التهيئة: مستحسنة قبل <span class="ltr-iso">T0</span>';
 
-    var hzTxt = displayCalib.calibrated
-      ? displayCalib.refreshHz + "Hz (" + displayCalib.frameMs + "ms)"
-      : "60Hz افتراضي (اضغط للمعايرة)";
+    var hzHtml = displayCalib.calibrated
+      ? '<span class="ltr-iso">' + esc(displayCalib.refreshHz + "Hz (" + displayCalib.frameMs + "ms)") + "</span>"
+      : '<span class="ltr-iso">60Hz</span> افتراضي';
 
     target.innerHTML =
       '<div style="display:flex;flex-direction:column;gap:16px;">' +
       '<section class="card">' +
-      '<h2 class="section-title">النسخة الثالثة المرقّاة: البطارية السيكوفيزيائية المقاومة للتكتيل (D1–D5 · ≤15 د)</h2>' +
-      '<p class="section-sub">مقفلة على إطارات الشاشة (rAF + Canvas) مع عشوائية مشفرة وتدوير نماذج الرموز المتعامدة (Form A/B/C) لإغلاق مسارات التكتيل الأربعة واستخراج البصمات التفريقية ومؤشرات RCI 90%.</p>' +
-      '<div class="deep-calib-bar">' +
+      '<div>' +
+      '<h2 class="section-title">النسخة الثالثة المرقّاة: البطارية السيكوفيزيائية المقاومة للتكتيل (~15 د)</h2>' +
+      '<p class="section-sub">مقفلة على إطارات الشاشة مع عشوائية مشفرة وتدوير نماذج الرموز المتعامدة (<span class="ltr-iso">Form A/B/C</span>) لإغلاق مسارات التكتيل واستخراج البصمات التفريقية ومؤشرات <span class="ltr-iso">RCI 90%</span>.</p>' +
+      "</div>" +
+      '<div class="deep-calib-bar" style="margin-top:0;">' +
       '<div class="deep-calib-item">' +
-      '<label for="deepPhaseSelect" class="stim-label">مرحلة التتبع الطولي:</label>' +
+      '<label for="deepPhaseSelect" class="stim-label">مرحلة التتبع:</label>' +
       '<select id="deepPhaseSelect" class="phase-select">' + phaseOptsHtml + '</select>' +
       '</div>' +
       '<div class="deep-calib-item">' +
-      '<span class="stim-label">مجموعة الرموز المتعامدة (6–8 أسابيع):</span>' +
+      '<span class="stim-label">نموذج الرموز:</span>' +
       '<div class="form-pill-group">' + formBtnsHtml + '</div>' +
       '</div>' +
       '<div class="deep-calib-item">' +
-      '<span class="stim-label ltr-iso">' + esc(hzTxt) + " · " + esc(famStatusTxt) + '</span>' +
-      '<button id="btnRecalibHz" type="button" class="btn-ghost" style="min-height:36px;padding:5px 12px;">معايرة التردد</button>' +
+      '<span class="stim-label">' + hzHtml + " · " + famStatusHtml + '</span>' +
+      '<button id="btnRecalibHz" type="button" class="btn-ghost" style="min-height:34px;padding:4px 11px;font-size:0.8rem;">معايرة التردد</button>' +
       '</div>' +
       '</div>' +
       envAlertsHtml +
-      '<div class="backup-actions-row">' +
-      '<button id="btnRunFamiliarization" type="button" class="btn-ghost">جولة تهيئة تمهيدية (~2 د · مستبعدة من السجل)</button>' +
-      '<button id="btnRunFullDeep" type="button" class="btn-primary">بدء البطارية العميقة المعتمدة — 5 مسابير (≤15 د)</button>' +
-      '<button id="btnCopyDeepReport" type="button" class="btn-ghost">نسخ التقرير التفريقي كنص</button>' +
+      '<div class="suite-toolbar">' +
+      '<div class="suite-primary-actions">' +
+      '<button id="btnRunFullDeep" type="button" class="btn-primary">بدء البطارية العميقة المعتمدة — 5 مسابير (~15 د)</button>' +
+      '<button id="btnRunFamiliarization" type="button" class="btn-ghost">جولة تهيئة تمهيدية (~2 د · مستبعدة)</button>' +
+      "</div>" +
+      '<div class="suite-util-actions">' +
+      '<button id="btnCopyDeepReport" type="button" class="btn-ghost">نسخ التقرير</button>' +
       '<button id="btnExportDeepJson" type="button" class="btn-ghost">تصدير JSON</button>' +
       '<button id="btnImportDeepJson" type="button" class="btn-ghost">استيراد JSON</button>' +
       '<input id="inputImportDeepJson" type="file" accept=".json,application/json" hidden />' +
-      '<button id="btnResetDeep" type="button" class="btn-danger">' + (resetArmed ? "اضغط ثانية لتأكيد المسح" : "مسح سجل النسخة الثالثة") + "</button>" +
+      '<button id="btnResetDeep" type="button" class="btn-danger">' + (resetArmed ? "اضغط ثانية لتأكيد المسح" : "مسح السجل") + "</button>" +
+      "</div>" +
       "</div>" +
       "</section>" +
       '<div class="hero-summary-grid">' +
-      '<article class="summary-card"><h3 class="summary-label">1. صمود الربط تحت الحمل (D1 · TBRS)</h3><div class="summary-value ltr-iso">' + esc(kpi1Val) + '</div><div class="summary-sub">نافذة ثابتة 4,000ms (4 أحكام/1000ms مقابل حكمين/2000ms)</div></article>' +
-      '<article class="summary-card"><h3 class="summary-label">2. التحديث السريع وتفكيك M3 (D2)</h3><div class="summary-value ltr-iso">' + esc(kpi2Val) + '</div><div class="summary-sub">طفرات 800ms (عرض 500ms) + بوابة Reference-Back وستة بدائل</div></article>' +
-      '<article class="summary-card"><h3 class="summary-label">3. سعة خليط Bays المقنّع (D3)</h3><div class="summary-value ltr-iso">' + esc(kpi3Val) + '</div><div class="summary-sub">ومضة 200ms لـ 4 عناصر عبر تأخير 0.9s مقابل 3.8s</div></article>' +
-      '<article class="summary-card"><h3 class="summary-label">4. التوطيد واليقظة الممتدة (D4 · D5)</h3><div class="summary-value ltr-iso">' + esc(kpi4Val) + '</div><div class="summary-sub">عتبة التدفق SOA_75 وسرعة PVT-5 التبادلية</div></article>' +
+      '<article class="summary-card"><h3 class="summary-label">' + formatDeepRichHtml("1. صمود الربط تحت الحمل (D1 · TBRS)") + '</h3><div class="summary-value ltr-iso">' + esc(kpi1Val) + '</div><div class="summary-sub">نافذة ثابتة <span class="ltr-iso">4,000ms</span> (<span class="ltr-iso">4</span> أحكام مقابل حكمين)</div></article>' +
+      '<article class="summary-card"><h3 class="summary-label">' + formatDeepRichHtml("2. التحديث السريع وتفكيك البوابة (D2 · M3)") + '</h3><div class="summary-value ltr-iso">' + esc(kpi2Val) + '</div><div class="summary-sub">طفرات <span class="ltr-iso">500ms</span> + بوابة تحديث/مقارنة وستة بدائل</div></article>' +
+      '<article class="summary-card"><h3 class="summary-label">' + formatDeepRichHtml("3. سعة خليط Bays المقنّع (D3)") + '</h3><div class="summary-value ltr-iso">' + esc(kpi3Val) + '</div><div class="summary-sub">ومضة <span class="ltr-iso">200ms</span> لـ <span class="ltr-iso">4</span> عناصر عبر تأخير <span class="ltr-iso">0.9s</span> و<span class="ltr-iso">3.8s</span></div></article>' +
+      '<article class="summary-card"><h3 class="summary-label">' + formatDeepRichHtml("4. التوطيد واليقظة الممتدة (D4 · D5)") + '</h3><div class="summary-value ltr-iso">' + esc(kpi4Val) + '</div><div class="summary-sub">عتبة التدفق <span class="ltr-iso">SOA_75</span> وسرعة <span class="ltr-iso">PVT-5</span> التبادلية</div></article>' +
       "</div>" +
+      '<div class="deep-probes-grid">' + cardsHtml + "</div>" +
       diffSigHtml +
       rciHtml +
       '<section class="card verdict-box">' +
-      '<h3 class="section-title" style="margin-bottom:8px;">' + esc(summary.overallHeadline) + "</h3>" +
+      '<h3 class="section-title" style="margin-bottom:4px;">' + formatDeepRichHtml(summary.overallHeadline) + "</h3>" +
       '<ol class="verdict-list">' + vListHtml + "</ol>" +
       "</section>" +
-      '<div class="falsify-grid">' + cardsHtml + "</div>" +
       deepHistHtml +
       "</div>";
 

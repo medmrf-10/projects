@@ -86,13 +86,22 @@
   function openArena() {
     clearTimers();
     var a = domArena();
-    if (a.overlay) a.overlay.hidden = false;
+    if (a.stage && a.stage.parentElement && a.stage.parentElement.classList) {
+      a.stage.parentElement.classList.remove("is-canvas-stage");
+    }
+    if (a.overlay) {
+      a.overlay.hidden = false;
+      a.overlay.scrollTop = 0;
+    }
   }
 
   function closeArena() {
     clearTimers();
     var a = domArena();
-    if (a.overlay) a.overlay.hidden = true;
+    if (a.overlay) {
+      a.overlay.scrollTop = 0;
+      a.overlay.hidden = true;
+    }
     if (a.stage) a.stage.innerHTML = "";
     render();
   }
@@ -101,7 +110,10 @@
     isBattery = false;
     clearTimers();
     var a = domArena();
-    if (a.overlay) a.overlay.hidden = true;
+    if (a.overlay) {
+      a.overlay.scrollTop = 0;
+      a.overlay.hidden = true;
+    }
     if (a.stage) a.stage.innerHTML = "";
     render();
   }
@@ -144,32 +156,93 @@
     showExperimentIntro(expId);
   }
 
+  function formatRichTextHtml(rawStr) {
+    var s = esc(rawStr);
+    var slots = [];
+    function keep(html) {
+      var id = slots.length;
+      slots.push(html);
+      return "\uE000" + id + "\uE001";
+    }
+    s = s.replace(/\[([^\]]+)\]/g, function (_m, inner) {
+      return keep('<span class="verdict-tag">' + inner + "</span>");
+    });
+    s = s.replace(/\((Space|Enter|\d+\s*[–-]\s*\d+)\)/g, function (_m, inner) {
+      return keep('<kbd class="kbd-chip ltr-iso">' + inner + "</kbd>");
+    });
+    s = s.replace(/\(([^()\uE000\uE001]+)\)/g, function (full, inner) {
+      if (/[\u0600-\u06FF]/.test(inner) || /^\d+$/.test(inner.trim())) return full;
+      return keep('<span class="ltr-iso">' + full + "</span>");
+    });
+    s = s.replace(/(?:~?\d+(?:\.\d+)?\s*(?:ms|s)\b|[±+-]?\d+(?:\.\d+)?(?:\s*ms|\s*s)\b|~?[±+-]?\d+(?:\.\d+)?%|[±+-]\d+(?:\.\d+)?|~?\d+\.\d+|\b\d+\s*×\s*\d+\b|\b(?:2D|F[1-4]|D[1-5])\b)/g, function (m) {
+      return keep('<span class="ltr-iso">' + m + "</span>");
+    });
+    return s.replace(/\uE000(\d+)\uE001/g, function (_m, idx) {
+      return slots[Number(idx)];
+    }).replace(/<\/kbd>\s*\.\s*$/, "</kbd>");
+  }
+
   function showExperimentIntro(expId) {
     clearTimers();
     var meta = findMeta(expId);
     var a = domArena();
+    var shortCode = meta.shortCode || String(meta.code || "").split("·")[0].trim();
     setHeader(
-      meta.code + " — " + meta.title,
-      isBattery ? "حسم " + (batteryIdx + 1) + "/4" : "تجربة فاصلة"
+      shortCode + " — " + meta.title,
+      isBattery ? "حسم " + (batteryIdx + 1) + " / 4" : "تجربة فاصلة"
     );
 
     var stepsHtml = meta.instructions.map(function (s) {
-      return "<li>" + esc(s) + "</li>";
+      var stLine = formatRichTextHtml(s);
+      var colonPos = stLine.indexOf(":");
+      if (colonPos > 0 && colonPos < 30) {
+        stLine = "<strong>" + stLine.slice(0, colonPos + 1) + "</strong>" + stLine.slice(colonPos + 1);
+      }
+      return "<li>" + stLine + "</li>";
     }).join("");
+
+    var flowHtml = "";
+    if (Array.isArray(meta.flowSteps) && meta.flowSteps.length > 0) {
+      flowHtml =
+        '<div class="probe-flow-box" aria-label="مسار الجولة">' +
+        '<span class="probe-flow-label">مسار الجولة</span>' +
+        '<div class="probe-flow-track">' +
+        meta.flowSteps.map(function (fs, idx) {
+          var stepHtml = '<span class="flow-step">' + formatRichTextHtml(fs) + "</span>";
+          return idx === 0
+            ? stepHtml
+            : '<span class="flow-step-unit"><span class="flow-arrow" aria-hidden="true">←</span>' + stepHtml + "</span>";
+        }).join("") +
+        "</div></div>";
+    } else if (meta.example) {
+      flowHtml = '<div class="probe-example-box">' + formatRichTextHtml(meta.example) + "</div>";
+    }
+
+    var domainTag = meta.domainTag || meta.shortTitle;
+    var metaChip = meta.metaChip || "تجربة حسم";
 
     a.stage.innerHTML =
       '<div class="probe-intro">' +
-      '<div class="probe-region-badge">' + esc(meta.code) + "</div>" +
-      '<h2 class="probe-title" style="font-size:1.25rem;margin:0;">' + esc(meta.title) + "</h2>" +
+      '<div class="probe-intro-top">' +
+      '<div class="probe-intro-badges">' +
+      '<span class="probe-code ltr-iso">' + esc(shortCode) + "</span>" +
+      '<span class="probe-domain-tag">' + esc(domainTag) + "</span>" +
+      "</div>" +
+      '<div class="probe-intro-meta">' +
+      '<span class="intro-meta-chip">' + formatRichTextHtml(metaChip) + "</span>" +
+      "</div>" +
+      "</div>" +
+      '<h2 class="probe-intro-title">' + esc(meta.title) + "</h2>" +
       '<ol class="probe-steps">' + stepsHtml + "</ol>" +
-      '<div class="probe-example-box">' + esc(meta.example) + "</div>" +
+      flowHtml +
       '<div class="result-actions">' +
-      '<button id="btnFalsifyStart" type="button" class="btn-primary">ابدأ الآن (Enter)</button>' +
+      '<button id="btnFalsifyStart" type="button" class="btn-primary"><span>ابدأ الآن</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>' +
       "</div>" +
       "</div>";
 
     var go = function () {
       clearTimers();
+      if (a.overlay) a.overlay.scrollTop = 0;
       if (expId === "f1_crossmodal") return runF1();
       if (expId === "f2_suppression") return runF2();
       if (expId === "f3_spatial_slots") return runF3();
@@ -188,12 +261,12 @@
     clearTimers();
     var meta = findMeta(expId);
     var a = domArena();
-    setHeader(meta.title + " — النتيجة", headlineScore);
+    setHeader(meta.shortTitle + " — النتيجة", headlineScore);
 
     var cardsHtml = cards.map(function (c) {
       return (
         '<div class="submetric-card">' +
-        '<span class="stim-label">' + esc(c.label) + "</span>" +
+        '<span class="stim-label">' + formatRichTextHtml(c.label) + "</span>" +
         '<strong style="font-size:1.05rem;"><span class="ltr-iso">' + esc(c.val) + "</span></strong>" +
         "</div>"
       );
@@ -203,16 +276,16 @@
     var nextBtnHtml = "";
     if (isBattery && !isLast) {
       var nxt = findMeta(batteryQueue[batteryIdx + 1]);
-      nextBtnHtml = '<button id="btnFalsifyNext" type="button" class="btn-primary">التجربة التالية: ' + esc(nxt.shortTitle) + " (Enter)</button>";
+      nextBtnHtml = '<button id="btnFalsifyNext" type="button" class="btn-primary"><span>التجربة التالية: ' + esc(nxt.shortTitle) + '</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     } else {
-      nextBtnHtml = '<button id="btnFalsifyDone" type="button" class="btn-primary">عرض لوحة الحكم الجراحي الكامل (Enter)</button>';
+      nextBtnHtml = '<button id="btnFalsifyDone" type="button" class="btn-primary"><span>عرض لوحة الحكم الجراحي الكامل</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     }
 
     a.stage.innerHTML =
       '<div class="result-report">' +
       '<div class="score-hero"><div class="score-ring-val"><span class="ltr-iso">' + esc(headlineScore) + "</span></div></div>" +
       '<div class="submetrics-grid">' + cardsHtml + "</div>" +
-      '<div class="diagnosis-callout">' + esc(summaryText) + "</div>" +
+      '<div class="diagnosis-callout">' + formatRichTextHtml(summaryText) + "</div>" +
       '<div class="result-actions">' + nextBtnHtml + "</div>" +
       "</div>";
 
@@ -523,7 +596,7 @@
         pacerHtml(tr.mode) +
         '<div class="stim-step-text">' +
         (tr.mode === "vocal" ? "ابدأ الآن بترديد «واحد — اثنان» بصوت مسموع متصل" : "جولة صامتة اعتيادية") +
-        '</div><button id="f2GoBtn" type="button" class="btn-primary">ابدأ الجولة (مسافة)</button></div>';
+        '</div><button id="f2GoBtn" type="button" class="btn-primary"><span>ابدأ الجولة</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button></div>';
       startPacerIfVocal(tr.mode);
 
       var go = function () {
@@ -548,7 +621,7 @@
         '<div class="task-box">' +
         '<p class="task-question">هل استمر لسانك بترديد «واحد — اثنان» طوال الجولة دون انقطاع؟</p>' +
         '<div class="result-actions">' +
-        '<button id="f2Kept" type="button" class="btn-primary">نعم، استمر دون توقف (Enter)</button>' +
+        '<button id="f2Kept" type="button" class="btn-primary"><span>نعم، استمر دون توقف</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>' +
         '<button id="f2Froze" type="button" class="btn-ghost">توقف لساني أثناء التفكير (سجّل وأعد)</button>' +
         "</div></div>";
 
@@ -651,7 +724,7 @@
           '<div class="stimulus-card">' + pacerHtml(tr.mode) +
           '<div class="stim-label"><span class="ltr-iso">' + (pIdx + 1) + ' / 2</span></div>' +
           '<div class="stim-step-text">' + esc(tr.premises[pIdx]) + "</div>" +
-          '<button id="f2NextP" type="button" class="btn-primary">' + (pIdx === 0 ? "التالي (مسافة)" : "السؤال (مسافة)") + "</button></div>";
+          '<button id="f2NextP" type="button" class="btn-primary"><span>' + (pIdx === 0 ? "التالي" : "السؤال") + '</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button></div>';
         var adv = function () { pIdx += 1; showP(); };
         document.getElementById("f2NextP").addEventListener("click", adv);
         bindKeys(function (ev) {
@@ -739,12 +812,12 @@
           '<div class="stim-step-text">ألف: <span class="ltr-iso">' + tr.initial[0] +
           '</span> &nbsp;|&nbsp; باء: <span class="ltr-iso">' + tr.initial[1] +
           '</span> &nbsp;|&nbsp; جيم: <span class="ltr-iso">' + tr.initial[2] + "</span></div>" +
-          '<button id="f3Start" type="button" class="btn-primary">ابدأ (مسافة)</button></div>';
+          '<button id="f3Start" type="button" class="btn-primary"><span>ابدأ</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button></div>';
       } else {
         a.stage.innerHTML =
           '<div class="stimulus-card"><div class="stim-label">احفظ رقم كل صندوق في مكانه</div>' +
           renderThreeBoxes(-1, [String(tr.initial[0]), String(tr.initial[1]), String(tr.initial[2])]) +
-          '<button id="f3Start" type="button" class="btn-primary">ابدأ (مسافة)</button></div>';
+          '<button id="f3Start" type="button" class="btn-primary"><span>ابدأ</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button></div>';
       }
 
       var sIdx = 0;
@@ -766,7 +839,7 @@
             '<div class="stimulus-card"><div class="stim-label"><span class="ltr-iso">' + (sIdx + 1) + ' / 5</span></div>' +
             '<div class="tbrs-timer-track"><div id="f3Bar" class="tbrs-timer-fill"></div></div>' +
             '<div class="stim-step-text">' + esc(st.verbalText) + "</div>" +
-            '<button id="f3Next" type="button" class="btn-primary">التالي (مسافة)</button></div>';
+            '<button id="f3Next" type="button" class="btn-primary"><span>التالي</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button></div>';
         } else {
           var labels = ["•", "•", "•"];
           labels[st.slotIdx] = esc(st.text);
@@ -774,7 +847,7 @@
             '<div class="stimulus-card"><div class="stim-label"><span class="ltr-iso">' + (sIdx + 1) + ' / 5</span></div>' +
             '<div class="tbrs-timer-track"><div id="f3Bar" class="tbrs-timer-fill"></div></div>' +
             renderThreeBoxes(st.slotIdx, labels) +
-            '<button id="f3Next" type="button" class="btn-primary">التالي (مسافة)</button></div>';
+            '<button id="f3Next" type="button" class="btn-primary"><span>التالي</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button></div>';
         }
         startCountdownBar(document.getElementById("f3Bar"), 8500);
         var adv = function () { clearTimers(); sIdx += 1; showStep(); };
@@ -908,15 +981,24 @@
         var showP = function () {
           clearTimers();
           if (pIdx >= 2) return showQ();
-          var hintHtml = tr.axisHints && tr.axisHints[pIdx]
-            ? '<div class="axis-hint-pill">' + esc(tr.axisHints[pIdx]) + "</div>"
-            : "";
+          var hintHtml = "";
+          if (tr.axisHints && tr.axisHints[pIdx]) {
+            var rawHint = String(tr.axisHints[pIdx]);
+            var hParts = rawHint.split("◄──");
+            if (hParts.length === 2) {
+              hintHtml =
+                '<div class="axis-hint-pill"><span>' + esc(hParts[0].trim()) +
+                '</span><span class="ltr-iso">◄──</span><span>' + esc(hParts[1].trim()) + "</span></div>";
+            } else {
+              hintHtml = '<div class="axis-hint-pill"><span>' + esc(rawHint) + "</span></div>";
+            }
+          }
           a.stage.innerHTML =
             '<div class="stimulus-card">' + axisTop +
             '<div class="stim-label"><span class="ltr-iso">' + (pIdx + 1) + ' / 2</span></div>' +
             '<div class="stim-step-text">' + esc(tr.premises[pIdx]) + "</div>" +
             hintHtml +
-            '<button id="f4Next" type="button" class="btn-primary">' + (pIdx === 0 ? "التالي (مسافة)" : "السؤال (مسافة)") + "</button></div>";
+            '<button id="f4Next" type="button" class="btn-primary"><span>' + (pIdx === 0 ? "التالي" : "السؤال") + '</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button></div>';
           var adv = function () { pIdx += 1; showP(); };
           document.getElementById("f4Next").addEventListener("click", adv);
           bindKeys(function (ev) {
@@ -952,7 +1034,7 @@
           '<div class="stimulus-card"><div class="stim-label">قاعدة غير مكانية</div>' +
           '<div class="stim-step-text">البداية: <span class="ltr-iso">' + tr.startVal +
           "</span> &nbsp;|&nbsp; القاعدة: <strong>" + esc(tr.baseRule) + "</strong></div>" +
-          '<button id="f4SGo" type="button" class="btn-primary">ابدأ (مسافة)</button></div>';
+          '<button id="f4SGo" type="button" class="btn-primary"><span>ابدأ</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button></div>';
 
         var sStep = 0;
         var runSignStep = function () {
@@ -979,7 +1061,7 @@
           a.stage.innerHTML =
             '<div class="stimulus-card"><div class="stim-label">خطوة <span class="ltr-iso">' + (sStep + 1) + ' / 2</span></div>' +
             '<div class="stim-step-text">' + esc(stObj.label) + "</div>" +
-            '<button id="f4SNext" type="button" class="btn-primary">تم الحساب — التالي (مسافة)</button></div>';
+            '<button id="f4SNext" type="button" class="btn-primary"><span>تم الحساب — التالي</span><kbd class="kbd-on-btn ltr-iso">Space</kbd></button></div>';
           var adv = function () {
             var rt = Math.round(nowMs() - t0);
             if (stObj.ruleMode === "same") sameStepRts.push(rt);
@@ -1016,27 +1098,35 @@
     var res = st.results || {};
 
     var vListHtml = summary.verdicts.map(function (v) {
-      return "<li>" + esc(v) + "</li>";
+      return "<li>" + formatRichTextHtml(v) + "</li>";
     }).join("");
 
     var cardsHtml = Core.EXPERIMENTS.map(function (exp) {
       var r = res[exp.id];
-      var badge = "غير منفذ بعد";
+      var shortCode = exp.shortCode || String(exp.code || "").split("·")[0].trim();
+      var statusHtml = '<span class="probe-status-pill">' + formatRichTextHtml(exp.metaChip || "غير منفذ بعد") + "</span>";
       if (r) {
-        if (exp.id === "f1_crossmodal") badge = "مربعات+حساب: " + r.svPct + "% | كلمات+حساب: " + r.vvPct + "%";
-        else if (exp.id === "f2_suppression") badge = "كتم اللسان: " + r.spatialVocalPct + "% (توقف: " + r.tongueFreezeCount + ")";
-        else if (exp.id === "f3_spatial_slots") badge = "صناديق مكانية: " + r.spatial3Pct + "% مقابل نصي: " + r.verbal3Pct + "%";
-        else if (exp.id === "f4_polarity_axis") badge = "انمحاء الضريبة بالمسطرة: " + r.axisReliefPct + "%";
+        var mTxt = "";
+        if (exp.id === "f1_crossmodal") mTxt = "مربعات+حساب " + r.svPct + "% · كلمات+حساب " + r.vvPct + "%";
+        else if (exp.id === "f2_suppression") mTxt = "كتم اللسان " + r.spatialVocalPct + "% · توقف " + r.tongueFreezeCount;
+        else if (exp.id === "f3_spatial_slots") mTxt = "مكاني " + r.spatial3Pct + "% · نصي " + r.verbal3Pct + "%";
+        else if (exp.id === "f4_polarity_axis") mTxt = "انمحاء الضريبة " + r.axisReliefPct + "%";
+        statusHtml = '<span class="probe-status-pill is-done">' + formatRichTextHtml(mTxt) + "</span>";
       }
       return (
         '<article class="probe-card">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-        '<span class="probe-region-badge">' + esc(exp.code) + "</span>" +
-        '<span class="stim-label"><span class="ltr-iso">' + esc(badge) + "</span></span>" +
+        '<div class="probe-badges">' +
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+        '<span class="probe-code ltr-iso">' + esc(shortCode) + "</span>" +
+        (exp.domainTag ? '<span class="probe-role-tag">' + esc(exp.domainTag) + "</span>" : "") +
+        "</div>" +
+        statusHtml +
         "</div>" +
         '<h3 class="card-title">' + esc(exp.title) + "</h3>" +
-        '<p class="card-subtitle">' + esc(exp.targetQuestion) + "</p>" +
-        '<button type="button" class="btn-ghost btn-run-falsify-one" data-f-id="' + esc(exp.id) + '">تشغيل هذه التجربة منفردة</button>' +
+        '<p class="card-subtitle">' + formatRichTextHtml(exp.targetQuestion) + "</p>" +
+        '<button type="button" class="btn-start-probe btn-run-falsify-one" data-f-id="' + esc(exp.id) + '">' +
+        (r ? "إعادة تشغيل هذه التجربة" : "بدء هذه التجربة منفردة") +
+        "</button>" +
         "</article>"
       );
     }).join("");
@@ -1044,19 +1134,25 @@
     target.innerHTML =
       '<div style="display:flex;flex-direction:column;gap:16px;">' +
       '<section class="card">' +
+      '<div>' +
       '<h2 class="section-title">مختبر الحسم والتكذيب الجراحي (4 تجارب فاصلة — 30 جولة)</h2>' +
-      '<p class="section-sub">يفحص بالتجربة المضادة كل شق من فرضية «انحشار الحفظ والحساب في قناة لفظية واحدة وغياب المسودة المكانية» ليحسم بالأرقام ما هو بنيوي وما هو كيميائي قابل للعلاج.</p>' +
-      '<div class="backup-actions-row">' +
+      '<p class="section-sub">يفحص بالتجربة المضادة فرضية انحشار الحفظ والحساب في قناة لفظية واحدة وغياب المسودة المكانية، لفصل ما هو بنيوي عما هو كيميائي قابل للعلاج.</p>' +
+      "</div>" +
+      '<div class="suite-toolbar">' +
+      '<div class="suite-primary-actions">' +
       '<button id="btnRunFullFalsify" type="button" class="btn-primary">بدء بطارية الحسم الكاملة — 4 تجارب متتالية</button>' +
-      '<button id="btnCopyFalsifyReport" type="button" class="btn-ghost">نسخ تقرير الحسم كنص</button>' +
-      '<button id="btnResetFalsify" type="button" class="btn-danger">' + (resetArmed ? "اضغط ثانية لتأكيد المسح" : "مسح سجل الحسم") + "</button>" +
+      "</div>" +
+      '<div class="suite-util-actions">' +
+      '<button id="btnCopyFalsifyReport" type="button" class="btn-ghost">نسخ تقرير الحسم</button>' +
+      '<button id="btnResetFalsify" type="button" class="btn-danger">' + (resetArmed ? "اضغط ثانية لتأكيد المسح" : "مسح السجل") + "</button>" +
+      "</div>" +
       "</div>" +
       "</section>" +
+      '<div class="falsify-grid">' + cardsHtml + "</div>" +
       '<section class="card verdict-box">' +
-      '<h3 class="section-title" style="margin-bottom:8px;">' + esc(summary.overallHeadline) + "</h3>" +
+      '<h3 class="section-title" style="margin-bottom:4px;">' + formatRichTextHtml(summary.overallHeadline) + "</h3>" +
       '<ol class="verdict-list">' + vListHtml + "</ol>" +
       "</section>" +
-      '<div class="falsify-grid">' + cardsHtml + "</div>" +
       "</div>";
 
     var fullBtn = document.getElementById("btnRunFullFalsify");
@@ -1068,7 +1164,7 @@
         var text = summary.plainTextReport;
         var markCopied = function () {
           copyBtn.textContent = "تم نسخ تقرير الحسم";
-          setTimeout(function () { copyBtn.textContent = "نسخ تقرير الحسم كنص"; }, 1800);
+          setTimeout(function () { copyBtn.textContent = "نسخ تقرير الحسم"; }, 1800);
         };
         var fallbackCopy = function () {
           var area = document.createElement("textarea");

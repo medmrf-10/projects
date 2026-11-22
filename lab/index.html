@@ -14,20 +14,9 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="./styles.css?v=10" />
+  <link rel="stylesheet" href="./styles.css?v=13" />
 
   <style>
-    :where(.topbar-inner) {
-      flex-wrap: wrap;
-    }
-    @media (max-width: 920px) {
-      :where(.topbar-inner > .view-tabs) {
-        order: 3;
-        flex: 1 1 100%;
-        width: 100%;
-        margin: 4px 0 0;
-      }
-    }
     :where(.backup-actions-row) {
       display: flex;
       flex-wrap: wrap;
@@ -61,19 +50,45 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 12h4l2.5-6 4 12 3-8 2.5 2H22" />
-          </svg>
+      <div class="topbar-head">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12h4l2.5-6 4 12 3-8 2.5 2H22" />
+            </svg>
+          </div>
+          <div class="brand-copy">
+            <h1 class="brand-title">مختبر التتبع العصبي الجراحي</h1>
+            <p class="brand-sub">منظومة قياس الذاكرة العاملة والانتباه التنفيذي</p>
+          </div>
         </div>
-        <div>
-          <h1 class="brand-title">مختبر التتبع العصبي الجراحي</h1>
-          <p class="brand-sub">منظومة الذاكرة العاملة والانتباه التنفيذي</p>
+
+        <div class="top-actions">
+          <button
+            id="topContextPill"
+            type="button"
+            class="top-context-pill"
+            title="معاينة وتعديل سياق الجلسة والمرحلة العلاجية"
+          >
+            <span class="top-context-dot" aria-hidden="true"></span>
+            <span id="topContextPillText">خط الأساس · يقظة 8/10</span>
+          </button>
+          <button
+            id="themeToggleBtn"
+            type="button"
+            class="pill-btn"
+            aria-label="تبديل الوضع الليلي والنهاري"
+            title="تبديل الوضع الليلي والنهاري"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+            <span>الوضع الليلي</span>
+          </button>
         </div>
       </div>
 
-      <nav class="view-tabs" role="tablist" aria-label="أقسام المختبر">
+      <nav id="mainViewTabs" class="view-tabs" role="tablist" aria-label="أقسام المختبر">
         <button
           type="button"
           class="tab-btn is-active"
@@ -82,7 +97,8 @@
           aria-selected="true"
           aria-controls="view-dashboard"
         >
-          لوحة المناطق المتضررة
+          <span>لوحة المناطق المتضررة</span>
+          <span class="tab-badge ltr-iso">6</span>
         </button>
         <button
           type="button"
@@ -92,7 +108,8 @@
           aria-selected="false"
           aria-controls="view-falsify"
         >
-          حسم الفرضية الفراغية (4)
+          <span>حسم الفرضية الفراغية</span>
+          <span class="tab-badge ltr-iso">F1–F4</span>
         </button>
         <button
           type="button"
@@ -102,7 +119,8 @@
           aria-selected="false"
           aria-controls="view-deep"
         >
-          النسخة العميقة 3 (5)
+          <span>النسخة العميقة 3</span>
+          <span class="tab-badge is-accent ltr-iso">D1–D5</span>
         </button>
         <button
           type="button"
@@ -112,7 +130,7 @@
           aria-selected="false"
           aria-controls="view-trends"
         >
-          المنحنيات والسجل الطولي
+          <span>المنحنيات والسجل الطولي</span>
         </button>
         <button
           type="button"
@@ -122,42 +140,9 @@
           aria-selected="false"
           aria-controls="view-data"
         >
-          المعايرة والنسخ الاحتياطي
+          <span>المعايرة والنسخ الاحتياطي</span>
         </button>
       </nav>
-
-      <div class="top-actions">
-        <button
-          id="themeToggleBtn"
-          type="button"
-          class="pill-btn"
-          aria-label="تبديل الوضع الليلي والنهاري"
-          title="تبديل الوضع الليلي والنهاري"
-        >
-          الوضع الليلي
-        </button>
-        <button
-          id="topFalsifyBtn"
-          type="button"
-          class="pill-btn"
-        >
-          حسم الفرضية (4)
-        </button>
-        <button
-          id="topDeepBtn"
-          type="button"
-          class="pill-btn is-primary"
-        >
-          النسخة العميقة 3 (5)
-        </button>
-        <button
-          id="topBatteryBtn"
-          type="button"
-          class="pill-btn"
-        >
-          البطارية السريعة (6)
-        </button>
-      </div>
     </div>
   </header>
 
@@ -166,11 +151,14 @@
     <section id="view-dashboard" class="view-panel" role="tabpanel">
       <div class="v3-callout-strip" role="region" aria-label="النسخة الثالثة العميقة المضادة للتكتيل">
         <div class="v3-callout-copy">
-          <strong>النسخة الثالثة المرقّاة: البطارية السيكوفيزيائية المقاومة للتكتيل (D1–D5 · ≤15 د)</strong>
-          <span>محرك rAF + Canvas برموز متعامدة (Form A/B/C): نافذة TBRS ثابتة (4.0s)، بوابة Reference-Back بتفكيك M3، خليط Bays المقنّع (200ms · N=4)، عتبة التوطيد (SOA_75)، وPVT-5 المعياري.</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span class="probe-code ltr-iso">V3.3 · D1–D5</span>
+            <strong>البطارية السيكوفيزيائية المقاومة للتكتيل (~15 د)</strong>
+          </div>
+          <span>5 مسابير رمزية متعامدة مقفلة على إطارات الشاشة لعزل السعة الخام وسرعة التوطيد واليقظة دون تسميع لفظي.</span>
         </div>
         <button id="bannerOpenDeepBtn" type="button" class="btn-primary">
-          فتح النسخة العميقة 3
+          فتح النسخة العميقة 3 ←
         </button>
       </div>
 
@@ -252,16 +240,6 @@
               مقارنة جراحية ثنائية الأبعاد بين خط الأساس المرجعي (21 نوفمبر)، والقياس الأحدث، والسقف الوظيفي السليم لكل منطقة
             </p>
           </div>
-          <div class="chart-legend" aria-hidden="true">
-            <span class="legend-item">
-              <span class="legend-dot" style="background: var(--accent);"></span>
-              <span>المناطق الخمس المتضررة</span>
-            </span>
-            <span class="legend-item">
-              <span class="legend-dot" style="background: var(--control-accent);"></span>
-              <span>مرساة التحكم الضابطة (98%)</span>
-            </span>
-          </div>
         </header>
         <div id="profileBarsContainer" role="img" aria-label="مخطط الأشرطة الجراحي المقارن للمناطق العصبية الست"></div>
       </section>
@@ -296,7 +274,7 @@
           <div>
             <h2 id="compositeTrendHeading" class="chart-title">منحنى ردم الفجوة العصبية المركب عبر المراحل العلاجية</h2>
             <p class="chart-sub">
-              مسار صعود المناطق الخمس المتضررة من خط الأساس (36%) نحو السقف السليم (85%) بموازاة مرساة التحكم الضابطة (98%)
+              مسار صعود المناطق الخمس المتضررة من خط الأساس <span class="ltr-iso">(36%)</span> نحو السقف السليم <span class="ltr-iso">(85%)</span> بموازاة مرساة التحكم الضابطة <span class="ltr-iso">(98%)</span>
             </p>
           </div>
         </header>
@@ -499,7 +477,13 @@
         <span id="arenaTitle" class="arena-title"></span>
         <span id="arenaProgress" class="arena-progress"></span>
       </div>
-      <button id="arenaAbortBtn" type="button" class="pill-btn">إنهاء والعودة</button>
+      <button id="arenaAbortBtn" type="button" class="pill-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+        <span>إنهاء والعودة</span>
+      </button>
     </header>
     <div class="arena-stage-wrap">
       <div id="arenaStage"></div>
@@ -509,13 +493,13 @@
   <!-- إشعار سريع لطيف -->
   <div id="toastEl" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="./stimuli.js?v=10"></script>
-  <script src="./analytics.js?v=10"></script>
-  <script src="./engine.js?v=10"></script>
-  <script src="./falsify-core.js?v=10"></script>
-  <script src="./falsify.js?v=10"></script>
-  <script src="./deep-core.js?v=10"></script>
-  <script src="./deep.js?v=10"></script>
+  <script src="./stimuli.js?v=13"></script>
+  <script src="./analytics.js?v=13"></script>
+  <script src="./engine.js?v=13"></script>
+  <script src="./falsify-core.js?v=13"></script>
+  <script src="./falsify.js?v=13"></script>
+  <script src="./deep-core.js?v=13"></script>
+  <script src="./deep.js?v=13"></script>
   <script>
     (function () {
       "use strict";
@@ -620,6 +604,29 @@
           .replace(/'/g, "&#39;");
       }
 
+      function formatUiRichHtml(rawStr) {
+        let s = escapeHtml(rawStr);
+        const slots = [];
+        function keep(html) {
+          const id = slots.length;
+          slots.push(html);
+          return "\uE000" + id + "\uE001";
+        }
+        s = s.replace(/\(([^()\uE000\uE001]+)\)/g, function (full, inner) {
+          if (/[\u0621-\u064A\u0671-\u06D3]/.test(inner) || /^\d+$/.test(inner.trim())) return full;
+          return keep('<span class="ltr-iso">(' + inner.replace(/،/g, ",") + ')</span>');
+        });
+        s = s.replace(/(?:\b(?:RCI|ICC|SEM|r|p)\s*(?:=|&lt;|&gt;|≥|≤)\s*[±+-]?\d+(?:\.\d+)?(?:\s*,\s*p\s*(?:&lt;|&gt;|=)\s*\d+(?:\.\d+)?)?|\bRCI\s+[+-]?\d+(?:\.\d+)?|(?:&lt;|&gt;|≥|≤)\s*[±+-]?\d+(?:\.\d+)?%?)/g, function (m) {
+          return keep('<span class="ltr-iso">' + m + '</span>');
+        });
+        s = s.replace(/(?:~?\d+(?:\.\d+)?\s*(?:ms|s|m)\b|~?\d+(?:\.\d+)?%|[±+-]\d+(?:\.\d+)?%?|\b\d+\/\d+\b|\b\d+\s*[–-]\s*\d+\+?|\bZ2×Z2\b|\b2D\b|\bHCN\s*\/\s*Alpha-2A\b|\bMAP-MLE(?:\s+Tau)?\b|\bEx-Gaussian\s+Tau\b|\bTBRS\b|\bABBA\b|\bDLPFC\b|\bLISAS\b|\bICV\b|\bTau\b)/g, function (m) {
+          return keep('<span class="ltr-iso">' + m + '</span>');
+        });
+        return s.replace(/\uE000(\d+)\uE001/g, function (_, idx) {
+          return slots[Number(idx)];
+        });
+      }
+
       function formatPct(num, decimals) {
         if (num === null || num === undefined || Number.isNaN(Number(num))) {
           return "—";
@@ -674,11 +681,14 @@
       const dom = {
         html: document.documentElement,
         themeToggleBtn: document.getElementById("themeToggleBtn"),
+        topContextPill: document.getElementById("topContextPill"),
+        topContextPillText: document.getElementById("topContextPillText"),
         topFalsifyBtn: document.getElementById("topFalsifyBtn"),
         topDeepBtn: document.getElementById("topDeepBtn"),
         bannerOpenDeepBtn: document.getElementById("bannerOpenDeepBtn"),
         topBatteryBtn: document.getElementById("topBatteryBtn"),
         launchBatteryBtn: document.getElementById("launchBatteryBtn"),
+        mainViewTabs: document.getElementById("mainViewTabs"),
         viewTabs: Array.from(document.querySelectorAll(".view-tabs [data-view]")),
         viewFalsify: document.getElementById("view-falsify"),
         falsifyMount: document.getElementById("falsifyMount"),
@@ -909,7 +919,22 @@
         const next = theme === "dark" ? "dark" : "light";
         dom.html.setAttribute("data-theme", next);
         if (dom.themeToggleBtn) {
-          dom.themeToggleBtn.textContent = next === "dark" ? "الوضع النهاري" : "الوضع الليلي";
+          const sunSvg =
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<circle cx="12" cy="12" r="5" />' +
+            '<line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />' +
+            '<line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />' +
+            '<line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />' +
+            '<line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />' +
+            '</svg>';
+          const moonSvg =
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />' +
+            '</svg>';
+          dom.themeToggleBtn.innerHTML =
+            (next === "dark" ? sunSvg : moonSvg) +
+            '<span>' + (next === "dark" ? "الوضع النهاري" : "الوضع الليلي") + '</span>';
+          dom.themeToggleBtn.setAttribute("aria-pressed", next === "dark" ? "true" : "false");
         }
         const A = getAnalyticsApi();
         if (typeof A.setTheme === "function") {
@@ -928,6 +953,7 @@
           section.hidden = key !== normalized;
         });
 
+        let activeTabEl = null;
         dom.viewTabs.forEach(function (btn) {
           const rawTarget = (btn.getAttribute("data-view") || "").trim();
           const btnView = rawTarget === "longitudinal" ? "trends" : rawTarget;
@@ -935,7 +961,17 @@
           btn.classList.toggle("is-active", isActive);
           btn.classList.toggle("active", isActive);
           btn.setAttribute("aria-selected", isActive ? "true" : "false");
+          if (isActive) activeTabEl = btn;
         });
+
+        if (activeTabEl && dom.mainViewTabs && dom.mainViewTabs.scrollWidth > dom.mainViewTabs.clientWidth) {
+          try {
+            const navRect = dom.mainViewTabs.getBoundingClientRect();
+            const btnRect = activeTabEl.getBoundingClientRect();
+            const deltaX = (btnRect.left + btnRect.width / 2) - (navRect.left + navRect.width / 2);
+            dom.mainViewTabs.scrollBy({ left: deltaX, behavior: "smooth" });
+          } catch (_) {}
+        }
 
         if (normalized === "falsify") {
           if (dom.viewFalsify) dom.viewFalsify.hidden = false;
@@ -1040,6 +1076,21 @@
         if (dom.dailyLapsesValue && dom.dailyLapsesInput) {
           dom.dailyLapsesValue.textContent = toAsciiDigits(dom.dailyLapsesInput.value);
         }
+        if (dom.topContextPillText) {
+          const phaseId = dom.phaseSelect ? dom.phaseSelect.value : "baseline";
+          const phases = getStimuliPhases();
+          const phObj = phases.find(function (p) {
+            return String(p.id || p.phase || p.key || p.value) === phaseId;
+          });
+          const shortPhase = phObj && phObj.short
+            ? toAsciiDigits(phObj.short)
+            : (dom.phaseSelect && dom.phaseSelect.selectedOptions[0]
+                ? toAsciiDigits(dom.phaseSelect.selectedOptions[0].textContent).split("(")[0].trim()
+                : "خط الأساس");
+          const alVal = dom.alertnessInput ? dom.alertnessInput.value : "8";
+          dom.topContextPillText.innerHTML =
+            escapeHtml(shortPhase) + ' · يقظة <span class="ltr-iso">' + escapeHtml(alVal + "/10") + '</span>';
+        }
       }
 
       function getCurrentContext() {
@@ -1143,30 +1194,26 @@
           ? "بطاريات مكتملة: " + toAsciiDigits(completedBatteries) + " · الحالة الإحصائية: " + toAsciiDigits(stats && stats.compositeRciStatusAr ? stats.compositeRciStatusAr : "معاير")
           : "نفّذ أول فحص لتفعيل مؤشر التغير الموثوق (Jacobson-Truax RCI)";
 
-        function wrapIsoNums(str) {
-          return escapeHtml(str).replace(/([±+-]?\d+(?:\.\d+)?%?)/g, '<span class="ltr-iso">$1</span>');
-        }
-
         dom.heroSummaryGrid.innerHTML =
           '<article class="summary-card">' +
             '<h2 class="summary-label">1. مؤشر المناطق الخمس المتضررة المركب</h2>' +
             '<div class="summary-value"><span class="ltr-iso">' + escapeHtml(impairedVal) + '</span></div>' +
-            '<div class="summary-sub">' + wrapIsoNums(impairedSub) + '</div>' +
+            '<div class="summary-sub">' + formatUiRichHtml(impairedSub) + '</div>' +
           '</article>' +
           '<article class="summary-card">' +
             '<h2 class="summary-label">2. مؤشر مرساة التحكم الضابطة</h2>' +
             '<div class="summary-value"><span class="ltr-iso">' + escapeHtml(controlVal) + '</span></div>' +
-            '<div class="summary-sub">' + wrapIsoNums(controlSub) + '</div>' +
+            '<div class="summary-sub">' + formatUiRichHtml(controlSub) + '</div>' +
           '</article>' +
           '<article class="summary-card">' +
             '<h2 class="summary-label">3. فجوة التباين العصبي الحالية</h2>' +
             '<div class="summary-value"><span class="ltr-iso">' + escapeHtml(gapVal) + '</span></div>' +
-            '<div class="summary-sub">' + wrapIsoNums(gapSub) + '</div>' +
+            '<div class="summary-sub">' + formatUiRichHtml(gapSub) + '</div>' +
           '</article>' +
           '<article class="summary-card">' +
             '<h2 class="summary-label">4. إجمالي الفحوص وموثوقية التحسن</h2>' +
             '<div class="summary-value"><span class="ltr-iso">' + escapeHtml(runsVal) + '</span></div>' +
-            '<div class="summary-sub">' + wrapIsoNums(deltaSub) + '</div>' +
+            '<div class="summary-sub">' + formatUiRichHtml(deltaSub) + '</div>' +
           '</article>';
       }
 
@@ -1204,9 +1251,9 @@
             delta === null ? "is-neutral" : delta > 0 ? "is-up" : delta < 0 ? "is-down" : "is-neutral";
           const cardClass = probe.isControl ? "probe-card is-control" : "probe-card";
           const semVal = latestEntry && typeof latestEntry.sem === "number" ? latestEntry.sem : (probe.raw && probe.raw.sem ? probe.raw.sem : null);
-          const latestText = latestScore !== null
-            ? formatPct(latestScore, 1) + (semVal !== null ? " ±" + toAsciiDigits(semVal) + "%" : "")
-            : "لم يُفحص";
+          const latestHtml = latestScore !== null
+            ? '<strong class="ltr-iso">' + escapeHtml(formatPct(latestScore, 1) + (semVal !== null ? " ±" + toAsciiDigits(semVal) + "%" : "")) + '</strong>'
+            : '<strong>لم يُفحص</strong>';
           const rciVal = latestEntry && typeof latestEntry.rci === "number" ? latestEntry.rci : null;
           const sigMark = latestEntry && latestEntry.isReliableChange ? " *" : "";
           const deltaText = delta !== null
@@ -1215,31 +1262,36 @@
           const barWidth = Math.max(0, Math.min(100, latestScore !== null ? latestScore : probe.baseline));
           const baselinePos = Math.max(0, Math.min(100, probe.baseline));
           const runCount = latestEntry && typeof latestEntry.count === "number" ? latestEntry.count : 0;
+          const durMin = probe.raw && probe.raw.durationSec
+            ? Math.max(1, Math.round((probe.raw.durationSec / 60) * 10) / 10)
+            : 2;
+          const roleLabel = probe.isControl ? "مرساة ضابطة" : "منطقة مستهدفة";
 
           return (
             '<article class="' + cardClass + '" data-probe-card="' + escapeHtml(probe.id) + '">' +
-              '<header class="probe-header">' +
-                '<div>' +
-                  '<h3 class="probe-title">' + escapeHtml(probe.index + ". " + probe.title) + '</h3>' +
-                  '<div class="probe-region">' + escapeHtml(probe.region) + '</div>' +
+              '<div class="probe-card-header">' +
+                '<div class="probe-badges">' +
+                  '<span class="probe-code">' + escapeHtml(probe.code) + '</span>' +
+                  '<span class="probe-role-tag">' + escapeHtml(roleLabel) + ' · <span class="ltr-iso">~' + escapeHtml(durMin) + 'm</span></span>' +
                 '</div>' +
-                '<span class="probe-code">' + escapeHtml(probe.code) + '</span>' +
-              '</header>' +
-              '<p class="probe-deficit">' + escapeHtml(probe.deficit) + '</p>' +
+                '<h3 class="probe-title">' + escapeHtml(probe.index + ". " + probe.title) + '</h3>' +
+                '<div class="probe-region">' + formatUiRichHtml(probe.region) + '</div>' +
+              '</div>' +
+              '<p class="probe-deficit">' + formatUiRichHtml(probe.deficit) + '</p>' +
               '<div class="probe-bar-track" aria-hidden="true">' +
                 '<div class="probe-bar-fill" style="width: ' + toAsciiDigits(barWidth) + '%;"></div>' +
                 '<span class="probe-bar-baseline-tick" style="inset-inline-start: ' + toAsciiDigits(baselinePos) + '%;" title="خط الأساس 21 نوفمبر"></span>' +
               '</div>' +
               '<div class="probe-metrics-row">' +
-                '<span class="metric-pill">الأحدث: <strong class="ltr-iso">' + escapeHtml(latestText) + '</strong></span>' +
-                '<span class="metric-pill">أساس 21 نوفمبر: <strong class="ltr-iso">' + escapeHtml(formatPct(probe.baseline, 0)) + '</strong></span>' +
-                '<span class="metric-pill">الهدف السليم: <strong class="ltr-iso">' + escapeHtml(formatPct(probe.target, 0)) + '</strong></span>' +
+                '<span class="metric-pill">الأحدث: ' + latestHtml + '</span>' +
+                '<span class="metric-pill">الأساس: <strong class="ltr-iso">' + escapeHtml(formatPct(probe.baseline, 0)) + '</strong></span>' +
+                '<span class="metric-pill">الهدف: <strong class="ltr-iso">' + escapeHtml(formatPct(probe.target, 0)) + '</strong></span>' +
                 '<span class="delta-pill ' + deltaState + ' ltr-iso">' + escapeHtml(deltaText) + '</span>' +
               '</div>' +
               '<footer class="probe-card-footer">' +
                 '<span class="summary-sub">القياسات: <strong class="ltr-iso">' + escapeHtml(runCount) + '</strong></span>' +
                 '<button type="button" class="btn-start-probe" data-probe-id="' + escapeHtml(probe.id) + '">' +
-                  'فحص هذه المنطقة منفردة' +
+                  'بدء الفحص المنفرد' +
                 '</button>' +
               '</footer>' +
             '</article>'
@@ -1254,8 +1306,8 @@
         dom.methodologyList.innerHTML = probes.map(function (p) {
           return (
             "<li>" +
-              "<strong>" + escapeHtml(p.title) + " (" + escapeHtml(p.region) + "):</strong> " +
-              escapeHtml(p.methodology) +
+              "<strong>" + escapeHtml(p.title) + " — " + formatUiRichHtml(p.region) + ":</strong> " +
+              formatUiRichHtml(p.methodology) +
             "</li>"
           );
         }).join("");
@@ -1320,8 +1372,8 @@
             ? "مرساة تحكم ضابطة (خط الأساس: " + formatPct(selected.baseline, 0) + " · حد الثبات المنهجي: 82% · المعيار السليم: " + formatPct(selected.target, 0) + ")."
             : "منطقة مستهدفة بالردم الجراحي — خط الأساس (21 نوفمبر): " + formatPct(selected.baseline, 0) + " · السقف المرجعي السليم: " + formatPct(selected.target, 0) + ".";
           dom.probeClinicalInterpretation.innerHTML =
-            "<strong>التفسير السريري (" + escapeHtml(selected.region) + "):</strong> " +
-            "<span>" + escapeHtml(selected.clinicalNote || selected.deficit) + " " + escapeHtml(roleNote) + "</span>";
+            "<strong>التفسير السريري — " + formatUiRichHtml(selected.region) + ":</strong> " +
+            "<span>" + formatUiRichHtml((selected.clinicalNote || selected.deficit) + " " + roleNote) + "</span>";
         }
       }
 
@@ -1330,7 +1382,7 @@
         const A = getAnalyticsApi();
         if (typeof A.getScientificAudit !== "function") {
           dom.scientificAuditList.innerHTML =
-            '<li><strong>1. الجاهزية الإحصائية:</strong> محرك التدقيق الموثوق (RCI) جاهز لتقييم الجلسات فور تسجيلها.</li>';
+            '<li><strong>1. الجاهزية الإحصائية:</strong> محرك التدقيق الموثوق (<span class="ltr-iso">RCI</span>) جاهز لتقييم الجلسات فور تسجيلها.</li>';
           return;
         }
 
@@ -1358,8 +1410,8 @@
         dom.scientificAuditList.innerHTML = items.map(function (it) {
           return (
             "<li>" +
-              "<strong>" + escapeHtml(it.title) + ":</strong> " +
-              "<span>" + escapeHtml(it.body) + "</span>" +
+              "<strong>" + formatUiRichHtml(it.title) + ":</strong> " +
+              "<span>" + formatUiRichHtml(it.body) + "</span>" +
             "</li>"
           );
         }).join("");
@@ -1430,7 +1482,7 @@
           vigilanceDecrementMs: { label: "تدهور اليقظة عبر الوقت", suffix: " ms" },
           stackAccPct: { label: "المكدس والشرط", suffix: "%" },
           ruleInterruptAccPct: { label: "القاعدة بعد المقاطعة", suffix: "%" },
-          visual2dAccPct: { label: "ومضة 2D (3.2s)", suffix: "%" },
+          visual2dAccPct: { label: "ومضة التناسب (2D · 3.2s)", suffix: "%" },
           stackRtMs: { label: "زمن حل المكدس", suffix: " ms" },
           visual2dRtMs: { label: "زمن مطابقة 2D", suffix: " ms" },
           lisasMs: { label: "كفاءة السرعة والدقة LISAS", suffix: " ms" },
@@ -1459,7 +1511,7 @@
           pills.slice(0, 8).map(function (item, i) {
             return (
               '<li class="metric-pill">' +
-                '<span>' + escapeHtml((i + 1) + ". " + item.label) + ':</span> ' +
+                '<span>' + formatUiRichHtml((i + 1) + ". " + item.label) + ':</span> ' +
                 '<strong class="ltr-iso">' + escapeHtml(item.val) + '</strong>' +
               '</li>'
             );
@@ -1532,7 +1584,7 @@
                     (delta !== null ? '<span class="delta-pill ' + deltaState + ' ltr-iso">' + escapeHtml(formatDelta(delta) + rciTxt) + '</span>' : '') +
                   '</div>' +
                 '</div>' +
-                '<div class="summary-sub">التاريخ: <span class="ltr-iso">' + escapeHtml(tsText) + '</span>' + escapeHtml(contextLine) + '</div>' +
+                '<div class="summary-sub">التاريخ: <span class="ltr-iso">' + escapeHtml(tsText) + '</span>' + formatUiRichHtml(contextLine) + '</div>' +
                 formatSubMetricsPills(rec) +
               '</div>' +
             '</li>'
@@ -1925,6 +1977,16 @@
           });
         }
 
+        if (dom.topContextPill) {
+          dom.topContextPill.addEventListener("click", function () {
+            if (state.activeView === "dashboard" && dom.phaseSelect) {
+              dom.phaseSelect.focus();
+              dom.phaseSelect.scrollIntoView({ block: "center", behavior: "smooth" });
+            } else {
+              switchView("data");
+            }
+          });
+        }
         if (dom.launchBatteryBtn) {
           dom.launchBatteryBtn.addEventListener("click", launchFullBattery);
         }

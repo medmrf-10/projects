@@ -113,13 +113,13 @@
   };
 
   var DEFAULT_PHASES_META = {
-    baseline: { id: "baseline", label: "خط الأساس القاعدي (قبل التدخل)", color: "#64748b" },
-    sleep_inertia: { id: "sleep_inertia", label: "فحص جمود الاستيقاظ الصباحي (+15د)", color: "#7c3aed" },
-    post_washout: { id: "post_washout", label: "ما بعد الغسيل الدوائي العارض (6–8 أسابيع)", color: "#0891b2" },
-    metabolic: { id: "metabolic", label: "الدعم الاستقلابي والكرياتين والتأهيل العضلي", color: "#0284c7" },
-    med_early: { id: "med_early", label: "العلاج الدوائي الجبهي المبكر (أسبوع 1–4)", color: "#d97706" },
-    med_stable: { id: "med_stable", label: "استقرار العلاج الدوائي الجبهي (أسبوع 6–12+)", color: "#0f766e" },
-    post_airway: { id: "post_airway", label: "ما بعد إصلاح مجرى التنفس واسترداد النوم العميق", color: "#10b981" }
+    baseline: { id: "baseline", label: "خط الأساس القاعدي (قبل التدخل)", short: "خط الأساس", color: "#64748b" },
+    sleep_inertia: { id: "sleep_inertia", label: "فحص جمود الاستيقاظ الصباحي (+15د)", short: "جمود الاستيقاظ", color: "#7c3aed" },
+    post_washout: { id: "post_washout", label: "ما بعد الغسيل الدوائي العارض (6–8 أسابيع)", short: "بعد الغسيل الدوائي", color: "#0891b2" },
+    metabolic: { id: "metabolic", label: "الدعم الاستقلابي والكرياتين والتأهيل العضلي", short: "الدعم الاستقلابي", color: "#0284c7" },
+    med_early: { id: "med_early", label: "العلاج الدوائي الجبهي المبكر (أسبوع 1–4)", short: "الدوائي المبكر", color: "#d97706" },
+    med_stable: { id: "med_stable", label: "استقرار العلاج الدوائي الجبهي (أسبوع 6–12+)", short: "استقرار الدواء", color: "#0f766e" },
+    post_airway: { id: "post_airway", label: "ما بعد إصلاح مجرى التنفس واسترداد النوم العميق", short: "بعد إصلاح النوم", color: "#10b981" }
   };
 
   var FALLBACK_PHASE_PALETTE = [
@@ -1743,9 +1743,14 @@
           item.title ||
           item.name ||
           id;
+        var sh =
+          item.short ||
+          (map[id] && map[id].short) ||
+          String(lbl).split("(")[0].trim();
         map[id] = {
           id: id,
           label: sanitizePlainText(lbl),
+          short: sanitizePlainText(sh),
           color:
             typeof item.color === "string" && item.color.trim()
               ? item.color.trim()
@@ -1763,6 +1768,7 @@
           map[pk] = {
             id: pk,
             label: sanitizePlainText(val),
+            short: sanitizePlainText((map[pk] && map[pk].short) || val.split("(")[0].trim()),
             color: map[pk] ? map[pk].color : hashPhaseColor(pk)
           };
         } else if (val && typeof val === "object") {
@@ -1774,9 +1780,14 @@
             val.title ||
             val.name ||
             pk;
+          var pSh =
+            val.short ||
+            (map[pk] && map[pk].short) ||
+            String(pLbl).split("(")[0].trim();
           map[pk] = {
             id: pk,
             label: sanitizePlainText(pLbl),
+            short: sanitizePlainText(pSh),
             color:
               typeof val.color === "string" && val.color.trim()
                 ? val.color.trim()
@@ -1794,6 +1805,7 @@
       return {
         id: key,
         label: sanitizePlainText(key),
+        short: sanitizePlainText(key),
         color: hashPhaseColor(key)
       };
     };
@@ -1912,18 +1924,21 @@
   }
 
   function buildSharedSvgStyle(isDark) {
-    var ink = isDark ? "#f1f5f9" : "#0f172a";
-    var muted = isDark ? "#94a3b8" : "#64748b";
-    var grid = isDark ? "#334155" : "#e2e8f0";
-    var track = isDark ? "#1e293b" : "#f1f5f9";
-    var surface = isDark ? "#0f172a" : "#ffffff";
-    var cardBg = isDark ? "#1e293b" : "#f8fafc";
-    var baseLine = isDark ? "#f59e0b" : "#d97706";
+    var ink = isDark ? "#ebf1ef" : "#111816";
+    var muted = isDark ? "#8fa19a" : "#667570";
+    var grid = isDark ? "#273531" : "#d8e0db";
+    var track = isDark ? "#1c2724" : "#ebefec";
+    var surface = isDark ? "#161f1c" : "#ffffff";
+    var cardBg = isDark ? "#1c2724" : "#f8faf8";
+    var baseLine = isDark ? "#f59e0b" : "#b45309";
 
     return (
       "<style>" +
       ".nl-svg{font-family:'IBM Plex Sans Arabic',system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;user-select:none;direction:ltr;}" +
       ".nl-svg text{direction:ltr;unicode-bidi:isolate;}" +
+      ".nl-svg text.nl-rtl-left{direction:rtl;unicode-bidi:isolate;text-anchor:end;}" +
+      ".nl-svg text.nl-rtl-right{direction:rtl;unicode-bidi:isolate;text-anchor:start;}" +
+      ".nl-svg tspan.nl-ltr{direction:ltr;unicode-bidi:isolate;}" +
       ".nl-ink{fill:var(--nl-ink,var(--text-primary,var(--text," + ink + ")));}" +
       ".nl-muted{fill:var(--nl-muted,var(--text-secondary,var(--muted," + muted + ")));}" +
       ".nl-grid{stroke:var(--nl-grid,var(--border-subtle,var(--border," + grid + ")));}" +
@@ -1932,17 +1947,17 @@
       ".nl-callout{fill:var(--nl-callout,var(--surface-elevated," + cardBg + "));stroke:var(--nl-grid,var(--border," + grid + "));}" +
       ".nl-base-tick{stroke:" + baseLine + ";}" +
       ".nl-base-txt{fill:" + baseLine + ";}" +
-      "[data-theme='dark'] .nl-ink,.dark .nl-ink{fill:#f1f5f9;}" +
-      "[data-theme='dark'] .nl-muted,.dark .nl-muted{fill:#94a3b8;}" +
-      "[data-theme='dark'] .nl-grid,.dark .nl-grid{stroke:#334155;}" +
-      "[data-theme='dark'] .nl-track,.dark .nl-track{fill:#1e293b;}" +
-      "[data-theme='dark'] .nl-surface,.dark .nl-surface{fill:#0f172a;}" +
-      "[data-theme='dark'] .nl-callout,.dark .nl-callout{fill:#1e293b;stroke:#334155;}" +
-      "[data-theme='light'] .nl-ink{fill:#0f172a;}" +
-      "[data-theme='light'] .nl-muted{fill:#64748b;}" +
-      "[data-theme='light'] .nl-grid{stroke:#e2e8f0;}" +
-      "[data-theme='light'] .nl-track{fill:#f1f5f9;}" +
-      "[data-theme='light'] .nl-callout{fill:#f8fafc;stroke:#cbd5e1;}" +
+      "[data-theme='dark'] .nl-ink,.dark .nl-ink{fill:#ebf1ef;}" +
+      "[data-theme='dark'] .nl-muted,.dark .nl-muted{fill:#8fa19a;}" +
+      "[data-theme='dark'] .nl-grid,.dark .nl-grid{stroke:#273531;}" +
+      "[data-theme='dark'] .nl-track,.dark .nl-track{fill:#1c2724;}" +
+      "[data-theme='dark'] .nl-surface,.dark .nl-surface{fill:#161f1c;}" +
+      "[data-theme='dark'] .nl-callout,.dark .nl-callout{fill:#1c2724;stroke:#273531;}" +
+      "[data-theme='light'] .nl-ink{fill:#111816;}" +
+      "[data-theme='light'] .nl-muted{fill:#667570;}" +
+      "[data-theme='light'] .nl-grid{stroke:#d8e0db;}" +
+      "[data-theme='light'] .nl-track{fill:#ebefec;}" +
+      "[data-theme='light'] .nl-callout{fill:#f8faf8;stroke:#d8e0db;}" +
       "</style>"
     );
   }
@@ -1981,7 +1996,7 @@
     parts.push('<g transform="translate(0, 18)" font-size="10.8">');
     parts.push(
       '<rect x="18" y="-8" width="12" height="10" rx="2" fill="#2563eb" fill-opacity="0.88"/>' +
-        '<text x="34" y="1" class="nl-muted" text-anchor="start">القياس ±SEM</text>'
+        '<text x="34" y="1" class="nl-muted nl-rtl-left">القياس <tspan class="nl-ltr">±SEM</tspan></text>'
     );
     parts.push(
       '<rect x="128" y="-8" width="14" height="10" rx="2" fill="url(#nl-unmeasured-dots)" stroke="#64748b" stroke-width="1" stroke-dasharray="2 2"/>' +
@@ -1989,7 +2004,7 @@
     );
     parts.push(
       '<line x1="224" y1="-9" x2="224" y2="4" class="nl-base-tick" stroke-width="2.2"/>' +
-        '<text x="230" y="1" class="nl-base-txt" font-weight="600" text-anchor="start">أساس 21 Nov</text>'
+        '<text x="230" y="1" class="nl-base-txt nl-rtl-left" font-weight="600">أساس <tspan class="nl-ltr">21 Nov</tspan></text>'
     );
     parts.push(
       '<line x1="322" y1="-9" x2="322" y2="4" stroke="#10b981" stroke-width="2.2" stroke-dasharray="3 2"/>' +
@@ -2244,13 +2259,13 @@
       parts.push(
         '<text x="742" y="' +
           (y + 25) +
-          '" class="nl-muted" font-size="10.1" text-anchor="end">' +
-          "أساس " +
+          '" class="nl-muted nl-rtl-right" font-size="10.1">' +
+          'أساس <tspan class="nl-ltr">' +
           info.baseline +
-          "% · سليم " +
+          '%</tspan> · سليم <tspan class="nl-ltr">' +
           info.norm +
-          "%" +
-          (hasLive ? " · RCI " + info.rci : " · بانتظار القياس") +
+          "%</tspan>" +
+          (hasLive ? ' · <tspan class="nl-ltr">RCI ' + (info.rci > 0 ? "+" : "") + info.rci + "</tspan>" : " · بانتظار القياس") +
           "</text>"
       );
 
@@ -2309,16 +2324,16 @@
     parts.push(
       '<text x="' +
         padLeft +
-        '" y="21" class="nl-muted" font-size="10.8" text-anchor="start">' +
-        "الأساس: " +
+        '" y="21" class="nl-muted nl-rtl-left" font-size="10.8">' +
+        'الأساس: <tspan class="nl-ltr">' +
         baselineScore +
-        "% · عتبة RCI(p<0.05): " +
+        '%</tspan> · عتبة <tspan class="nl-ltr">RCI</tspan>: <tspan class="nl-ltr">' +
         (targetId === "control" ? "≥82%" : rciThresholdScore + "%") +
-        " · السليم: " +
+        '</tspan> · السليم: <tspan class="nl-ltr">' +
         normScore +
-        "% · الجلسات: " +
+        '%</tspan> · الجلسات: <tspan class="nl-ltr">' +
         history.length +
-        "</text>"
+        "</tspan></text>"
     );
 
     var yTicks = [0, 25, 50, 75, 100];
@@ -2385,13 +2400,19 @@
           '" stroke="#0284c7" stroke-width="1.3" stroke-opacity="0.65" stroke-dasharray="4 4"/>'
       );
       parts.push(
-        '<text x="' +
-          (padLeft + 4) +
-          '" y="' +
-          (yRci - 4) +
-          '" fill="#0284c7" font-size="9.2" font-weight="600" text-anchor="start">' +
-          (targetId === "control" ? "حد الثبات 82%" : "RCI p<0.05 (" + rciLineVal + "%)") +
-          "</text>"
+        targetId === "control"
+          ? '<text x="' +
+              (padLeft + 4) +
+              '" y="' +
+              (yRci - 4) +
+              '" fill="#0284c7" class="nl-rtl-left" font-size="9.2" font-weight="600">حد الثبات <tspan class="nl-ltr">82%</tspan></text>'
+          : '<text x="' +
+              (padLeft + 4) +
+              '" y="' +
+              (yRci - 4) +
+              '" fill="#0284c7" font-size="9.2" font-weight="600" text-anchor="start">RCI p&lt;0.05 (' +
+              rciLineVal +
+              '%)</text>'
       );
     }
 
@@ -2455,7 +2476,7 @@
         '<text x="' +
           bx +
           '" y="' +
-          (yBase - 10) +
+          (yBase - 12) +
           '" class="nl-ink" font-size="11" font-weight="700" text-anchor="middle">' +
           baselineScore +
           "%</text>"
@@ -2617,12 +2638,13 @@
       }
 
       var phKeys = Object.keys(seenPhases);
-      var lx = padLeft;
-      for (var pk = 0; pk < phKeys.length && lx < width - 120; pk += 1) {
+      var rx = width - padRight;
+      for (var pk = 0; pk < phKeys.length && rx > padLeft + 70; pk += 1) {
         var pInfo = seenPhases[phKeys[pk]];
+        var phShort = pInfo.short || pInfo.label;
         parts.push(
           '<circle cx="' +
-            (lx + 5) +
+            (rx - 4) +
             '" cy="' +
             (height - 8) +
             '" r="4" fill="' +
@@ -2631,14 +2653,14 @@
         );
         parts.push(
           '<text x="' +
-            (lx + 14) +
+            (rx - 13) +
             '" y="' +
             (height - 4.5) +
-            '" class="nl-muted" font-size="10" text-anchor="start">' +
-            escapeSvg(pInfo.label) +
+            '" class="nl-muted nl-rtl-right" font-size="10">' +
+            escapeSvg(phShort) +
             "</text>"
         );
-        lx += Math.max(82, pInfo.label.length * 7 + 28);
+        rx -= Math.max(78, phShort.length * 6.8 + 28);
       }
     }
 
@@ -2696,13 +2718,13 @@
     parts.push(
       '<line x1="112" y1="0" x2="128" y2="0" stroke="#2563eb" stroke-width="2.6"/>' +
         '<circle cx="120" cy="0" r="3.5" fill="#2563eb"/>' +
-        '<text x="134" y="4" class="nl-muted" text-anchor="start">المؤشر المركب (5 مناطق)</text>'
+        '<text x="134" y="4" class="nl-muted nl-rtl-left">المؤشر المركب (<tspan class="nl-ltr">5</tspan> مناطق)</text>'
     );
     parts.push(
       '<line x1="278" y1="0" x2="294" y2="0" stroke="#0284c7" stroke-width="1.5" stroke-dasharray="4 3"/>' +
-        '<text x="300" y="4" fill="#0284c7" text-anchor="start">عتبة RCI p<0.05 (' +
+        '<text x="300" y="4" fill="#0284c7" class="nl-rtl-left">عتبة <tspan class="nl-ltr">RCI p&lt;0.05 (' +
         compRciThreshold +
-        '%)</text>'
+        '%)</tspan></text>'
     );
     parts.push("</g>");
 
@@ -2799,7 +2821,7 @@
           (ax + 12) +
           '" y="' +
           (yCtrl0 + 4) +
-          '" fill="#0d9488" font-size="11" font-weight="700" text-anchor="start">98% تحكم</text>'
+          '" fill="#0d9488" class="nl-rtl-left" font-size="11" font-weight="700">تحكم: <tspan class="nl-ltr">98%</tspan></text>'
       );
 
       parts.push(
@@ -2814,7 +2836,7 @@
           (ax + 12) +
           '" y="' +
           (yComp0 + 4) +
-          '" fill="#2563eb" font-size="11" font-weight="700" text-anchor="start">36% مركب</text>'
+          '" fill="#2563eb" class="nl-rtl-left" font-size="11" font-weight="700">مركب: <tspan class="nl-ltr">36%</tspan></text>'
       );
 
       parts.push(
@@ -2822,9 +2844,9 @@
           (ax + 12) +
           '" y="' +
           round1((yCtrl0 + yComp0) / 2 + 4) +
-          '" class="nl-base-txt" font-size="10.5" font-weight="700" text-anchor="start">فجوة الأساس: ' +
+          '" class="nl-base-txt nl-rtl-left" font-size="10.5" font-weight="700">فجوة الأساس: <tspan class="nl-ltr">' +
           baseGap +
-          " نقطة</text>"
+          "</tspan> نقطة</text>"
       );
 
       parts.push(
@@ -2984,19 +3006,21 @@
 
       var latestGap = round1(points[count - 1].control - points[count - 1].composite);
       var initialGap = BASELINE_REF.scores.control - BASELINE_REF.compositeDeficitBaseline;
+      var latestRciVal = points[count - 1].rci;
       parts.push(
         '<text x="' +
           (width - padRight) +
           '" y="' +
           (height - 5) +
-          '" class="nl-muted" font-size="10.5" font-weight="600" text-anchor="end">' +
-          "تقلصت الفجوة العصبية من " +
+          '" class="nl-muted nl-rtl-right" font-size="10.5" font-weight="600">' +
+          'تقلصت الفجوة العصبية من <tspan class="nl-ltr">' +
           initialGap +
-          " نقطة في خط الأساس إلى " +
+          '</tspan> نقطة في خط الأساس إلى <tspan class="nl-ltr">' +
           latestGap +
-          " نقطة حاليا (RCI = " +
-          points[count - 1].rci +
-          ")" +
+          '</tspan> نقطة حاليا (<tspan class="nl-ltr">RCI = ' +
+          (latestRciVal > 0 ? "+" : "") +
+          latestRciVal +
+          "</tspan>)" +
           "</text>"
       );
     }
