@@ -10,12 +10,10 @@
     "notes": "Introductory tutorial for adult learners",
     "syllabus_lessons": null,
     "display_order": 0,
-    "totalCount": 9,
-    "tutorialCount": 3,
+    "drawingCount": 6,
     "solidCount": 6,
     "hiddenCount": 0,
-    "testCount": 0,
-    "maxStars": 18
+    "testCount": 0
   },
   {
     "id": 2,
@@ -28,12 +26,10 @@
     "notes": "Rotations in a single plane",
     "syllabus_lessons": null,
     "display_order": 1,
-    "totalCount": 31,
-    "tutorialCount": 1,
+    "drawingCount": 30,
     "solidCount": 30,
     "hiddenCount": 0,
-    "testCount": 3,
-    "maxStars": 90
+    "testCount": 3
   },
   {
     "id": 3,
@@ -46,12 +42,10 @@
     "notes": "Isometric cube drawings",
     "syllabus_lessons": null,
     "display_order": 2,
-    "totalCount": 37,
-    "tutorialCount": 2,
+    "drawingCount": 35,
     "solidCount": 35,
     "hiddenCount": 0,
-    "testCount": 3,
-    "maxStars": 105
+    "testCount": 3
   },
   {
     "id": 4,
@@ -64,12 +58,10 @@
     "notes": "3D figure to 2D faces",
     "syllabus_lessons": null,
     "display_order": 3,
-    "totalCount": 36,
-    "tutorialCount": 3,
+    "drawingCount": 33,
     "solidCount": 17,
     "hiddenCount": 16,
-    "testCount": 3,
-    "maxStars": 99
+    "testCount": 3
   },
   {
     "id": 5,
@@ -82,12 +74,10 @@
     "notes": "2D views to 3D figure",
     "syllabus_lessons": null,
     "display_order": 4,
-    "totalCount": 30,
-    "tutorialCount": 1,
+    "drawingCount": 29,
     "solidCount": 29,
     "hiddenCount": 0,
-    "testCount": 3,
-    "maxStars": 87
+    "testCount": 3
   },
   {
     "id": 9,
@@ -100,12 +90,10 @@
     "notes": "Combination of Ortho and 2D to 3D, but with sloped and curved surfaces",
     "syllabus_lessons": null,
     "display_order": 5,
-    "totalCount": 33,
-    "tutorialCount": 2,
+    "drawingCount": 31,
     "solidCount": 26,
     "hiddenCount": 5,
-    "testCount": 3,
-    "maxStars": 93
+    "testCount": 3
   },
   {
     "id": 10,
@@ -118,12 +106,10 @@
     "notes": "Series of folding and unfolding assignments.",
     "syllabus_lessons": null,
     "display_order": 6,
-    "totalCount": 33,
-    "tutorialCount": 2,
+    "drawingCount": 31,
     "solidCount": 31,
     "hiddenCount": 0,
-    "testCount": 3,
-    "maxStars": 93
+    "testCount": 3
   },
   {
     "id": 6,
@@ -136,12 +122,10 @@
     "notes": "3D rotations about a single axis",
     "syllabus_lessons": null,
     "display_order": 7,
-    "totalCount": 31,
-    "tutorialCount": 1,
+    "drawingCount": 30,
     "solidCount": 30,
     "hiddenCount": 0,
-    "testCount": 3,
-    "maxStars": 90
+    "testCount": 3
   },
   {
     "id": 7,
@@ -154,12 +138,10 @@
     "notes": "3D rotations about multiple axes",
     "syllabus_lessons": null,
     "display_order": 8,
-    "totalCount": 31,
-    "tutorialCount": 1,
+    "drawingCount": 30,
     "solidCount": 30,
     "hiddenCount": 0,
-    "testCount": 3,
-    "maxStars": 90
+    "testCount": 3
   },
   {
     "id": 8,
@@ -172,11 +154,9 @@
     "notes": "Assembly of a cube",
     "syllabus_lessons": null,
     "display_order": 9,
-    "totalCount": 21,
-    "tutorialCount": 1,
+    "drawingCount": 20,
     "solidCount": 20,
     "hiddenCount": 0,
-    "testCount": 3,
-    "maxStars": 60
+    "testCount": 3
   }
 ]
