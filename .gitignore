@@ -1,0 +1,12 @@
+# Android build outputs and local machine properties
+apps/zme-notes/build/
+apps/zme-notes/.gradle/
+apps/zme-notes/app/build/
+apps/zme-notes/local.properties
+
+# Release signing keystores
+*.jks
+*.keystore
+
+# macOS Finder metadata
+.DS_Store

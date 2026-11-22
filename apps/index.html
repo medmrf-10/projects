@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="frozen">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+  <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#0A0A0A" />
+  <title>مركز تطبيقاتنا — Apps</title>
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("apps_hub_theme");
+        if (saved === "light" || saved === "frozen") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <header class="hub-topbar">
+    <div class="topbar-inner">
+      <a href="../" class="back-link" aria-label="العودة إلى بوابة المشاريع الرئيسية">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+        <span>العودة إلى البوابة</span>
+      </a>
+
+      <div class="topbar-meta">
+        <span id="appCountBadge" class="count-badge" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="appCountText">1 تطبيق متاح</span>
+        </span>
+
+        <button
+          id="themeToggleBtn"
+          type="button"
+          class="theme-toggle"
+          aria-label="تبديل المظهر النهاري والليلي"
+          title="تبديل المظهر"
+        >
+          <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"></path>
+          </svg>
+          <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <span id="themeLabel" class="theme-label">المظهر النهاري</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="hub-main">
+    <section class="hub-header" aria-labelledby="hubTitle">
+      <div class="header-copy">
+        <div class="hub-kicker">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>التوزيع المباشر للحزم الأصلية</span>
+        </div>
+        <h1 id="hubTitle" class="hub-title">مركز تطبيقاتنا — Apps</h1>
+        <p id="hubSubtitle" class="hub-subtitle">
+          تطبيقات أصلية مخصّصة ومستقلة، مبنية للسرعة والخصوصية والتوزيع المباشر دون وسطاء.
+        </p>
+      </div>
+
+      <div class="header-stats" aria-label="ملخص المركز">
+        <span class="stat-chip">تحقق <span class="ltr-token mono">SHA-256</span></span>
+        <span class="stat-chip">حزم موقّعة مباشرة</span>
+      </div>
+    </section>
+
+    <section aria-labelledby="catalogSectionTitle">
+      <div class="section-head">
+        <h2 id="catalogSectionTitle" class="section-title">التطبيقات المتاحة للتحميل</h2>
+      </div>
+      <div id="appsCatalog" class="apps-catalog"></div>
+    </section>
+
+    <section aria-labelledby="futureSectionTitle">
+      <div class="section-head">
+        <h2 id="futureSectionTitle" class="section-title">التوسّع ومعايير النشر</h2>
+      </div>
+      <div class="secondary-grid">
+        <div id="upcomingContainer"></div>
+
+        <article class="standards-card" aria-label="معايير الخصوصية والتوزيع">
+          <div class="upcoming-head">
+            <div class="upcoming-title-wrap">
+              <div class="upcoming-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+              </div>
+              <h3 class="upcoming-title">معايير الأمان والتوزيع</h3>
+            </div>
+            <span class="badge-neutral">معمارية صافية</span>
+          </div>
+          <ol class="standards-list">
+            <li class="standards-item">
+              <span class="standards-index">1.</span>
+              <span>خلوّ كامل من الرموز والمفاتيح المدمجة داخل حزم <span class="ltr-token mono">APK</span>؛ تُحفظ الإعدادات مشفّرة محلياً داخل الجهاز.</span>
+            </li>
+            <li class="standards-item">
+              <span class="standards-index">2.</span>
+              <span>توقيع رقمي رسمي مع بصمة <span class="ltr-token mono">SHA-256</span> مطابقة للملف المنشور للتحقق الفوري قبل التثبيت.</span>
+            </li>
+            <li class="standards-item">
+              <span class="standards-index">3.</span>
+              <span>فهرس قابل للتوسّع عبر <span class="ltr-token mono">apps.json</span> لإضافة الإصدارات والتطبيقات الجديدة بسلاسة.</span>
+            </li>
+          </ol>
+        </article>
+      </div>
+    </section>
+
+    <footer class="hub-footer">
+      <span>مركز تطبيقاتنا — توزيع مباشر للحزم الموقّعة</span>
+      <span>جميع الأرقام والبصمات مضبوطة بالنسق القياسي الموحد</span>
+    </footer>
+  </main>
+
+  <script id="appsCatalogFallback" type="application/json">
+  {
+    "hub": {
+      "title": "مركز تطبيقاتنا — Apps",
+      "subtitle": "تطبيقات أصلية مخصّصة ومستقلة، مبنية للسرعة والخصوصية والتوزيع المباشر دون وسطاء.",
+      "updatedAt": "2026-11-22"
+    },
+    "apps": [
+      {
+        "id": "zme-notes",
+        "name": "بوح — مفكرة الملاحظات النفسية",
+        "shortName": "بوح",
+        "tagline": "تدوين نفسي فوري دون احتكاك أو تسجيل دخول معطّل؛ يحفظ ملاحظاتك محلياً أولاً ويزامنها مباشرة وبشكل مشفّر إلى مستودعك الخاص.",
+        "version": "v1.0.0",
+        "versionCode": 1,
+        "platform": "Android 8.0+",
+        "minSdk": 26,
+        "packageId": "io.medmrf.zmenotes",
+        "badge": "متصل بمستودع zme",
+        "icon": "./icon.svg",
+        "downloadUrl": "./releases/zme-notes-v1.0.0.apk",
+        "fileName": "zme-notes-v1.0.0.apk",
+        "apkSizeBytes": 1347941,
+        "apkSizeLabel": "1.29 MB",
+        "sha256": "a8708d8c079b439095381f96684a210da4047c6360e21daf3bc068ace9c39e66",
+        "features": [
+          "تفريغ فوري دون احتكاك",
+          "حفظ محلي دون إنترنت",
+          "إملاء صوتي",
+          "مزامنة مباشرة ومشفّرة إلى zme"
+        ],
+        "setupSteps": [
+          {
+            "number": 1,
+            "title": "تثبيت ملف APK على أندرويد",
+            "segments": [
+              "حمّل ملف ",
+              {
+                "code": "zme-notes-v1.0.0.apk"
+              },
+              " عبر زر التحميل المباشر وافتحه على هاتف أندرويد، مع السماح بالتثبيت من المتصفح عند ظهور التنبيه للمرة الأولى."
+            ]
+          },
+          {
+            "number": 2,
+            "title": "إنشاء رمز وصول دقيق من GitHub",
+            "segments": [
+              "أنشئ رمز وصول دقيق ",
+              {
+                "code": "Fine-Grained PAT"
+              },
+              " من إعدادات GitHub، واحصره بمستودع ",
+              {
+                "code": "zme"
+              },
+              " فقط مع منحه صلاحية ",
+              {
+                "code": "Contents: Read and write"
+              },
+              " دون غيرها."
+            ]
+          },
+          {
+            "number": 3,
+            "title": "لصق الرمز واختبار الاتصال مرة واحدة",
+            "segments": [
+              "افتح «الإعدادات» داخل تطبيق بوح، الصق الرمز مرة واحدة ثم اضغط على «اختبار الاتصال» ليُحفظ مشفّراً داخل مخزن مفاتيح الجهاز."
+            ]
+          }
+        ]
+      }
+    ],
+    "upcoming": [
+      {
+        "id": "future-slot",
+        "name": "التطبيقات القادمة",
+        "badge": "جاهز للتوسّع",
+        "description": "مساحة مهيّأة لاستيعاب التطبيقات الأصلية المستقبلية عبر فهرس الحزم الموحد، بنفس معايير التوقيع الرقمي والخصوصية والتوزيع المباشر."
+      }
+    ]
+  }
+  </script>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var root = document.documentElement;
+      var themeBtn = document.getElementById("themeToggleBtn");
+      var iconSun = document.getElementById("iconSun");
+      var iconMoon = document.getElementById("iconMoon");
+      var themeLabel = document.getElementById("themeLabel");
+      var metaTheme = document.querySelector('meta[name="theme-color"]');
+
+      function syncThemeUI() {
+        var isLight = root.getAttribute("data-theme") === "light";
+        if (iconSun && iconMoon) {
+          iconSun.toggleAttribute("hidden", isLight);
+          iconMoon.toggleAttribute("hidden", !isLight);
+        }
+        if (themeLabel) {
+          themeLabel.textContent = isLight ? "المظهر الليلي" : "المظهر النهاري";
+        }
+        if (metaTheme) {
+          metaTheme.setAttribute("content", isLight ? "#FFFFFF" : "#0A0A0A");
+        }
+      }
+
+      syncThemeUI();
+
+      if (themeBtn) {
+        themeBtn.addEventListener("click", function () {
+          var next = root.getAttribute("data-theme") === "light" ? "frozen" : "light";
+          root.setAttribute("data-theme", next);
+          try {
+            localStorage.setItem("apps_hub_theme", next);
+          } catch (e) {}
+          syncThemeUI();
+        });
+      }
+
+      function formatAsciiNumber(num) {
+        var str = String(Math.round(Number(num) || 0));
+        return str.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      }
+
+      function formatCountText(count) {
+        if (count === 1) return "1 تطبيق متاح";
+        if (count === 2) return "2 تطبيقان متاحان";
+        return String(count) + " تطبيقات متاحة";
+      }
+
+      function createSvg(pathMarkup, viewBox) {
+        var ns = "http://www.w3.org/2000/svg";
+        var svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("viewBox", viewBox || "0 0 24 24");
+        svg.setAttribute("fill", "none");
+        svg.setAttribute("stroke", "currentColor");
+        svg.setAttribute("stroke-width", "2");
+        svg.setAttribute("stroke-linecap", "round");
+        svg.setAttribute("stroke-linejoin", "round");
+        svg.setAttribute("aria-hidden", "true");
+        svg.innerHTML = pathMarkup;
+        return svg;
+      }
+
+      function appendTextWithLtrTokens(parent, text) {
+        var parts = String(text || "").split(/([A-Za-z0-9][A-Za-z0-9._:+-]*(?:\s+[A-Za-z0-9][A-Za-z0-9._:+-]*)*)/g);
+        for (var i = 0; i < parts.length; i++) {
+          var part = parts[i];
+          if (!part) continue;
+          if (/^[A-Za-z0-9]/.test(part)) {
+            var span = document.createElement("span");
+            span.className = "ltr-token";
+            span.textContent = part;
+            parent.appendChild(span);
+          } else {
+            parent.appendChild(document.createTextNode(part));
+          }
+        }
+      }
+
+      function copyToClipboard(text, btn, labelEl) {
+        function markCopied() {
+          btn.classList.add("is-copied");
+          labelEl.textContent = "تم النسخ";
+          window.setTimeout(function () {
+            btn.classList.remove("is-copied");
+            labelEl.textContent = "نسخ SHA-256";
+          }, 2200);
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(markCopied).catch(function () {
+            fallbackCopy(text, markCopied);
+          });
+        } else {
+          fallbackCopy(text, markCopied);
+        }
+      }
+
+      function fallbackCopy(text, done) {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          done();
+        } catch (e) {}
+      }
+
+      function buildAppCard(app) {
+        var card = document.createElement("article");
+        card.className = "app-card";
+        card.setAttribute("data-app-id", app.id || "");
+
+        var grid = document.createElement("div");
+        grid.className = "app-card-grid";
+
+        /* Right column (RTL start): Identity, Description, Features, Primary CTA */
+        var primary = document.createElement("div");
+        primary.className = "app-primary";
+
+        var identity = document.createElement("div");
+        identity.className = "app-identity";
+
+        var iconWrap = document.createElement("div");
+        iconWrap.className = "app-icon-wrap";
+        var iconImg = document.createElement("img");
+        iconImg.src = app.icon || "./icon.svg";
+        iconImg.alt = "أيقونة " + (app.shortName || app.name || "التطبيق");
+        iconImg.width = 64;
+        iconImg.height = 64;
+        iconWrap.appendChild(iconImg);
+
+        var titleBlock = document.createElement("div");
+        titleBlock.className = "app-title-block";
+
+        var badgesRow = document.createElement("div");
+        badgesRow.className = "app-badges-row";
+
+        if (app.badge) {
+          var badgeConn = document.createElement("span");
+          badgeConn.className = "badge-connected";
+          var dot = document.createElement("span");
+          dot.className = "status-dot";
+          dot.setAttribute("aria-hidden", "true");
+          badgeConn.appendChild(dot);
+          var badgeText = document.createElement("span");
+          appendTextWithLtrTokens(badgeText, app.badge);
+          badgeConn.appendChild(badgeText);
+          badgesRow.appendChild(badgeConn);
+        }
+
+        if (app.version) {
+          var verBadge = document.createElement("span");
+          verBadge.className = "badge-neutral mono ltr-token";
+          verBadge.textContent = app.version;
+          badgesRow.appendChild(verBadge);
+        }
+
+        if (app.platform) {
+          var platBadge = document.createElement("span");
+          platBadge.className = "badge-neutral mono ltr-token";
+          platBadge.textContent = app.platform;
+          badgesRow.appendChild(platBadge);
+        }
+
+        var nameEl = document.createElement("h3");
+        nameEl.className = "app-name";
+        nameEl.textContent = app.name || "";
+
+        titleBlock.appendChild(badgesRow);
+        titleBlock.appendChild(nameEl);
+
+        identity.appendChild(iconWrap);
+        identity.appendChild(titleBlock);
+        primary.appendChild(identity);
+
+        if (app.tagline) {
+          var tagEl = document.createElement("p");
+          tagEl.className = "app-tagline";
+          appendTextWithLtrTokens(tagEl, app.tagline);
+          primary.appendChild(tagEl);
+        }
+
+        if (Array.isArray(app.features) && app.features.length > 0) {
+          var featList = document.createElement("ul");
+          featList.className = "features-list";
+          featList.setAttribute("aria-label", "أبرز المزايا");
+
+          for (var i = 0; i < app.features.length; i++) {
+            var li = document.createElement("li");
+            li.className = "feature-pill";
+            li.appendChild(createSvg('<polyline points="20 6 9 17 4 12"></polyline>'));
+            var featText = document.createElement("span");
+            appendTextWithLtrTokens(featText, app.features[i]);
+            li.appendChild(featText);
+            featList.appendChild(li);
+          }
+          primary.appendChild(featList);
+        }
+
+        var actionsRow = document.createElement("div");
+        actionsRow.className = "app-actions";
+
+        var dlLink = document.createElement("a");
+        dlLink.className = "download-btn";
+        dlLink.href = app.downloadUrl || "#";
+        if (app.fileName) {
+          dlLink.setAttribute("download", app.fileName);
+        }
+        dlLink.appendChild(
+          createSvg(
+            '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>' +
+              '<polyline points="7 10 12 15 17 10"></polyline>' +
+              '<line x1="12" y1="15" x2="12" y2="3"></line>'
+          )
+        );
+        var dlText = document.createElement("span");
+        appendTextWithLtrTokens(dlText, "تحميل APK مباشر");
+        dlLink.appendChild(dlText);
+
+        if (app.apkSizeLabel) {
+          var dlSub = document.createElement("span");
+          dlSub.className = "download-sub mono ltr-token";
+          dlSub.textContent = "(" + app.apkSizeLabel + ")";
+          dlLink.appendChild(dlSub);
+        }
+        actionsRow.appendChild(dlLink);
+
+        var drawerId = "setup-drawer-" + (app.id || "app");
+        var quickGuideBtn = document.createElement("button");
+        quickGuideBtn.type = "button";
+        quickGuideBtn.className = "secondary-pill-btn";
+        quickGuideBtn.setAttribute("aria-expanded", "false");
+        quickGuideBtn.setAttribute("aria-controls", drawerId);
+        var guideText = document.createElement("span");
+        guideText.textContent = "خطوات التثبيت (3)";
+        quickGuideBtn.appendChild(guideText);
+        var guideChevron = createSvg('<polyline points="6 9 12 15 18 9"></polyline>');
+        guideChevron.classList.add("chevron-icon");
+        quickGuideBtn.appendChild(guideChevron);
+        actionsRow.appendChild(quickGuideBtn);
+
+        primary.appendChild(actionsRow);
+
+        /* Left column (RTL end): Technical Specifications & SHA-256 */
+        var specs = document.createElement("div");
+        specs.className = "app-specs";
+
+        var specsHeading = document.createElement("h4");
+        specsHeading.className = "specs-heading";
+        specsHeading.textContent = "مواصفات الحزمة والتحقق";
+        specs.appendChild(specsHeading);
+
+        var specsGrid = document.createElement("div");
+        specsGrid.className = "specs-grid";
+
+        var sizeDetail =
+          app.apkSizeBytes && Number(app.apkSizeBytes) > 0
+            ? app.apkSizeLabel + " (" + formatAsciiNumber(app.apkSizeBytes) + " B)"
+            : app.apkSizeLabel || "—";
+
+        var specItems = [
+          { label: "الإصدار", value: app.version || "v1.0.0", isLtr: true, wide: false },
+          { label: "النظام المدعوم", value: app.platform || "Android 8.0+", isLtr: true, wide: false },
+          { label: "حجم ملف APK", value: sizeDetail, isLtr: true, wide: true },
+          { label: "معرّف الحزمة", value: app.packageId || "io.medmrf.zmenotes", isLtr: true, wide: true }
+        ];
+
+        for (var s = 0; s < specItems.length; s++) {
+          var cell = document.createElement("div");
+          cell.className = "spec-cell" + (specItems[s].wide ? " spec-cell-wide" : "");
+          var lbl = document.createElement("span");
+          lbl.className = "spec-label";
+          appendTextWithLtrTokens(lbl, specItems[s].label);
+          var val = document.createElement("span");
+          val.className = "spec-value" + (specItems[s].isLtr ? " mono ltr-token" : "");
+          val.textContent = specItems[s].value;
+          cell.appendChild(lbl);
+          cell.appendChild(val);
+          specsGrid.appendChild(cell);
+        }
+        specs.appendChild(specsGrid);
+
+        /* SHA-256 Box with 1-click copy */
+        var checksumBox = document.createElement("div");
+        checksumBox.className = "checksum-box";
+
+        var checksumHead = document.createElement("div");
+        checksumHead.className = "checksum-header";
+
+        var checksumLabel = document.createElement("span");
+        checksumLabel.className = "checksum-label";
+        appendTextWithLtrTokens(checksumLabel, "بصمة التحقق SHA-256");
+
+        var copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "copy-hash-btn";
+        copyBtn.setAttribute("aria-label", "نسخ بصمة SHA-256");
+        copyBtn.appendChild(
+          createSvg(
+            '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>' +
+              '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>'
+          )
+        );
+        var copyLabel = document.createElement("span");
+        copyLabel.textContent = "نسخ SHA-256";
+        copyBtn.appendChild(copyLabel);
+
+        copyBtn.addEventListener("click", function () {
+          copyToClipboard(app.sha256 || "", copyBtn, copyLabel);
+        });
+
+        checksumHead.appendChild(checksumLabel);
+        checksumHead.appendChild(copyBtn);
+
+        var checksumVal = document.createElement("code");
+        checksumVal.className = "checksum-value";
+        checksumVal.setAttribute("data-sha256", app.sha256 || "");
+        checksumVal.textContent = app.sha256 || "";
+
+        checksumBox.appendChild(checksumHead);
+        checksumBox.appendChild(checksumVal);
+        specs.appendChild(checksumBox);
+
+        grid.appendChild(primary);
+        grid.appendChild(specs);
+        card.appendChild(grid);
+
+        /* Expandable 3-Step Arabic Setup Drawer */
+        if (Array.isArray(app.setupSteps) && app.setupSteps.length > 0) {
+          var drawer = document.createElement("div");
+          drawer.className = "setup-drawer";
+
+          var trigger = document.createElement("button");
+          trigger.type = "button";
+          trigger.className = "setup-drawer-trigger";
+          trigger.setAttribute("aria-expanded", "false");
+          trigger.setAttribute("aria-controls", drawerId);
+
+          var triggerLeft = document.createElement("span");
+          triggerLeft.className = "trigger-left";
+          triggerLeft.appendChild(
+            createSvg(
+              '<circle cx="12" cy="12" r="10"></circle>' +
+                '<line x1="12" y1="16" x2="12" y2="12"></line>' +
+                '<line x1="12" y1="8" x2="12.01" y2="8"></line>'
+            )
+          );
+          var triggerText = document.createElement("span");
+          appendTextWithLtrTokens(triggerText, "دليل التثبيت والربط مع مستودع zme (3 خطوات)");
+          triggerLeft.appendChild(triggerText);
+
+          var chevron = createSvg('<polyline points="6 9 12 15 18 9"></polyline>');
+          chevron.classList.add("trigger-chevron");
+
+          trigger.appendChild(triggerLeft);
+          trigger.appendChild(chevron);
+
+          var drawerBody = document.createElement("div");
+          drawerBody.id = drawerId;
+          drawerBody.className = "setup-drawer-body";
+          drawerBody.hidden = true;
+
+          var stepsOl = document.createElement("ol");
+          stepsOl.className = "setup-steps";
+
+          for (var k = 0; k < app.setupSteps.length; k++) {
+            var st = app.setupSteps[k];
+            var stepLi = document.createElement("li");
+            stepLi.className = "setup-step";
+
+            var stepHead = document.createElement("div");
+            stepHead.className = "step-head";
+
+            var numEl = document.createElement("span");
+            numEl.className = "step-num mono";
+            numEl.textContent = String(st.number || k + 1);
+
+            var titleEl = document.createElement("h5");
+            titleEl.className = "step-title";
+            appendTextWithLtrTokens(titleEl, st.title || "");
+
+            stepHead.appendChild(numEl);
+            stepHead.appendChild(titleEl);
+            stepLi.appendChild(stepHead);
+
+            var descEl = document.createElement("p");
+            descEl.className = "step-desc";
+            if (Array.isArray(st.segments)) {
+              for (var g = 0; g < st.segments.length; g++) {
+                var seg = st.segments[g];
+                if (typeof seg === "string") {
+                  appendTextWithLtrTokens(descEl, seg);
+                } else if (seg && seg.code) {
+                  var codeEl = document.createElement("code");
+                  codeEl.className = "inline-code";
+                  codeEl.textContent = seg.code;
+                  descEl.appendChild(codeEl);
+                }
+              }
+            } else if (st.detail) {
+              appendTextWithLtrTokens(descEl, st.detail);
+            }
+            stepLi.appendChild(descEl);
+            stepsOl.appendChild(stepLi);
+          }
+
+          drawerBody.appendChild(stepsOl);
+          drawer.appendChild(trigger);
+          drawer.appendChild(drawerBody);
+          card.appendChild(drawer);
+
+          function toggleDrawer(forceOpen) {
+            var currentlyOpen = trigger.getAttribute("aria-expanded") === "true";
+            var nextOpen = typeof forceOpen === "boolean" ? forceOpen : !currentlyOpen;
+            trigger.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+            quickGuideBtn.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+            drawerBody.hidden = !nextOpen;
+          }
+
+          trigger.addEventListener("click", function () {
+            toggleDrawer();
+          });
+
+          quickGuideBtn.addEventListener("click", function () {
+            toggleDrawer();
+            if (trigger.getAttribute("aria-expanded") === "true") {
+              drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+          });
+        }
+
+        return card;
+      }
+
+      function renderCatalog(data) {
+        if (!data || !Array.isArray(data.apps)) return;
+
+        var titleEl = document.getElementById("hubTitle");
+        var subEl = document.getElementById("hubSubtitle");
+        var countTextEl = document.getElementById("appCountText");
+        var catalogEl = document.getElementById("appsCatalog");
+        var upcomingEl = document.getElementById("upcomingContainer");
+
+        if (data.hub && data.hub.title && titleEl) {
+          titleEl.textContent = "";
+          appendTextWithLtrTokens(titleEl, data.hub.title);
+        }
+        if (data.hub && data.hub.subtitle && subEl) {
+          subEl.textContent = data.hub.subtitle;
+        }
+        if (countTextEl) {
+          countTextEl.textContent = formatCountText(data.apps.length);
+        }
+
+        if (catalogEl) {
+          catalogEl.textContent = "";
+          for (var i = 0; i < data.apps.length; i++) {
+            catalogEl.appendChild(buildAppCard(data.apps[i]));
+          }
+        }
+
+        if (upcomingEl) {
+          upcomingEl.textContent = "";
+          var items = Array.isArray(data.upcoming) && data.upcoming.length > 0
+            ? data.upcoming
+            : [
+                {
+                  name: "التطبيقات القادمة",
+                  badge: "جاهز للتوسّع",
+                  description: "مساحة مهيّأة لاستيعاب التطبيقات الأصلية المستقبلية بنفس معايير السرعة والخصوصية والتوزيع المباشر."
+                }
+              ];
+
+          for (var u = 0; u < items.length; u++) {
+            var slot = items[u];
+            var box = document.createElement("article");
+            box.className = "upcoming-card";
+
+            var head = document.createElement("div");
+            head.className = "upcoming-head";
+
+            var titleWrap = document.createElement("div");
+            titleWrap.className = "upcoming-title-wrap";
+
+            var iconBox = document.createElement("div");
+            iconBox.className = "upcoming-icon";
+            iconBox.appendChild(
+              createSvg(
+                '<rect x="3" y="3" width="7" height="7" rx="1.5"></rect>' +
+                  '<rect x="14" y="3" width="7" height="7" rx="1.5"></rect>' +
+                  '<rect x="14" y="14" width="7" height="7" rx="1.5"></rect>' +
+                  '<line x1="6.5" y1="14" x2="6.5" y2="21"></line>' +
+                  '<line x1="3" y1="17.5" x2="10" y2="17.5"></line>'
+              )
+            );
+
+            var h3 = document.createElement("h3");
+            h3.className = "upcoming-title";
+            h3.textContent = slot.name || "التطبيقات القادمة";
+
+            titleWrap.appendChild(iconBox);
+            titleWrap.appendChild(h3);
+
+            var badge = document.createElement("span");
+            badge.className = "badge-neutral";
+            badge.textContent = slot.badge || "جاهز للتوسّع";
+
+            head.appendChild(titleWrap);
+            head.appendChild(badge);
+
+            var p = document.createElement("p");
+            p.className = "upcoming-desc";
+            appendTextWithLtrTokens(p, slot.description || "");
+
+            box.appendChild(head);
+            box.appendChild(p);
+            upcomingEl.appendChild(box);
+          }
+        }
+      }
+
+      /* Render immediately from embedded catalog so there is zero blank flash or file:// error */
+      var fallbackNode = document.getElementById("appsCatalogFallback");
+      if (fallbackNode && fallbackNode.textContent) {
+        try {
+          renderCatalog(JSON.parse(fallbackNode.textContent));
+        } catch (e) {}
+      }
+
+      /* Hydrate cleanly from ./apps.json when served over HTTP/HTTPS */
+      if (typeof window.fetch === "function" && window.location.protocol !== "file:") {
+        window
+          .fetch("./apps.json", { cache: "no-cache" })
+          .then(function (res) {
+            if (!res.ok) return null;
+            return res.json();
+          })
+          .then(function (json) {
+            if (json && Array.isArray(json.apps)) {
+              renderCatalog(json);
+            }
+          })
+          .catch(function () {
+            /* Graceful silent fallback to embedded catalog */
+          });
+      }
+    })();
+  </script>
+</body>
+</html>

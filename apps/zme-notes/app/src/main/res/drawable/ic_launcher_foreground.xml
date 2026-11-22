@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Serene minimalist quill & note emblem -->
+    <path
+        android:fillColor="#2DD4BF"
+        android:pathData="M72,28C59,30 46,39 39,52L34,63L45,58C58,51 68,40 72,28Z" />
+    <path
+        android:fillColor="#0F766E"
+        android:pathData="M34,63L30,74L41,70L45,58L34,63Z" />
+    <path
+        android:fillColor="#CCFBF1"
+        android:pathData="M30,77H76V81H30Z" />
+    <path
+        android:fillColor="#5EEAD4"
+        android:pathData="M56,67H76V71H56Z" />
+</vector>
