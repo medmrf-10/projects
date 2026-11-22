@@ -239,12 +239,12 @@
     requestAnimationFrame(sampleTick);
   }
 
-  // Frame-locked phase runner on requestAnimationFrame + performance.now() with dropped-frame detector
+  // Wall-clock monotonic rAF phase runner (immune to 10-120Hz ProMotion / VRR refresh switching)
   function runFramePhase(durationMs, opts) {
     var o = opts || {};
     var myToken = activeRunToken;
     var fMs = displayCalib.frameMs || 16.67;
-    var targetFrames = Math.max(1, Math.round(durationMs / fMs));
+    var liveFrameMs = Math.min(20, Math.max(4, fMs));
     var onsetNow = null;
     var prevTickNow = null;
     var framesCount = 0;
@@ -272,8 +272,11 @@
       var dt = tNow - prevTickNow;
       prevTickNow = tNow;
       framesCount += 1;
+      if (dt >= 3.5 && dt <= 42.0) {
+        liveFrameMs = liveFrameMs * 0.7 + Math.min(20, dt) * 0.3;
+      }
 
-      if (dt > 1.5 * fMs) {
+      if (dt > Math.max(28, 1.8 * fMs)) {
         droppedInPhase += 1;
         if (activeProbeGuard) {
           activeProbeGuard.droppedFrames += 1;
@@ -292,7 +295,8 @@
       }
       if (myToken !== activeRunToken) return;
 
-      if (framesCount >= targetFrames || wallElapsed >= durationMs - 0.45 * fMs) {
+      // Terminate strictly on monotonic performance.now() wall-clock (prevents premature frame-count cutoffs on VRR/ProMotion)
+      if (wallElapsed >= durationMs - Math.min(4.5, 0.35 * liveFrameMs)) {
         activeRafId = null;
         if (typeof o.onComplete === "function") {
           o.onComplete(wallElapsed, droppedInPhase, tNow);
@@ -1092,7 +1096,7 @@
 
       var W = 400, H = 268, ringR = 86, slotR = 31;
 
-      // Offscreen pre-rendering of Fixation, 900ms Simultaneous 3-Glyph Array, and 150ms Pattern Mask
+      // Offscreen pre-rendering of Fixation, 2,000ms Simultaneous 3-Glyph Array, and 150ms Pattern Mask
       var bufFix = createBufferCanvas(W, H);
       bufFix.ctx.fillStyle = pal.surface;
       bufFix.ctx.fillRect(0, 0, W, H);
@@ -1133,7 +1137,7 @@
 
       a.stage.innerHTML =
         '<div class="task-box deep-canvas-box">' +
-        '<div id="d1SubLabel" class="stim-label">احفظ مواقع الرموز الثلاثة معا <span class="ltr-iso">(900 ms)</span></div>' +
+        '<div id="d1SubLabel" class="stim-label">احفظ مواقع الرموز الثلاثة معا <span class="ltr-iso">(2.0 s)</span></div>' +
         '<div id="d1CanvasMount" class="deep-canvas-wrap"></div>' +
         '<div id="d1ControlsMount"></div>' +
         '</div>';
@@ -1193,13 +1197,20 @@
         }
       }
 
-      // Phase 1: Fixation (200ms) -> Phase 2: Simultaneous Array (900ms) -> Phase 3: Mask (150ms) -> Phase 4: Post-mask Prep (350ms) -> Phase 5: Strictly Fixed 4,000ms TBRS Window
+      // Phase 1: Fixation (200ms) -> Phase 2: Simultaneous Array (2,000ms) -> Phase 3: Mask (150ms) -> Phase 4: Post-mask Prep (350ms) -> Phase 5: Strictly Fixed 4,000ms TBRS Window
       runFramePhase(tr.fixationMs, {
         onStart: function () { blitBuffer(stageObj, bufFix); },
         onComplete: function () {
           runFramePhase(tr.encodeMs, {
             isCriticalExposure: true,
-            onStart: function () { blitBuffer(stageObj, bufEncode); },
+            onStart: function () {
+              blitBuffer(stageObj, bufEncode);
+              drawCountdownStripOnCanvas(stageObj.ctx, W, 1, pal.accent);
+            },
+            onTick: function (wallElapsed) {
+              blitBuffer(stageObj, bufEncode);
+              drawCountdownStripOnCanvas(stageObj.ctx, W, 1 - wallElapsed / tr.encodeMs, pal.accent);
+            },
             onComplete: function () {
               runFramePhase(tr.maskMs, {
                 onStart: function () { blitBuffer(stageObj, bufMask); },
@@ -1469,7 +1480,7 @@
         }
       }
 
-      // Pre-render initial fixation, simultaneous 900ms encoding, 150ms mask, and rapid 800ms (500ms exposure) mutation buffers
+      // Pre-render initial fixation, simultaneous 2,000ms encoding, 150ms mask, and rapid 800ms (500ms exposure) mutation buffers
       var bufFix = createBufferCanvas(W, H);
       drawThreeRolesScene(bufFix.ctx, [null, null, null], {});
       drawFixationCross(bufFix.ctx, W / 2, H / 2, 7, pal.ink);
@@ -1493,7 +1504,7 @@
 
       a.stage.innerHTML =
         '<div class="task-box deep-canvas-box">' +
-        '<div id="d2SubLabel" class="stim-label">احفظ الرموز الثلاثة داخل إطاراتها <span class="ltr-iso">(900 ms)</span></div>' +
+        '<div id="d2SubLabel" class="stim-label">احفظ الرموز الثلاثة داخل إطاراتها <span class="ltr-iso">(2.0 s)</span></div>' +
         '<div id="d2CanvasMount" class="deep-canvas-wrap"></div>' +
         '<div id="d2ControlsMount"></div>' +
         '</div>';
@@ -1504,13 +1515,20 @@
       var controlsMount = document.getElementById("d2ControlsMount");
       var gateResults = [];
 
-      // 1. Fixation (200ms) -> 2. Encode (900ms) -> 3. Mask (150ms) -> 4. Post-mask blank (200ms) -> 5. Rapid sub-second mutations (SOA=800ms)
+      // 1. Fixation (200ms) -> 2. Encode (2,000ms) -> 3. Mask (150ms) -> 4. Post-mask blank (200ms) -> 5. Rapid sub-second mutations (SOA=800ms)
       runFramePhase(tr.fixationMs, {
         onStart: function () { blitBuffer(stageObj, bufFix); },
         onComplete: function () {
           runFramePhase(tr.encodeMs, {
             isCriticalExposure: true,
-            onStart: function () { blitBuffer(stageObj, bufEncode); },
+            onStart: function () {
+              blitBuffer(stageObj, bufEncode);
+              drawCountdownStripOnCanvas(stageObj.ctx, W, 1, pal.accent);
+            },
+            onTick: function (wallElapsed) {
+              blitBuffer(stageObj, bufEncode);
+              drawCountdownStripOnCanvas(stageObj.ctx, W, 1 - wallElapsed / tr.encodeMs, pal.accent);
+            },
             onComplete: function () {
               runFramePhase(tr.maskMs, {
                 onStart: function () { blitBuffer(stageObj, bufMask); },
