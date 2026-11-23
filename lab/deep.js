@@ -378,9 +378,11 @@
       gateRedSoft: dark ? "rgba(248, 113, 113, 0.15)" : "rgba(220, 38, 38, 0.12)",
       gateBlue: dark ? "#60a5fa" : "#2563eb",
       gateBlueSoft: dark ? "rgba(96, 165, 250, 0.15)" : "rgba(37, 99, 235, 0.12)",
-      baysBg: dark ? "#262a33" : "#808080",
-      baysRing: dark ? "#cbd5e1" : "#1e293b",
-      baysBar: dark ? "#f8fafc" : "#0b1120"
+      baysBg: dark ? "#141c1a" : "#eef2f0",
+      baysRing: dark ? "#455c54" : "#8fa19a",
+      baysBar: dark ? "#f4f8f7" : "#0b1311",
+      baysCue: dark ? "#25c49a" : "#095040",
+      baysCueSoft: dark ? "rgba(37, 196, 154, 0.16)" : "rgba(13, 102, 82, 0.13)"
     };
   }
 
@@ -486,14 +488,14 @@
     ctx.restore();
   }
 
-  function drawPatternMaskPatch(ctx, cx, cy, radius, seed) {
+  function drawPatternMaskPatch(ctx, cx, cy, radius, seed, bgOverride) {
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.clip();
 
     var pal = getCanvasPalette();
-    ctx.fillStyle = pal.surface;
+    ctx.fillStyle = bgOverride || pal.surface;
     ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
 
     // High-contrast multi-orientation + checkerboard scramble mask
@@ -1346,6 +1348,7 @@
           if (answeredRecall) return;
           answeredRecall = true;
           clearActiveRun();
+          controlsMount.innerHTML = "";
           records.push({
             trialIndex: tr.trialIndex,
             cond: tr.cond,
@@ -1644,6 +1647,7 @@
           if (doneProbe) return;
           doneProbe = true;
           clearActiveRun();
+          controlsMount.innerHTML = "";
           records.push({
             trialIndex: tr.trialIndex,
             isLag0: tr.isLag0,
@@ -1689,15 +1693,24 @@
     runSingleTrial();
   }
 
-  /* ================= 6. PROBE 3: D3 MASKED BAYS N=4 (200ms · 0.9s vs 3.8s) ================= */
+  /* ================= 6. PROBE 3: D3 MASKED BAYS N=4 (600ms + 200ms ISI · 0.9s vs 3.8s) ================= */
 
   function runD3() {
     var Core = getCore();
-    var trials = Core.generateD3Trials({ isFamiliarization: isFamiliarizationRun });
+    var st = Core.loadState();
+    var formId = st.activeForm;
+    var trials = Core.generateD3Trials({ formId: formId, isFamiliarization: isFamiliarizationRun });
     var idx = 0;
     var records = [];
     var a = domArena();
     var syllables = ["با", "بي", "بو"];
+
+    var W = 360, H = 288, cx = W / 2, cy = H / 2, ringR = 94, nodeR = 34;
+    var stageObj = null;
+    var pacerEl = null;
+    var sylEl = null;
+    var dotEl = null;
+    var respMount = null;
 
     activeProbeGuard = {
       expId: "d3_bays_analog",
@@ -1713,54 +1726,88 @@
       }
     };
 
-    function ringPos(deg, cx, cy, r) {
+    function ringPos(deg, centerX, centerY, r) {
       var rad = (deg * Math.PI) / 180;
-      return { x: cx + Math.cos(rad) * r, y: cy + Math.sin(rad) * r };
+      return { x: centerX + Math.cos(rad) * r, y: centerY + Math.sin(rad) * r };
     }
 
-    function drawOrientedGaborPatch(ctx, cx, cy, r, angleDeg, pal, opts) {
+    function drawOrientedGaborPatch(ctx, px, py, r, angleDeg, pal, opts) {
       var o = opts || {};
       ctx.save();
+      if (o.dimmed) {
+        ctx.globalAlpha = 0.42;
+      }
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.strokeStyle = o.cued ? pal.accent : pal.baysRing;
-      ctx.lineWidth = o.cued ? 3.0 : 1.5;
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      if (o.cued) {
+        ctx.fillStyle = pal.baysCueSoft;
+        ctx.fill();
+      }
+      ctx.strokeStyle = o.cued ? pal.baysCue : pal.baysRing;
+      ctx.lineWidth = o.cued ? 3.4 : 1.7;
       ctx.stroke();
 
       if (o.cuedQuestion) {
-        ctx.fillStyle = pal.accent;
-        ctx.font = "700 18px 'IBM Plex Sans Arabic', sans-serif";
+        ctx.fillStyle = pal.baysCue;
+        ctx.font = "700 21px 'IBM Plex Sans Arabic', sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("؟", cx, cy + 1);
+        ctx.fillText("؟", px, py + 1);
       } else if (!o.empty) {
         var rad = (angleDeg * Math.PI) / 180;
-        var len = r * 0.78;
+        var len = r * 0.80;
         var dx = Math.cos(rad) * len;
         var dy = Math.sin(rad) * len;
         ctx.strokeStyle = pal.baysBar;
-        ctx.lineWidth = 4.4;
+        ctx.lineWidth = 4.8;
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.moveTo(cx - dx, cy - dy);
-        ctx.lineTo(cx + dx, cy + dy);
+        ctx.moveTo(px - dx, py - dy);
+        ctx.lineTo(px + dx, py + dy);
         ctx.stroke();
 
         ctx.fillStyle = pal.baysBar;
         ctx.beginPath();
-        ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+        ctx.arc(px, py, 2.6, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
     }
 
+    function ensureD3StageShell() {
+      var existingCanvas = document.getElementById("d3Canvas");
+      if (stageObj && existingCanvas === stageObj.canvas) return;
+      a.stage.innerHTML =
+        '<div class="task-box deep-canvas-box">' +
+        '<div id="d3Pacer" class="suppression-pacer is-frozen" aria-live="off">' +
+        '<span id="d3PacerDot" class="pacer-dot"></span>' +
+        '<span>كبح لفظي هادئ: <strong id="d3Syllable">با — بي — بو</strong></span>' +
+        '</div>' +
+        '<div id="d3CanvasMount" class="deep-canvas-wrap"></div>' +
+        '<div id="d3ResponseMount"></div>' +
+        '</div>';
+
+      stageObj = createStageCanvas(W, H);
+      stageObj.canvas.id = "d3Canvas";
+      stageObj.canvas.style.touchAction = "none";
+      document.getElementById("d3CanvasMount").appendChild(stageObj.canvas);
+      pacerEl = document.getElementById("d3Pacer");
+      sylEl = document.getElementById("d3Syllable");
+      dotEl = document.getElementById("d3PacerDot");
+      respMount = document.getElementById("d3ResponseMount");
+    }
+
     function runSingleTrial() {
       clearActiveRun();
+      if (a.overlay && a.overlay.scrollTop !== 0) {
+        a.overlay.scrollTop = 0;
+      }
       if (idx >= trials.length) {
         var scored = Core.scoreD3Trials(records);
         var envSnap = Core.buildEnvironmentSnapshot(displayCalib.refreshHz, displayCalib.frameMs);
         Core.saveExperimentResult("d3_bays_analog", Object.assign({
           isFamiliarization: isFamiliarizationRun,
+          formId: formId,
           env: envSnap,
           refreshHz: displayCalib.refreshHz,
           frameMs: displayCalib.frameMs,
@@ -1784,16 +1831,35 @@
         );
       }
 
+      ensureD3StageShell();
+
       var tr = trials[idx];
       var pal = getCanvasPalette();
+      var itiMs = Number.isFinite(tr.itiMs) ? tr.itiMs : 400;
+      var fixationMs = Number.isFinite(tr.fixationMs) ? tr.fixationMs : 750;
+      var exposureMs = Number.isFinite(tr.exposureMs) ? tr.exposureMs : 600;
+      var isiMs = Number.isFinite(tr.isiMs) ? tr.isiMs : 200;
+      var maskMs = Number.isFinite(tr.maskMs) ? tr.maskMs : 150;
+      var delayMs = Number.isFinite(tr.delayMs) ? tr.delayMs : (tr.isLong ? 3600 : 700);
+      var responseDeadlineMs = Number.isFinite(tr.responseDeadlineMs) ? tr.responseDeadlineMs : 10000;
+      var suppressionPaceMs = Number.isFinite(tr.suppressionPaceMs) ? tr.suppressionPaceMs : 550;
+
       setHeader(
         "D3 — خليط الزوايا · " + (tr.isLong ? "تأخير\u00A03.8s" : "تأخير\u00A00.9s"),
         (idx + 1) + " / " + trials.length
       );
 
-      var W = 380, H = 264, cx = W / 2, cy = H / 2, ringR = 84, nodeR = 26;
+      // Freeze pacer completely during fixation, stimulus, isi, and mask (zero peripheral motion!)
+      if (dotEl) dotEl.classList.remove("is-beat");
+      if (sylEl) sylEl.textContent = "با — بي — بو";
+      if (pacerEl) {
+        pacerEl.classList.add("is-frozen");
+        pacerEl.style.visibility = "visible";
+      }
+      if (respMount) respMount.innerHTML = "";
+      stageObj.canvas.style.cursor = "default";
 
-      // Offscreen pre-rendered buffers for 250ms Fixation, 200ms N=4 Flash, 150ms Grid/Noise Mask, and Retention Blank
+      // Offscreen pre-rendered buffers for 750ms Fixation/ISI, 600ms N=4 Array, and 150ms Pattern Mask
       var bufFix = createBufferCanvas(W, H);
       bufFix.ctx.fillStyle = pal.baysBg;
       bufFix.ctx.fillRect(0, 0, W, H);
@@ -1817,34 +1883,17 @@
       bufMask.ctx.fillRect(0, 0, W, H);
       for (var i2 = 0; i2 < 4; i2 += 1) {
         var p2 = ringPos(tr.ringLocationsDeg[i2], cx, cy, ringR);
-        drawPatternMaskPatch(bufMask.ctx, p2.x, p2.y, nodeR, tr.maskSeed + i2 * 61);
+        drawPatternMaskPatch(bufMask.ctx, p2.x, p2.y, nodeR, tr.maskSeed + i2 * 61, pal.baysBg);
       }
       drawFixationCross(bufMask.ctx, cx, cy, 6, pal.baysBar);
 
-      a.stage.innerHTML =
-        '<div class="task-box deep-canvas-box">' +
-        '<div id="d3Pacer" class="suppression-pacer" aria-live="off">' +
-        '<span id="d3PacerDot" class="pacer-dot is-beat"></span>' +
-        '<span>كبح لفظي متواصل: <strong id="d3Syllable">با</strong> (با — بي — بو)</span>' +
-        '</div>' +
-        '<div id="d3CanvasMount" class="deep-canvas-wrap"></div>' +
-        '<div id="d3ResponseMount"></div>' +
-        '</div>';
-
-      var stageObj = createStageCanvas(W, H);
-      document.getElementById("d3CanvasMount").appendChild(stageObj.canvas);
-      var pacerEl = document.getElementById("d3Pacer");
-      var sylEl = document.getElementById("d3Syllable");
-      var dotEl = document.getElementById("d3PacerDot");
-      var respMount = document.getElementById("d3ResponseMount");
-
-      var pacerOriginNow = nowMs();
+      var pacerOriginNow = 0;
       var lastBeatIdx = -1;
 
       function syncSuppressionPacer(tNow) {
-        var elapsed = tNow - pacerOriginNow;
-        var beatIdx = Math.floor(elapsed / tr.suppressionPaceMs);
-        var withinBeat = elapsed % tr.suppressionPaceMs;
+        var elapsed = Math.max(0, tNow - pacerOriginNow);
+        var beatIdx = Math.floor(elapsed / suppressionPaceMs);
+        var withinBeat = elapsed % suppressionPaceMs;
         if (beatIdx !== lastBeatIdx) {
           lastBeatIdx = beatIdx;
           if (sylEl) sylEl.textContent = syllables[beatIdx % 3];
@@ -1854,46 +1903,82 @@
         }
       }
 
-      runFramePhase(tr.fixationMs, {
-        onStart: function (t0) {
-          pacerOriginNow = t0;
-          blitBuffer(stageObj, bufFix);
-          syncSuppressionPacer(t0);
+      function drawFixationGazeCue(wallElapsed) {
+        blitBuffer(stageObj, bufFix);
+        // Smooth converging centering ring during 0..500ms; steady (+) lock during final 250ms before flash
+        var lockSpanMs = Math.min(500, Math.max(250, fixationMs - 250));
+        if (wallElapsed < lockSpanMs) {
+          var prog = Math.max(0, Math.min(1, wallElapsed / lockSpanMs));
+          var ease = 1 - (1 - prog) * (1 - prog);
+          var cueR = 26 - 16 * ease;
+          var ctx = stageObj.ctx;
+          ctx.save();
+          ctx.strokeStyle = pal.baysCue;
+          ctx.globalAlpha = 0.38 * (1 - 0.32 * prog);
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, cueR, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // Phase 1: Fixation (750ms) with calm converging gaze-centering lock on (+)
+      runFramePhase(fixationMs, {
+        onStart: function () {
+          stageObj.canvas.dataset.phase = "fixation";
+          drawFixationGazeCue(0);
         },
-        onTick: function (_w, _f, tNow) { syncSuppressionPacer(tNow); },
+        onTick: function (wallElapsed) {
+          drawFixationGazeCue(wallElapsed);
+        },
         onComplete: function () {
-          // 200ms Simultaneous N=4 Flash
-          runFramePhase(tr.exposureMs, {
+          // Phase 2: Simultaneous N=4 Orientation Array (600ms)
+          runFramePhase(exposureMs, {
             isCriticalExposure: true,
-            onStart: function (tNow) {
+            onStart: function () {
+              stageObj.canvas.dataset.phase = "stimulus";
               blitBuffer(stageObj, bufFlash);
-              syncSuppressionPacer(tNow);
             },
-            onTick: function (_w, _f, tNow) { syncSuppressionPacer(tNow); },
             onComplete: function () {
-              // 150ms Pattern Mask
-              runFramePhase(tr.maskMs, {
-                onStart: function (tNow) {
-                  blitBuffer(stageObj, bufMask);
-                  syncSuppressionPacer(tNow);
+              // Phase 3: Clean Unmasked Blank Consolidation ISI (200ms -> 800ms stimulus-to-mask SOA)
+              runFramePhase(isiMs, {
+                onStart: function () {
+                  stageObj.canvas.dataset.phase = "isi";
+                  blitBuffer(stageObj, bufFix);
                 },
-                onTick: function (_w, _f, tNow) { syncSuppressionPacer(tNow); },
                 onComplete: function () {
-                  // Blank Retention (900ms vs 3,800ms)
-                  runFramePhase(tr.delayMs, {
-                    onStart: function (tNow) {
-                      blitBuffer(stageObj, bufFix);
-                      syncSuppressionPacer(tNow);
-                    },
-                    onTick: function (wallElapsed, _f, tNow) {
-                      syncSuppressionPacer(tNow);
-                      if (tr.isLong) {
-                        blitBuffer(stageObj, bufFix);
-                        drawCountdownStripOnCanvas(stageObj.ctx, W, 1 - wallElapsed / tr.delayMs, pal.accent);
-                      }
+                  // Phase 4: Oriented-Line / Checkerboard Afterimage Mask (150ms)
+                  runFramePhase(maskMs, {
+                    onStart: function () {
+                      stageObj.canvas.dataset.phase = "mask";
+                      blitBuffer(stageObj, bufMask);
                     },
                     onComplete: function () {
-                      showAnalogDialCanvas();
+                      // Phase 5: Post-Mask Blank Retention (700ms vs 3,600ms => 0.9s vs 3.8s total blank retention)
+                      runFramePhase(delayMs, {
+                        onStart: function (tNow) {
+                          stageObj.canvas.dataset.phase = "delay";
+                          if (pacerEl) pacerEl.classList.remove("is-frozen");
+                          pacerOriginNow = tNow;
+                          lastBeatIdx = -1;
+                          syncSuppressionPacer(tNow);
+                          blitBuffer(stageObj, bufFix);
+                          if (tr.isLong) {
+                            drawCountdownStripOnCanvas(stageObj.ctx, W, 1, pal.baysCue);
+                          }
+                        },
+                        onTick: function (wallElapsed, _f, tNow) {
+                          syncSuppressionPacer(tNow);
+                          if (tr.isLong) {
+                            blitBuffer(stageObj, bufFix);
+                            drawCountdownStripOnCanvas(stageObj.ctx, W, 1 - wallElapsed / delayMs, pal.baysCue);
+                          }
+                        },
+                        onComplete: function () {
+                          showAnalogDialCanvas();
+                        }
+                      });
                     }
                   });
                 }
@@ -1905,7 +1990,13 @@
 
       function showAnalogDialCanvas() {
         // Keep top slot height locked via visibility:hidden so canvas fixation (cx, cy) shifts 0px!
-        if (pacerEl) pacerEl.style.visibility = "hidden";
+        if (dotEl) dotEl.classList.remove("is-beat");
+        if (pacerEl) {
+          pacerEl.classList.add("is-frozen");
+          pacerEl.style.visibility = "hidden";
+        }
+        stageObj.canvas.dataset.phase = "response";
+
         var curAngle = tr.initDialAngle;
         var touched = false;
         var finished = false;
@@ -1916,7 +2007,7 @@
           var ctx = stageObj.ctx;
           ctx.fillStyle = pal.baysBg;
           ctx.fillRect(0, 0, W, H);
-          drawCountdownStripOnCanvas(ctx, W, remRatio, pal.accent);
+          drawCountdownStripOnCanvas(ctx, W, remRatio, pal.baysCue);
 
           for (var i = 0; i < 4; i += 1) {
             var p = ringPos(tr.ringLocationsDeg[i], cx, cy, ringR);
@@ -1927,6 +2018,7 @@
             } else {
               drawOrientedGaborPatch(ctx, p.x, p.y, nodeR, 0, pal, {
                 empty: !isProbe,
+                dimmed: !isProbe,
                 cued: isProbe,
                 cuedQuestion: isProbe
               });
@@ -1937,8 +2029,8 @@
           var dialR = 42;
           ctx.save();
           ctx.fillStyle = pal.surface;
-          ctx.strokeStyle = pal.accent;
-          ctx.lineWidth = 2.4;
+          ctx.strokeStyle = pal.baysCue;
+          ctx.lineWidth = 2.5;
           ctx.beginPath();
           ctx.arc(cx, cy, dialR, 0, Math.PI * 2);
           ctx.fill();
@@ -1948,14 +2040,14 @@
           var dx = Math.cos(rad) * (dialR - 8);
           var dy = Math.sin(rad) * (dialR - 8);
           ctx.strokeStyle = pal.ink;
-          ctx.lineWidth = 4.6;
+          ctx.lineWidth = 4.8;
           ctx.lineCap = "round";
           ctx.beginPath();
           ctx.moveTo(cx - dx, cy - dy);
           ctx.lineTo(cx + dx, cy + dy);
           ctx.stroke();
 
-          ctx.fillStyle = pal.accent;
+          ctx.fillStyle = pal.baysCue;
           ctx.beginPath();
           ctx.arc(cx + dx, cy + dy, 5.5, 0, Math.PI * 2);
           ctx.arc(cx - dx, cy - dy, 5.5, 0, Math.PI * 2);
@@ -2000,6 +2092,9 @@
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = '<span>تأكيد الميل</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd>';
           }
+          if (!finished) {
+            drawCueAndDial(Math.max(0, 1 - (nowMs() - respStart) / responseDeadlineMs));
+          }
         }
         syncScrubThumb();
 
@@ -2008,12 +2103,13 @@
           var rect = stageObj.canvas.getBoundingClientRect();
           var px = ev.clientX - (rect.left + rect.width / 2);
           var py = ev.clientY - (rect.top + rect.height / 2);
-          if (Math.hypot(px, py) < 5) return;
+          if (Math.hypot(px, py) < 12) return;
           var deg = (Math.atan2(py, px) * 180) / Math.PI;
           markAdjusted(deg);
         }
 
         var onDown = function (ev) {
+          if (ev.cancelable) ev.preventDefault();
           dragging = true;
           if (stageObj.canvas.setPointerCapture && ev.pointerId !== undefined) {
             try { stageObj.canvas.setPointerCapture(ev.pointerId); } catch (_) {}
@@ -2022,6 +2118,7 @@
         };
         var onMove = function (ev) {
           if (!dragging) return;
+          if (ev.cancelable) ev.preventDefault();
           updateFromPointer(ev);
         };
         var onUp = function () { dragging = false; };
@@ -2033,28 +2130,25 @@
         stageObj.canvas.addEventListener("pointerup", onUp);
         stageObj.canvas.addEventListener("pointercancel", onUp);
 
-        // Anti-occlusion mobile scrub track below the ring canvas
+        // Endless relative rotary drum below the ring canvas (zero initial jump, zero screen-edge wall, 0% thumb occlusion)
         var scrubbing = false;
         var scrubStartX = 0;
         var scrubStartAngle = curAngle;
         var onScrubDown = function (ev) {
+          if (ev.cancelable) ev.preventDefault();
           scrubbing = true;
           scrubStartX = ev.clientX;
           scrubStartAngle = curAngle;
           if (scrubTrack && scrubTrack.setPointerCapture && ev.pointerId !== undefined) {
             try { scrubTrack.setPointerCapture(ev.pointerId); } catch (_) {}
           }
-          var rect = scrubTrack.getBoundingClientRect();
-          if (rect.width > 10) {
-            var rel = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
-            scrubStartAngle = rel * 180;
-            markAdjusted(scrubStartAngle);
-          }
+          markAdjusted(curAngle);
         };
         var onScrubMove = function (ev) {
           if (!scrubbing || !scrubTrack) return;
+          if (ev.cancelable) ev.preventDefault();
           var rect = scrubTrack.getBoundingClientRect();
-          var w = Math.max(80, rect.width);
+          var w = Math.max(120, rect.width);
           var deltaDeg = ((ev.clientX - scrubStartX) / w) * 180;
           markAdjusted(scrubStartAngle + deltaDeg);
         };
@@ -2088,6 +2182,19 @@
           });
         }
 
+        function drawItiBlank() {
+          var ctx = stageObj.ctx;
+          ctx.fillStyle = pal.baysBg;
+          ctx.fillRect(0, 0, W, H);
+          ctx.save();
+          ctx.fillStyle = pal.baysRing;
+          ctx.globalAlpha = 0.55;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 3.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
         function commitResponse(fromTimeout) {
           if (finished) return;
           if (!fromTimeout && !touched) return;
@@ -2105,7 +2212,19 @@
           });
 
           idx += 1;
-          runFramePhase(tr.itiMs, {
+
+          // Immediate visual release & start of 1,150ms (400ms ITI + 750ms Fixation) gaze-return turnaround
+          if (respMount) respMount.innerHTML = "";
+          if (pacerEl) pacerEl.style.visibility = "hidden";
+          stageObj.canvas.style.cursor = "default";
+          stageObj.canvas.dataset.phase = "iti";
+          drawItiBlank();
+
+          runFramePhase(itiMs, {
+            onStart: function () {
+              stageObj.canvas.dataset.phase = "iti";
+              drawItiBlank();
+            },
             onComplete: function () { runSingleTrial(); }
           });
         }
@@ -2124,13 +2243,14 @@
           }
         });
 
-        runFramePhase(tr.responseDeadlineMs, {
+        runFramePhase(responseDeadlineMs, {
           onStart: function () {
+            stageObj.canvas.dataset.phase = "response";
             respStart = nowMs();
             drawCueAndDial(1);
           },
           onTick: function (wallElapsed) {
-            drawCueAndDial(1 - wallElapsed / tr.responseDeadlineMs);
+            drawCueAndDial(1 - wallElapsed / responseDeadlineMs);
           },
           onComplete: function () {
             commitResponse(true);
@@ -2369,6 +2489,7 @@
           if (doneRec) return;
           doneRec = true;
           clearActiveRun();
+          controlsMount.innerHTML = "";
           records.push({
             trialIndex: tr.trialIndex,
             soaMs: tr.soaMs,
@@ -2620,7 +2741,7 @@
         var dt = tNow - prevNow;
         prevNow = tNow;
 
-        if (dt > 1.5 * fMs && activeProbeGuard) {
+        if (dt > Math.max(28, 1.8 * fMs) && activeProbeGuard) {
           activeProbeGuard.droppedFrames += 1;
         }
 
@@ -2955,7 +3076,7 @@
       '<div style="display:flex;flex-direction:column;gap:16px;">' +
       '<section class="card">' +
       '<div>' +
-      '<h2 class="section-title">النسخة الثالثة المرقّاة: البطارية السيكوفيزيائية المقاومة للتكتيل (~15 د)</h2>' +
+      '<h2 class="section-title">النسخة الثالثة المرقّاة: البطارية السيكوفيزيائية المقاومة للتكتيل (~16 د)</h2>' +
       '<p class="section-sub">مقفلة على إطارات الشاشة مع عشوائية مشفرة وتدوير نماذج الرموز المتعامدة (<span class="ltr-iso">Form A/B/C</span>) لإغلاق مسارات التكتيل واستخراج البصمات التفريقية ومؤشرات <span class="ltr-iso">RCI 90%</span>.</p>' +
       "</div>" +
       '<div class="deep-calib-bar" style="margin-top:0;">' +
@@ -2975,7 +3096,7 @@
       envAlertsHtml +
       '<div class="suite-toolbar">' +
       '<div class="suite-primary-actions">' +
-      '<button id="btnRunFullDeep" type="button" class="btn-primary">بدء البطارية العميقة المعتمدة — 5 مسابير (~15 د)</button>' +
+      '<button id="btnRunFullDeep" type="button" class="btn-primary">بدء البطارية العميقة المعتمدة — 5 مسابير (~16 د)</button>' +
       '<button id="btnRunFamiliarization" type="button" class="btn-ghost">جولة تهيئة تمهيدية (~2 د · مستبعدة)</button>' +
       "</div>" +
       '<div class="suite-util-actions">' +
@@ -2990,7 +3111,7 @@
       '<div class="hero-summary-grid">' +
       '<article class="summary-card"><h3 class="summary-label">' + formatDeepRichHtml("1. صمود الربط تحت الحمل (D1 · TBRS)") + '</h3><div class="summary-value ltr-iso">' + esc(kpi1Val) + '</div><div class="summary-sub">نافذة ثابتة <span class="ltr-iso">4,000ms</span> (<span class="ltr-iso">4</span> أحكام مقابل حكمين)</div></article>' +
       '<article class="summary-card"><h3 class="summary-label">' + formatDeepRichHtml("2. التحديث السريع وتفكيك البوابة (D2 · M3)") + '</h3><div class="summary-value ltr-iso">' + esc(kpi2Val) + '</div><div class="summary-sub">طفرات <span class="ltr-iso">500ms</span> + بوابة تحديث/مقارنة وستة بدائل</div></article>' +
-      '<article class="summary-card"><h3 class="summary-label">' + formatDeepRichHtml("3. سعة خليط Bays المقنّع (D3)") + '</h3><div class="summary-value ltr-iso">' + esc(kpi3Val) + '</div><div class="summary-sub">ومضة <span class="ltr-iso">200ms</span> لـ <span class="ltr-iso">4</span> عناصر عبر تأخير <span class="ltr-iso">0.9s</span> و<span class="ltr-iso">3.8s</span></div></article>' +
+      '<article class="summary-card"><h3 class="summary-label">' + formatDeepRichHtml("3. سعة خليط Bays المقنّع (D3)") + '</h3><div class="summary-value ltr-iso">' + esc(kpi3Val) + '</div><div class="summary-sub">عرض <span class="ltr-iso">600ms</span> وتوطيد <span class="ltr-iso">200ms</span> لـ <span class="ltr-iso">4</span> عناصر (<span class="ltr-iso">0.9s</span> / <span class="ltr-iso">3.8s</span>)</div></article>' +
       '<article class="summary-card"><h3 class="summary-label">' + formatDeepRichHtml("4. التوطيد واليقظة الممتدة (D4 · D5)") + '</h3><div class="summary-value ltr-iso">' + esc(kpi4Val) + '</div><div class="summary-sub">عتبة التدفق <span class="ltr-iso">SOA_75</span> وسرعة <span class="ltr-iso">PVT-5</span> التبادلية</div></article>' +
       "</div>" +
       '<div class="deep-probes-grid">' + cardsHtml + "</div>" +

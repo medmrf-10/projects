@@ -5,7 +5,7 @@
   root.NeuroLab = root.NeuroLab || {};
 
   var STORAGE_KEY = "neurolab_deep_v3";
-  var SUITE_VERSION = "3.3";
+  var SUITE_VERSION = "3.4";
 
   var EXPERIMENTS = [
     {
@@ -66,25 +66,25 @@
       code: "D3 · BAYS",
       shortCode: "D3",
       domainTag: "الدقة البصرية المتصلة · Bays",
-      metaChip: "48 جولة · ~3.8 د",
+      metaChip: "48 جولة · ~4.7 د",
       famMetaChip: "4 جولات تمهيدية",
-      title: "خليط Bays المقنّع للزوايا المتصلة (200ms · N=4)",
+      title: "خليط Bays المقنّع للزوايا المتصلة (600ms · N=4)",
       shortTitle: "خليط Bays المقنّع",
-      durationMin: 3.8,
+      durationMin: 4.7,
       targetQuestion:
-        "ما حصة استرجاع الهدف (α) مقابل التبديل المكاني (β) وقفزة الفقد بالتأخير (Δγ) بين 0.9s و3.8s عند ومضة 200ms مقنّعة لـ 4 عناصر؟",
+        "ما حصة استرجاع الهدف (α) مقابل التبديل المكاني (β) وقفزة الفقد بالتأخير (Δγ) بين 0.9s و3.8s عند عرض 600ms مقنّع لـ 4 عناصر؟",
       instructions: [
-        "كبح التسميع اللفظي: ردّد بصوت خافت متواصل «با — بي — بو» وثبّت نظرك على (+) لالتقاط ميل الخطوط الأربعة (200 ms).",
+        "كبح التسميع اللفظي: ردّد بصوت خافت متواصل «با — بي — بو» وثبّت نظرك على (+) لالتقاط ميل الخطوط الأربعة (600 ms).",
         "الاحتفاظ الصامت للبصر: واصل الترديد الهادئ طوال القناع وفترة الانتظار (0.9 s أو 3.8 s).",
         "مطابقة الزاوية: أدر القرص أو شريط السحب أو الأسهم ليطابق ميل موقع (؟) ثم أكّد بـ (Enter)."
       ],
       flowSteps: [
         "ترديد «با — بي — بو»",
-        "ومضة 4 زوايا (200 ms)",
-        "انتظار (0.9 s / 3.8 s)",
+        "عرض 4 زوايا (600 ms)",
+        "توطيد وقناع ثم انتظار (0.9 s / 3.8 s)",
         "تدوير لمطابقة (؟)"
       ],
-      example: "ترديد «با — بي — بو» ← ومضة 4 خطوط مائلة ← انتظار ← تدوير الخط ليطابق زاوية الموقع المطلوب"
+      example: "ترديد «با — بي — بو» ← عرض 4 خطوط مائلة ← انتظار ← تدوير الخط ليطابق زاوية الموقع المطلوب"
     },
     {
       id: "d4_consolidation_soa",
@@ -1590,7 +1590,7 @@
     };
   }
 
-  /* ================= 8. D3: MASKED BAYS N=4 AT 200ms (900ms VS 3,800ms) ================= */
+  /* ================= 8. D3: MASKED BAYS N=4 AT 600ms + 200ms ISI (900ms VS 3,800ms) ================= */
 
   function isOrientationAllowed(deg, existingAngles, minSepDeg) {
     var a = ((Number(deg) % 180) + 180) % 180;
@@ -1686,9 +1686,11 @@
     return round1((targetAngle + 83) % 180);
   }
 
-  function buildSingleD3Trial(trialIndex, isLong, probeIdx) {
+  function buildSingleD3Trial(trialIndex, isLong, probeIdx, formId) {
     var longFlag = Boolean(isLong);
-    var delayMs = longFlag ? 3800 : 900;
+    var delayMs = longFlag ? 3600 : 700;
+    var retentionBlankMs = longFlag ? 3800 : 900;
+    var totalRetentionMs = longFlag ? 3950 : 1050;
     var angles = sampleFourOrthogonalOrientations();
     var ringLocationsDeg = sampleNonDiametricRingLocations4();
     var pIdx = ((Number(probeIdx) || 0) % 4 + 4) % 4;
@@ -1699,15 +1701,19 @@
     }
     return {
       trialIndex: trialIndex,
+      formId: normalizeFormId(formId),
       setSize: 4,
       delayCond: longFlag ? "long_3800" : "short_900",
       isLong: longFlag,
-      fixationMs: 250,
-      exposureMs: 200,
+      itiMs: 400,
+      fixationMs: 750,
+      exposureMs: 600,
+      isiMs: 200,
       maskMs: 150,
       delayMs: delayMs,
-      responseDeadlineMs: 8000,
-      itiMs: 200,
+      retentionBlankMs: retentionBlankMs,
+      totalRetentionMs: totalRetentionMs,
+      responseDeadlineMs: 10000,
       suppressionPaceMs: 550,
       ringLocationsDeg: ringLocationsDeg,
       angles: angles,
@@ -1721,13 +1727,19 @@
 
   function regenerateD3SingleTrial(prevTrial) {
     var pt = prevTrial || {};
-    return buildSingleD3Trial(Number(pt.trialIndex) || 0, Boolean(pt.isLong), pt.probeIdx !== undefined ? pt.probeIdx : 0);
+    return buildSingleD3Trial(
+      Number(pt.trialIndex) || 0,
+      Boolean(pt.isLong),
+      pt.probeIdx !== undefined ? pt.probeIdx : 0,
+      pt.formId || "A"
+    );
   }
 
   function generateD3Trials(opts) {
     var o = opts || {};
+    var formId = normalizeFormId(o.formId);
     var isFam = Boolean(o.isFamiliarization);
-    // 48 trials split evenly: 24 @ 900ms short vs 24 @ 3800ms long (12 shuffled mini-blocks of 4)
+    // 48 trials split evenly: 24 @ 900ms short vs 24 @ 3800ms long blank retention (12 shuffled mini-blocks of 4)
     var delayCells = [];
     if (isFam) {
       delayCells = shuffle(["short", "short", "long", "long"]);
@@ -1744,7 +1756,7 @@
 
     var trials = [];
     for (var i = 0; i < delayCells.length; i += 1) {
-      trials.push(buildSingleD3Trial(i, delayCells[i] === "long", probeBag[i]));
+      trials.push(buildSingleD3Trial(i, delayCells[i] === "long", probeBag[i], formId));
     }
     return trials;
   }
@@ -3009,18 +3021,18 @@
       verdicts.push("2. التحديث الرمزي سريع الطفرة وبوابة Reference-Back (D2 · M3): بانتظار التنفيذ.");
     }
 
-    // 3. D3 Verdict: Masked Bays N=4 @ 200ms (900ms vs 3,800ms)
+    // 3. D3 Verdict: Masked Bays N=4 @ 600ms + 200ms ISI (900ms vs 3,800ms)
     if (d3) {
       componentScores.push(d3.calibratedScorePct);
       verdicts.push(
-        "3. خليط Bays المقنّع عند 200ms لحجم N=4 (D3): السعة K=" + d3.K + " (α=" + d3.alphaPct +
+        "3. خليط Bays المقنّع عند 600ms لحجم N=4 (D3): السعة K=" + d3.K + " (α=" + d3.alphaPct +
         "%)، التبديل β=" + d3.betaPct + "% (مؤشر Bays 2016 اللامعلمي: " + d3.bays2016SwapPct +
         "%)، التخمين γ=" + d3.gammaPct + "%، قفزة الفقد بالتأخير Δγ_delay=" + fmtSigned(d3.deltaGammaDelayPct, "%") +
         " (0.9s: " + d3.gammaShortPct + "% ← 3.8s: " + d3.gammaLongPct + "%)، والانحراف الدائري σ_θ=" +
         d3.sigmaDeg + "° (cMAE=" + d3.cMAE + "°)."
       );
     } else {
-      verdicts.push("3. خليط Bays المقنّع عند 200ms لحجم N=4 (D3): بانتظار التنفيذ.");
+      verdicts.push("3. خليط Bays المقنّع عند 600ms لحجم N=4 (D3): بانتظار التنفيذ.");
     }
 
     // 4. D4 Verdict: Ballistic Consolidation & Stream Overflow Threshold (SOA_75 & AUC_cons)

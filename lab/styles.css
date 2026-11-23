@@ -3068,6 +3068,19 @@ html[data-theme="dark"] .corsi-cell.is-lit {
   transform: scale(1.3);
 }
 
+.suppression-pacer.is-frozen {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+  color: var(--text-muted);
+  opacity: 0.58;
+}
+
+.suppression-pacer.is-frozen .pacer-dot {
+  background: var(--text-muted);
+  opacity: 0.28;
+  transform: none !important;
+}
+
 /* 4. F4 Horizontal Axis Guide Bar & Hint Pill */
 .axis-guide-bar {
   display: flex;
@@ -3606,13 +3619,17 @@ html[data-theme="dark"] .corsi-cell.is-lit {
   min-width: 0;
 }
 
+#d3ResponseMount {
+  min-height: 104px;
+}
+
 .d3-scrub-track {
   position: relative;
   width: 100%;
   max-width: 380px;
-  height: 40px;
+  height: 46px;
   margin: 0 auto 10px;
-  border-radius: 999px;
+  border-radius: 14px;
   background: var(--surface-2);
   border: 1.5px solid var(--border-strong);
   display: flex;
@@ -3621,6 +3638,7 @@ html[data-theme="dark"] .corsi-cell.is-lit {
   cursor: ew-resize;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
   overflow: hidden;
 }
 
@@ -3797,6 +3815,15 @@ html[data-theme="dark"] .gate-pill.is-blue {
   font-family: var(--font-mono);
   font-size: 1.15rem;
   font-weight: 700;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#d3ConfirmBtn {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .deep-calib-bar {
@@ -3858,6 +3885,26 @@ html[data-theme="dark"] .gate-pill.is-blue {
   }
 }
 
+@media (max-width: 480px) {
+  .arena-stage-wrap.is-canvas-stage {
+    padding: 10px 10px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .task-box.deep-canvas-box {
+    padding: 12px 10px;
+    gap: 10px;
+  }
+
+  #d1SubLabel,
+  #d2SubLabel,
+  #d3Pacer,
+  #d4SubLabel {
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+  }
+}
+
 @media (max-width: 440px) {
   .glyph-choice-grid-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3877,6 +3924,10 @@ html[data-theme="dark"] .gate-pill.is-blue {
   .glyph-mini-canvas {
     width: 48px;
     height: 48px;
+  }
+
+  #d3ResponseMount {
+    min-height: 156px;
   }
 
   .d3-rot-btn {
@@ -3928,6 +3979,10 @@ html[data-theme="dark"] .gate-pill.is-blue {
   .deep-stage-canvas {
     width: auto;
     max-height: 158px;
+  }
+
+  #d3ResponseMount {
+    min-height: 73px;
   }
 
   .d3-scrub-track {
