@@ -3275,18 +3275,28 @@
 
     setHeader(meta.title + " — النتيجة", score + "%");
 
+    var RS = root.NeuroLab && root.NeuroLab.RepoSync;
+    var saveBtnInner = RS && typeof RS.renderSaveButtonInnerHtml === "function"
+      ? RS.renderSaveButtonInnerHtml()
+      : "<span>حفظ في الريبو</span>";
+    var saveRepoBtnHtml =
+      '<button id="btnProbeSaveRepo" type="button" class="btn-repo-save" data-repo-save-btn>' + saveBtnInner + "</button>";
+
     var actionsHtml = "";
     if (sessionState.isBattery && !isLastBatteryStep) {
       var nextMeta = findProbeMeta(sessionState.batteryQueue[sessionState.batteryIndex + 1]);
       actionsHtml =
+        saveRepoBtnHtml +
         '<button id="btnNextBatteryProbe" type="button" class="btn-primary"><span>المسبار التالي: ' +
         esc(nextMeta.shortTitle || nextMeta.title) +
         '</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     } else if (isLastBatteryStep) {
       actionsHtml =
+        saveRepoBtnHtml +
         '<button id="btnFinishFullBattery" type="button" class="btn-primary"><span>عرض الحصيلة الجراحية للبطارية الكاملة</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     } else {
       actionsHtml =
+        saveRepoBtnHtml +
         '<button id="btnRetryProbe" type="button" class="btn-ghost">إعادة فحص المنطقة</button>' +
         '<button id="btnDoneProbe" type="button" class="btn-primary"><span>حفظ والعودة للوحة القيادة</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     }
@@ -3331,6 +3341,10 @@
       "</div>" +
       "</div>";
 
+    if (RS && typeof RS.refreshUi === "function") {
+      try { RS.refreshUi(); } catch (_) {}
+    }
+
     if (sessionState.isBattery && !isLastBatteryStep) {
       var goNext = function () {
         unbindKeyHandler();
@@ -3339,6 +3353,7 @@
       };
       document.getElementById("btnNextBatteryProbe").addEventListener("click", goNext);
       bindKeyHandler(function (ev) {
+        if (RS && typeof RS.isModalOpen === "function" && RS.isModalOpen()) return;
         if (ev.key === "Enter") {
           ev.preventDefault();
           goNext();
@@ -3351,6 +3366,7 @@
       };
       document.getElementById("btnFinishFullBattery").addEventListener("click", showFinal);
       bindKeyHandler(function (ev) {
+        if (RS && typeof RS.isModalOpen === "function" && RS.isModalOpen()) return;
         if (ev.key === "Enter") {
           ev.preventDefault();
           showFinal();
@@ -3365,6 +3381,7 @@
       };
       document.getElementById("btnDoneProbe").addEventListener("click", closeFn);
       bindKeyHandler(function (ev) {
+        if (RS && typeof RS.isModalOpen === "function" && RS.isModalOpen()) return;
         if (ev.key === "Enter") {
           ev.preventDefault();
           closeFn();
@@ -3443,6 +3460,7 @@
       ) +
       "</div>" +
       '<div class="result-actions">' +
+      '<button id="btnBatterySaveRepo" type="button" class="btn-repo-save" data-repo-save-btn><span>حفظ في الريبو</span></button>' +
       '<button id="btnCloseBatterySummary" type="button" class="btn-primary"><span>العودة إلى لوحة القيادة والمنحنيات</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>' +
       "</div>" +
       "</div>";
@@ -3450,11 +3468,17 @@
     sessionState.isBattery = false;
     sessionState.batteryRunId = null;
 
+    var RSBat = root.NeuroLab && root.NeuroLab.RepoSync;
+    if (RSBat && typeof RSBat.refreshUi === "function") {
+      try { RSBat.refreshUi(); } catch (_) {}
+    }
+
     var doneAll = function () {
       closeOverlay();
     };
     document.getElementById("btnCloseBatterySummary").addEventListener("click", doneAll);
     bindKeyHandler(function (ev) {
+      if (RSBat && typeof RSBat.isModalOpen === "function" && RSBat.isModalOpen()) return;
       if (ev.key === "Enter") {
         ev.preventDefault();
         doneAll();

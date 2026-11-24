@@ -564,7 +564,18 @@
 
   function saveExperimentResult(expId, payload) {
     var st = loadState();
-    var entry = Object.assign({ expId: expId, timestamp: new Date().toISOString() }, payload || {});
+    var RS = (root.NeuroLab && root.NeuroLab.RepoSync) || root.RepoSync || null;
+    var snap = RS && typeof RS.getActiveClinicalSnapshot === "function" ? RS.getActiveClinicalSnapshot() : null;
+    var entry = Object.assign(
+      {
+        expId: expId,
+        timestamp: new Date().toISOString(),
+        phase: snap ? snap.phase : "baseline",
+        dayCondition: snap ? snap.dayCondition : "normal",
+        notes: snap ? snap.notes : ""
+      },
+      payload || {}
+    );
     st.results[expId] = entry;
     st.history.unshift(entry);
     if (st.history.length > 40) st.history.length = 40;

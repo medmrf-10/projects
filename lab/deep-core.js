@@ -2751,6 +2751,18 @@
   }
 
   function readActiveClinicalContext() {
+    var RS = (root.NeuroLab && root.NeuroLab.RepoSync) || root.RepoSync || null;
+    var dayCond = "normal";
+    var notesStr = "";
+    if (RS && typeof RS.getActiveClinicalSnapshot === "function") {
+      try {
+        var snap = RS.getActiveClinicalSnapshot();
+        if (snap) {
+          dayCond = snap.dayCondition || "normal";
+          notesStr = snap.notes || "";
+        }
+      } catch (_) {}
+    }
     var A = (root.NeuroLab && root.NeuroLab.Analytics) || root.Analytics || null;
     if (A && typeof A.getContext === "function") {
       try {
@@ -2760,12 +2772,21 @@
             phase: String(ctx.phase || "baseline"),
             sleepQuality: Number(ctx.sleepQuality ?? 6),
             alertness: Number(ctx.alertness ?? 8),
-            nasalPatency: Number(ctx.nasalPatency ?? 5)
+            nasalPatency: Number(ctx.nasalPatency ?? 5),
+            dayCondition: dayCond,
+            notes: notesStr
           };
         }
       } catch (_) {}
     }
-    return { phase: "baseline", sleepQuality: 6, alertness: 8, nasalPatency: 5 };
+    return {
+      phase: "baseline",
+      sleepQuality: 6,
+      alertness: 8,
+      nasalPatency: 5,
+      dayCondition: dayCond,
+      notes: notesStr
+    };
   }
 
   function saveExperimentResult(expId, payload) {
@@ -2791,6 +2812,8 @@
         timestamp: new Date().toISOString(),
         formId: normalizeFormId((payload && payload.formId) || st.activeForm),
         phase: ctx.phase || "baseline",
+        dayCondition: ctx.dayCondition || "normal",
+        notes: ctx.notes || "",
         sleepQuality: ctx.sleepQuality,
         alertness: ctx.alertness,
         nasalPatency: ctx.nasalPatency,
@@ -3263,7 +3286,22 @@
       if (!mergedBase[k]) mergedBase[k] = Object.assign({}, incoming.results[k]);
     }
     var mergedResults = Object.assign({}, cur.results, incoming.results);
-    var mergedHistory = incoming.history.concat(cur.history).slice(0, 90);
+    var combinedHist = incoming.history.concat(cur.history);
+    var seenHist = {};
+    var mergedHistory = [];
+    for (var mh = 0; mh < combinedHist.length && mergedHistory.length < 90; mh += 1) {
+      var hItem = combinedHist[mh];
+      var hKey = hItem.syncRunKey || (hItem.expId + "|" + String(hItem.timestamp || ""));
+      if (!seenHist[hKey]) {
+        seenHist[hKey] = true;
+        mergedHistory.push(hItem);
+      }
+    }
+    mergedHistory.sort(function (a, b) {
+      var ta = Date.parse(a.timestamp || "") || 0;
+      var tb = Date.parse(b.timestamp || "") || 0;
+      return tb - ta;
+    });
 
     var nextState = {
       version: SUITE_VERSION,

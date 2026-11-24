@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="./styles.css?v=15" />
+  <link rel="stylesheet" href="./styles.css?v=16" />
 
   <style>
     :where(.backup-actions-row) {
@@ -72,6 +72,22 @@
           >
             <span class="top-context-dot" aria-hidden="true"></span>
             <span id="topContextPillText">خط الأساس · يقظة 8/10</span>
+          </button>
+          <button
+            id="topRepoSaveBtn"
+            type="button"
+            class="btn-repo-save"
+            data-repo-save-btn
+            aria-label="حفظ النتائج وإرسالها إلى مستودع السجلات عبر الأيام"
+            title="حفظ النتائج وإرسالها إلى مستودع السجلات (zme)"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span class="top-repo-label-full">حفظ في الريبو</span>
+            <span class="top-repo-label-short">حفظ</span>
           </button>
           <button
             id="themeToggleBtn"
@@ -169,6 +185,13 @@
               <span>المرحلة العلاجية</span>
             </label>
             <select id="phaseSelect" class="phase-select"></select>
+          </div>
+
+          <div class="context-field">
+            <label for="dayConditionSelect">
+              <span>حالة اليوم / الجلسة</span>
+            </label>
+            <select id="dayConditionSelect" class="phase-select js-day-condition-select"></select>
           </div>
 
           <div class="context-field">
@@ -305,6 +328,9 @@
         <ol id="scientificAuditList" class="audit-list"></ol>
       </section>
 
+      <!-- 2c. سجل المتابعة اليومية عبر الأيام والمزامنة مع الريبو -->
+      <div id="crossDayTrendsMount"></div>
+
       <!-- 3. قائمة السجلات الزمنية التفصيلية -->
       <section class="card" aria-labelledby="historyHeading">
         <header class="section-header" style="margin-bottom: 14px;">
@@ -319,6 +345,77 @@
 
     <!-- القسم الثالث: المعايرة والنسخ الاحتياطي -->
     <section id="view-data" class="view-panel" role="tabpanel" hidden>
+      <!-- 0. بطاقة المزامنة المباشرة مع مستودع السجلات (GitHub · zme) -->
+      <section class="card repo-sync-card" aria-labelledby="repoSyncHeading">
+        <header class="section-header" style="margin-bottom: 12px;">
+          <div>
+            <h2 id="repoSyncHeading" class="section-title">المزامنة المباشرة وحفظ النتائج عبر الأيام في المستودع (<span class="ltr-iso">GitHub · zme</span>)</h2>
+            <p class="section-sub">
+              يحفظ زر الحفظ نتائج جميع البطاريات مصنفة تلقائياً حسب تاريخ كل يوم داخل مستودعك الخاص دون وسطاء؛ الصق رمز الوصول الدقيق لمرة واحدة فقط
+            </p>
+          </div>
+        </header>
+
+        <div id="repoSyncStatusBanner" class="repo-status-strip" aria-live="polite"></div>
+
+        <div class="repo-settings-grid">
+          <div class="context-field">
+            <label for="repoOwnerInput"><span>المالك (<span class="ltr-iso">Owner</span>)</span></label>
+            <input id="repoOwnerInput" type="text" class="repo-ltr-input" value="medmrf-10" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="context-field">
+            <label for="repoNameInput"><span>المستودع (<span class="ltr-iso">Repo</span>)</span></label>
+            <input id="repoNameInput" type="text" class="repo-ltr-input" value="zme" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="context-field">
+            <label for="repoBranchInput"><span>الفرع (<span class="ltr-iso">Branch</span>)</span></label>
+            <input id="repoBranchInput" type="text" class="repo-ltr-input" value="main" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="context-field">
+            <label for="repoPathInput"><span>مسار ملف السجل (<span class="ltr-iso">File Path</span>)</span></label>
+            <input id="repoPathInput" type="text" class="repo-ltr-input" value="ALL/health/psycho/LabLongitudinalLog.md" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+
+        <div class="context-field" style="margin-top: 12px;">
+          <label for="repoTokenInput">
+            <span>رمز الوصول الدقيق (<span class="ltr-iso">Fine-Grained PAT — Contents: Read and write</span>)</span>
+          </label>
+          <div class="repo-token-wrap">
+            <input
+              id="repoTokenInput"
+              type="password"
+              class="repo-ltr-input"
+              placeholder="الصق رمز الوصول الدقيق هنا..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button id="btnRepoPasteToken" type="button" class="btn-ghost">لصق</button>
+            <button id="btnRepoToggleToken" type="button" class="btn-ghost">إظهار</button>
+            <button id="btnRepoClearToken" type="button" class="btn-danger">مسح الرمز</button>
+          </div>
+          <label class="repo-remember-label" for="repoRememberTokenInput">
+            <input id="repoRememberTokenInput" type="checkbox" checked />
+            <span>تذكر الرمز محلياً على هذا الجهاز للحفظ الفوري بضغطة واحدة عبر الأيام</span>
+          </label>
+        </div>
+
+        <div class="backup-actions-row">
+          <button id="btnDataPushRepo" type="button" class="btn-primary" data-repo-save-btn>
+            حفظ النتائج في الريبو
+          </button>
+          <button id="btnRepoTestConn" type="button" class="btn-ghost">
+            اختبار الاتصال
+          </button>
+          <button id="btnDataPullRepo" type="button" class="btn-ghost" data-repo-pull-btn>
+            استرجاع السجل من الريبو
+          </button>
+          <button id="btnRepoSaveConfig" type="button" class="btn-ghost">
+            حفظ الإعدادات
+          </button>
+        </div>
+      </section>
+
       <!-- 1. بطاقة تسجيل المؤشرات السريرية اليومية المرافقة -->
       <section class="card calib-card" aria-labelledby="dailyClinicalHeading">
         <header class="section-header" style="margin-bottom: 14px;">
@@ -392,6 +489,9 @@
         <div class="backup-actions-row">
           <button id="saveClinicalContextBtn" type="button" class="btn-primary">
             حفظ المؤشرات اليومية مع سياق الجلسة
+          </button>
+          <button id="saveClinicalToRepoBtn" type="button" class="btn-repo-save" data-repo-save-btn data-include-checkin>
+            حفظ المؤشرات والنتائج في الريبو
           </button>
         </div>
       </section>
@@ -490,16 +590,91 @@
     </div>
   </div>
 
+  <!-- نافذة إعداد الرمز السريع وحفظ النتائج في الريبو -->
+  <div id="repoSyncModal" class="repo-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="repoModalTitle" hidden>
+    <form id="repoSyncModalForm" class="repo-modal-dialog" autocomplete="off">
+      <div class="repo-modal-head">
+        <div>
+          <h2 id="repoModalTitle" class="section-title" style="margin-bottom: 4px;">حفظ النتائج وإرسالها إلى مستودع السجلات</h2>
+          <p class="section-sub">أدخل رمز الوصول الدقيق الخاص بمستودع <span class="ltr-iso">zme</span> مرة واحدة ليتم الحفظ بضغطة واحدة عبر الأيام</p>
+        </div>
+        <button id="btnCloseRepoModal" type="button" class="pill-btn" aria-label="إغلاق">إغلاق</button>
+      </div>
+
+      <div id="modalRepoFeedback" class="repo-modal-feedback" role="alert" hidden></div>
+
+      <div class="repo-settings-grid">
+        <div class="context-field">
+          <label for="modalDayCondition"><span>حالة اليوم / الجلسة</span></label>
+          <select id="modalDayCondition" class="phase-select"></select>
+        </div>
+        <div class="context-field">
+          <label for="modalSessionNote"><span>ملاحظة مرافقة (اختياري)</span></label>
+          <input id="modalSessionNote" type="text" maxlength="160" placeholder="مثال: صباحاً بعد نوم مريح" />
+        </div>
+      </div>
+
+      <div class="context-field">
+        <label for="modalRepoToken">
+          <span>رمز الوصول الدقيق (<span class="ltr-iso">Fine-Grained PAT — zme · Contents: Read &amp; write</span>)</span>
+        </label>
+        <div class="repo-token-wrap" style="margin-top: 6px;">
+          <input
+            id="modalRepoToken"
+            type="password"
+            class="repo-ltr-input"
+            placeholder="الصق رمز الوصول الدقيق هنا..."
+            autocomplete="off"
+            spellcheck="false"
+            required
+          />
+          <button id="btnModalPasteToken" type="button" class="btn-ghost">لصق</button>
+        </div>
+        <label class="repo-remember-label" for="modalRepoRemember">
+          <input id="modalRepoRemember" type="checkbox" checked />
+          <span>تذكر الرمز محلياً على هذا الجهاز</span>
+        </label>
+      </div>
+
+      <details>
+        <summary class="stim-label" style="cursor: pointer;">إعدادات المسار والمستودع (مضبوطة تلقائياً على <span class="ltr-iso">medmrf-10/zme</span>)</summary>
+        <div class="repo-settings-grid" style="margin-top: 10px;">
+          <div class="context-field">
+            <label for="modalRepoOwner"><span>المالك</span></label>
+            <input id="modalRepoOwner" type="text" class="repo-ltr-input" value="medmrf-10" />
+          </div>
+          <div class="context-field">
+            <label for="modalRepoName"><span>المستودع</span></label>
+            <input id="modalRepoName" type="text" class="repo-ltr-input" value="zme" />
+          </div>
+          <div class="context-field">
+            <label for="modalRepoBranch"><span>الفرع</span></label>
+            <input id="modalRepoBranch" type="text" class="repo-ltr-input" value="main" />
+          </div>
+          <div class="context-field">
+            <label for="modalRepoPath"><span>مسار السجل</span></label>
+            <input id="modalRepoPath" type="text" class="repo-ltr-input" value="ALL/health/psycho/LabLongitudinalLog.md" />
+          </div>
+        </div>
+      </details>
+
+      <div class="result-actions" style="justify-content: flex-end;">
+        <button id="btnModalSaveAndPush" type="submit" class="btn-primary">حفظ الإعدادات وإرسال النتائج الآن</button>
+      </div>
+    </form>
+  </div>
+
   <!-- إشعار سريع لطيف -->
   <div id="toastEl" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="./stimuli.js?v=15"></script>
-  <script src="./analytics.js?v=15"></script>
-  <script src="./engine.js?v=15"></script>
-  <script src="./falsify-core.js?v=15"></script>
-  <script src="./falsify.js?v=15"></script>
-  <script src="./deep-core.js?v=15"></script>
-  <script src="./deep.js?v=15"></script>
+  <script src="./stimuli.js?v=16"></script>
+  <script src="./analytics.js?v=16"></script>
+  <script src="./engine.js?v=16"></script>
+  <script src="./falsify-core.js?v=16"></script>
+  <script src="./falsify.js?v=16"></script>
+  <script src="./deep-core.js?v=16"></script>
+  <script src="./deep.js?v=16"></script>
+  <script src="./repo-sync.js?v=16"></script>
   <script>
     (function () {
       "use strict";
@@ -1628,6 +1803,9 @@
         if (state.activeView === "deep" && window.NeuroLab && window.NeuroLab.Deep && typeof window.NeuroLab.Deep.render === "function") {
           try { window.NeuroLab.Deep.render(); } catch (_) {}
         }
+        if (window.NeuroLab && window.NeuroLab.RepoSync && typeof window.NeuroLab.RepoSync.refreshUi === "function") {
+          try { window.NeuroLab.RepoSync.refreshUi(); } catch (_) {}
+        }
       }
 
       function handleSessionUpdate(payload) {
@@ -1912,6 +2090,9 @@
         if (window.NeuroLab && window.NeuroLab.DeepCore && typeof window.NeuroLab.DeepCore.clearState === "function") {
           try { window.NeuroLab.DeepCore.clearState(); } catch (_) {}
         }
+        if (window.NeuroLab && window.NeuroLab.RepoSync && typeof window.NeuroLab.RepoSync.clearLocalCheckins === "function") {
+          try { window.NeuroLab.RepoSync.clearLocalCheckins(); } catch (_) {}
+        }
         try { localStorage.removeItem(NOTES_STORAGE_KEY); } catch (_) {}
 
         hydrateContextInputs();
@@ -2128,6 +2309,12 @@
         }
         if (window.NeuroLab && window.NeuroLab.Deep && typeof window.NeuroLab.Deep.init === "function") {
           window.NeuroLab.Deep.init({ mountEl: dom.deepMount });
+        }
+        if (window.NeuroLab && window.NeuroLab.RepoSync && typeof window.NeuroLab.RepoSync.init === "function") {
+          window.NeuroLab.RepoSync.init({
+            onRefreshViews: refreshAllViews,
+            showToast: showToast
+          });
         }
         bindEvents();
         refreshAllViews();

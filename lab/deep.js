@@ -981,12 +981,21 @@
     }).join("");
 
     var isLast = isBattery && batteryIdx >= batteryQueue.length - 1;
+    var RS = root.NeuroLab && root.NeuroLab.RepoSync;
+    var repoSaveInner = RS && typeof RS.renderSaveButtonInnerHtml === "function"
+      ? RS.renderSaveButtonInnerHtml()
+      : "<span>حفظ في الريبو</span>";
+    var saveRepoBtnHtml =
+      '<button id="btnDeepSaveRepo" type="button" class="btn-repo-save" data-repo-save-btn>' + repoSaveInner + "</button>";
     var nextBtnHtml = "";
     if (isBattery && !isLast) {
       var nxt = findMeta(batteryQueue[batteryIdx + 1]);
-      nextBtnHtml = '<button id="btnDeepNext" type="button" class="btn-primary"><span>المسبار التالي: ' + esc(nxt.shortTitle) + '</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
+      nextBtnHtml =
+        saveRepoBtnHtml +
+        '<button id="btnDeepNext" type="button" class="btn-primary"><span>المسبار التالي: ' + esc(nxt.shortTitle) + '</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     } else {
       nextBtnHtml =
+        saveRepoBtnHtml +
         '<button id="btnDeepRetryOne" type="button" class="btn-ghost">إعادة هذا المسبار</button>' +
         '<button id="btnDeepDone" type="button" class="btn-primary"><span>عرض لوحة القياس العميق</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     }
@@ -998,6 +1007,10 @@
       '<div class="diagnosis-callout">' + formatDeepRichHtml(summaryText) + "</div>" +
       '<div class="result-actions">' + nextBtnHtml + "</div>" +
       "</div>";
+
+    if (RS && typeof RS.refreshUi === "function") {
+      try { RS.refreshUi(); } catch (_) {}
+    }
 
     var retryBtn = document.getElementById("btnDeepRetryOne");
     if (retryBtn) {
@@ -1018,6 +1031,7 @@
     var bNext = document.getElementById("btnDeepNext") || document.getElementById("btnDeepDone");
     if (bNext) bNext.addEventListener("click", proceed);
     bindKeys(function (ev) {
+      if (RS && typeof RS.isModalOpen === "function" && RS.isModalOpen()) return;
       if (ev.key === "Enter") {
         ev.preventDefault();
         proceed();
@@ -3085,6 +3099,10 @@
       '<select id="deepPhaseSelect" class="phase-select">' + phaseOptsHtml + '</select>' +
       '</div>' +
       '<div class="deep-calib-item">' +
+      '<label for="deepConditionSelect" class="stim-label">حالة اليوم:</label>' +
+      '<select id="deepConditionSelect" class="phase-select js-day-condition-select"></select>' +
+      '</div>' +
+      '<div class="deep-calib-item">' +
       '<span class="stim-label">نموذج الرموز:</span>' +
       '<div class="form-pill-group">' + formBtnsHtml + '</div>' +
       '</div>' +
@@ -3100,6 +3118,7 @@
       '<button id="btnRunFamiliarization" type="button" class="btn-ghost">جولة تهيئة تمهيدية (~2 د · مستبعدة)</button>' +
       "</div>" +
       '<div class="suite-util-actions">' +
+      '<button id="btnSyncDeepRepo" type="button" class="btn-repo-save" data-repo-save-btn>حفظ النتائج في الريبو</button>' +
       '<button id="btnCopyDeepReport" type="button" class="btn-ghost">نسخ التقرير</button>' +
       '<button id="btnExportDeepJson" type="button" class="btn-ghost">تصدير JSON</button>' +
       '<button id="btnImportDeepJson" type="button" class="btn-ghost">استيراد JSON</button>' +
@@ -3121,6 +3140,7 @@
       '<h3 class="section-title" style="margin-bottom:4px;">' + formatDeepRichHtml(summary.overallHeadline) + "</h3>" +
       '<ol class="verdict-list">' + vListHtml + "</ol>" +
       "</section>" +
+      '<div id="deepCrossDayMount"></div>' +
       deepHistHtml +
       "</div>";
 
@@ -3252,6 +3272,10 @@
       oneBtns[i].addEventListener("click", function (ev) {
         startExperiment(ev.currentTarget.getAttribute("data-d-id"));
       });
+    }
+
+    if (root.NeuroLab && root.NeuroLab.RepoSync && typeof root.NeuroLab.RepoSync.refreshUi === "function") {
+      try { root.NeuroLab.RepoSync.refreshUi(); } catch (_) {}
     }
   }
 

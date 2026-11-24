@@ -273,12 +273,14 @@
     }).join("");
 
     var isLast = isBattery && batteryIdx >= batteryQueue.length - 1;
+    var RS = root.NeuroLab && root.NeuroLab.RepoSync;
+    var saveBtnHtml = '<button id="btnFalsifySaveRepo" type="button" class="btn-repo-save" data-repo-save-btn><span>حفظ في الريبو</span></button>';
     var nextBtnHtml = "";
     if (isBattery && !isLast) {
       var nxt = findMeta(batteryQueue[batteryIdx + 1]);
-      nextBtnHtml = '<button id="btnFalsifyNext" type="button" class="btn-primary"><span>التجربة التالية: ' + esc(nxt.shortTitle) + '</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
+      nextBtnHtml = saveBtnHtml + '<button id="btnFalsifyNext" type="button" class="btn-primary"><span>التجربة التالية: ' + esc(nxt.shortTitle) + '</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     } else {
-      nextBtnHtml = '<button id="btnFalsifyDone" type="button" class="btn-primary"><span>عرض لوحة الحكم الجراحي الكامل</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
+      nextBtnHtml = saveBtnHtml + '<button id="btnFalsifyDone" type="button" class="btn-primary"><span>عرض لوحة الحكم الجراحي الكامل</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>';
     }
 
     a.stage.innerHTML =
@@ -288,6 +290,10 @@
       '<div class="diagnosis-callout">' + formatRichTextHtml(summaryText) + "</div>" +
       '<div class="result-actions">' + nextBtnHtml + "</div>" +
       "</div>";
+
+    if (RS && typeof RS.refreshUi === "function") {
+      try { RS.refreshUi(); } catch (_) {}
+    }
 
     var proceed = function () {
       if (isBattery && !isLast) {
@@ -301,6 +307,7 @@
     var bNext = document.getElementById("btnFalsifyNext") || document.getElementById("btnFalsifyDone");
     if (bNext) bNext.addEventListener("click", proceed);
     bindKeys(function (ev) {
+      if (RS && typeof RS.isModalOpen === "function" && RS.isModalOpen()) return;
       if (ev.key === "Enter") {
         ev.preventDefault();
         proceed();
@@ -1143,6 +1150,7 @@
       '<button id="btnRunFullFalsify" type="button" class="btn-primary">بدء بطارية الحسم الكاملة — 4 تجارب متتالية</button>' +
       "</div>" +
       '<div class="suite-util-actions">' +
+      '<button id="btnSyncFalsifyRepo" type="button" class="btn-repo-save" data-repo-save-btn>حفظ النتائج في الريبو</button>' +
       '<button id="btnCopyFalsifyReport" type="button" class="btn-ghost">نسخ تقرير الحسم</button>' +
       '<button id="btnResetFalsify" type="button" class="btn-danger">' + (resetArmed ? "اضغط ثانية لتأكيد المسح" : "مسح السجل") + "</button>" +
       "</div>" +
@@ -1212,6 +1220,10 @@
       oneBtns[i].addEventListener("click", function (ev) {
         startExperiment(ev.currentTarget.getAttribute("data-f-id"));
       });
+    }
+
+    if (root.NeuroLab && root.NeuroLab.RepoSync && typeof root.NeuroLab.RepoSync.refreshUi === "function") {
+      try { root.NeuroLab.RepoSync.refreshUi(); } catch (_) {}
     }
   }
 
