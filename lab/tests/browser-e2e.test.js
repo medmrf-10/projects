@@ -259,8 +259,17 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
       mobile: true
     }, sessionId);
 
-    // Wait for page bootstrap & scripts
-    await new Promise((r) => setTimeout(r, 700));
+    // Deterministic bootstrap polling (never race external font/network latency)
+    let ready = false;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      ready = await cdp.evalInPage(
+        sessionId,
+        `Boolean(window.NeuroLab && window.NeuroLab.RepoSync && window.NeuroLab.DeepCore && window.NeuroLab.Engine && document.getElementById("topRepoSaveBtn"))`
+      );
+      if (ready) break;
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    assert.equal(ready, true, "NeuroLab bootstrap did not initialize within timeout");
 
     // Verify zero runtime exceptions
     const runtimeExceptions = cdp.events.filter((e) => e.method === "Runtime.exceptionThrown");
@@ -272,38 +281,57 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
       `window.NeuroLab.RepoSync.setTransportForTest(null, "http://127.0.0.1:${ghSrv.port}"); true;`
     );
 
-    // Check 360px horizontal overflow across all 5 views in light & dark mode
-    const overflowReport = await cdp.evalInPage(sessionId, `
-      (async function () {
-        const views = ["dashboard", "falsify", "deep", "trends", "data"];
-        const issues = [];
-        for (const theme of ["light", "dark"]) {
-          document.documentElement.setAttribute("data-theme", theme);
-          for (const v of views) {
-            const tab = document.querySelector('.view-tabs [data-view="' + v + '"]');
-            tab.click();
-            await new Promise((r) => setTimeout(r, 40));
-            const docW = document.documentElement.scrollWidth;
-            const winW = window.innerWidth;
-            if (docW > winW + 1) {
-              issues.push(theme + "/" + v + ": scrollWidth=" + docW + " > innerWidth=" + winW);
+    // Check BOTH 360px AND ultra-narrow 320px horizontal overflow across all 5 views in light & dark mode
+    for (const vw of [360, 320]) {
+      await cdp.send("Emulation.setDeviceMetricsOverride", {
+        width: vw,
+        height: 800,
+        deviceScaleFactor: 2,
+        mobile: true
+      }, sessionId);
+
+      const overflowReport = await cdp.evalInPage(sessionId, `
+        (async function () {
+          const views = ["dashboard", "falsify", "deep", "trends", "data"];
+          const issues = [];
+          for (const theme of ["light", "dark"]) {
+            document.documentElement.setAttribute("data-theme", theme);
+            for (const v of views) {
+              const tab = document.querySelector('.view-tabs [data-view="' + v + '"]');
+              tab.click();
+              await new Promise((r) => setTimeout(r, 35));
+              const docW = document.documentElement.scrollWidth;
+              const winW = window.innerWidth;
+              if (docW > winW + 1) {
+                issues.push("${vw}px/" + theme + "/" + v + ": scrollWidth=" + docW + " > innerWidth=" + winW);
+              }
             }
           }
-        }
-        return issues;
-      })()
-    `);
-    assert.deepEqual(overflowReport, [], "360px mobile overflow detected: " + overflowReport.join(", "));
+          return issues;
+        })()
+      `);
+      assert.deepEqual(overflowReport, [], vw + "px mobile overflow detected: " + overflowReport.join(", "));
+    }
 
-    // Simulate recording Day 1 & Day 2 runs and opening Deep V3 completion screen inside Arena!
+    // Restore 360x800 mobile viewport for interactive flow
+    await cdp.send("Emulation.setDeviceMetricsOverride", {
+      width: 360,
+      height: 800,
+      deviceScaleFactor: 2,
+      mobile: true
+    }, sessionId);
+
+    // Phase 1 E2E: Multi-day runs + Modal session-only PAT (rememberToken=false) + Modal condition/note propagation!
     const arenaModalFlow = await cdp.evalInPage(sessionId, `
       (async function () {
         const DC = window.NeuroLab.DeepCore;
         const RS = window.NeuroLab.RepoSync;
 
-        // Day 1 result
+        // Day 1 result (normal condition)
         DC.saveExperimentResult("d1_tbrs", {
           timestamp: "2026-11-23T08:00:00.000Z",
+          localDateYmd: "2026-11-23",
+          localTimeHm: "09:00",
           formId: "A",
           phase: "baseline",
           dayCondition: "normal",
@@ -319,12 +347,14 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
           procMeanRtMs: 615
         });
 
-        // Day 2 result
+        // Day 2 result (recorded with default condition before opening modal)
         DC.saveExperimentResult("d2_refback_m3", {
           timestamp: "2026-11-24T09:00:00.000Z",
+          localDateYmd: "2026-11-24",
+          localTimeHm: "10:00",
           formId: "B",
           phase: "metabolic",
-          dayCondition: "rested",
+          dayCondition: "normal",
           calibratedScorePct: 63,
           pTargetPct: 63,
           lag0AccPct: 75,
@@ -346,21 +376,23 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
         const modal = document.getElementById("repoSyncModal");
         const modalOpened = modal && !modal.hidden;
 
-        // Fill PAT token inside modal and submit form -> triggers real cross-origin browser fetch OPTIONS + GET + PUT!
+        // Uncheck rememberToken (session-only mode!), set sleep_inertia + session note, and submit
+        document.getElementById("modalRepoRemember").checked = false;
+        document.getElementById("modalDayCondition").value = "sleep_inertia";
         document.getElementById("modalRepoToken").value = "pat_zme_mock_0123456789_e2eBrowserTest99";
         document.getElementById("modalSessionNote").value = "اختبار متصفح حقيقي عبر الأيام";
         document.getElementById("repoSyncModalForm").requestSubmit();
 
-        // Wait for async push completion
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 50; i++) {
           if (modal.hidden) break;
           await new Promise((r) => setTimeout(r, 50));
         }
 
+        const rawLocalCfg = JSON.parse(localStorage.getItem("neurolab_repo_sync_cfg_v1") || "{}");
+        const sessionTok = sessionStorage.getItem("neurolab_repo_sync_tok_session_v1") || "";
         const statsAfter = RS.getSyncStats();
         const topBtnSynced = document.getElementById("topRepoSaveBtn").classList.contains("is-synced");
 
-        // Switch to Trends tab and inspect Cross-Day card
         document.querySelector('.view-tabs [data-view="trends"]').click();
         const crossDayItemsCount = document.querySelectorAll("#crossDayTrendsMount .cross-day-item").length;
 
@@ -368,6 +400,8 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
           badgeBefore,
           modalOpened,
           modalClosedAfterPush: modal.hidden,
+          persistedLocalToken: rawLocalCfg.token || "",
+          sessionTokenPresent: sessionTok.startsWith("pat_zme_mock_"),
           unsyncedAfter: statsAfter.unsyncedCount,
           syncedAfter: statsAfter.syncedCount,
           topBtnSynced,
@@ -379,6 +413,8 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
     assert.equal(arenaModalFlow.badgeBefore, "2");
     assert.equal(arenaModalFlow.modalOpened, true);
     assert.equal(arenaModalFlow.modalClosedAfterPush, true);
+    assert.equal(arenaModalFlow.persistedLocalToken, "", "PAT leaked into localStorage when rememberToken=false!");
+    assert.equal(arenaModalFlow.sessionTokenPresent, true, "PAT missing from sessionStorage when rememberToken=false!");
     assert.equal(arenaModalFlow.unsyncedAfter, 0);
     assert.equal(arenaModalFlow.syncedAfter, 2);
     assert.equal(arenaModalFlow.topBtnSynced, true);
@@ -393,37 +429,97 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
     assert.equal(mdCheck.ok, true, "Committed Markdown failed Obsidian lint: " + mdCheck.errors.join("; "));
     assert.match(committedMd, /## سجل يوم \*\*2026-11-24\*\*/);
     assert.match(committedMd, /## سجل يوم \*\*2026-11-23\*\*/);
+    assert.match(committedMd, /الحالة اليومية \*\*جمود استيقاظ صباحي\*\*/);
+    assert.match(committedMd, /الملاحظة السياقية: اختبار متصفح حقيقي عبر الأيام\./);
 
-    // Phase 2 E2E: Wipe local data & token, run Arena completion screen, verify Modal z-index & Enter-key guard over Arena, then test Pull-from-Repo!
-    const phase2Result = await cdp.evalInPage(sessionId, `
+    // Phase 2 E2E: Complete an ACTUAL single probe (P4 · binding) end-to-end inside #arenaOverlay,
+    // verify inline Arena session-tagging bar + Enter key isolation + one-tap Save from Arena completion screen!
+    const arenaCompletionResult = await cdp.evalInPage(sessionId, `
+      (async function () {
+        window.NeuroLab.Engine.startSingleProbe("binding");
+        const arena = document.getElementById("arenaOverlay");
+        // Click Start inside Arena intro
+        for (let w = 0; w < 20; w++) {
+          const startBtn = arena.querySelector("#btnStartProbeNow, .btn-primary");
+          if (startBtn) { startBtn.click(); break; }
+          await new Promise((r) => setTimeout(r, 30));
+        }
+
+        // Complete all trials of P4 binding until #btnProbeSaveRepo appears on completion screen
+        for (let step = 0; step < 60; step++) {
+          if (document.getElementById("btnProbeSaveRepo")) break;
+          const optBtn = arena.querySelector("[data-choice], .choice-btn, .option-btn, .arena-choice-btn, #arenaStage button:not(#btnProbeSaveRepo)");
+          if (optBtn) optBtn.click();
+          await new Promise((r) => setTimeout(r, 60));
+        }
+
+        const onCompletionScreen = Boolean(document.getElementById("btnProbeSaveRepo"));
+        const arenaCondSel = arena.querySelector(".js-arena-condition-select");
+        const arenaNoteInp = arena.querySelector(".js-arena-note-input");
+
+        // Focus note input inside Arena and press Enter -> must NOT close #arenaOverlay!
+        arenaNoteInp.focus();
+        arenaNoteInp.value = "ملاحظة من شاشة النتيجة مباشرة";
+        arenaNoteInp.dispatchEvent(new Event("input", { bubbles: true }));
+        arenaNoteInp.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+        const arenaStillOpenAfterEnter = !arena.hidden && Boolean(document.getElementById("btnProbeSaveRepo"));
+
+        // Change session condition right on Arena completion screen
+        arenaCondSel.value = "post_exercise";
+        arenaCondSel.dispatchEvent(new Event("change", { bubbles: true }));
+
+        // Check zero horizontal overflow inside #arenaOverlay at 360px
+        const arenaOverflow = arena.scrollWidth > window.innerWidth + 1;
+
+        // Click #btnProbeSaveRepo directly on Arena completion screen (using session token!)
+        document.getElementById("btnProbeSaveRepo").click();
+        for (let i = 0; i < 50; i++) {
+          if (window.NeuroLab.RepoSync.getSyncStats().unsyncedCount === 0) break;
+          await new Promise((r) => setTimeout(r, 50));
+        }
+
+        const saveBtnSynced = document.getElementById("btnProbeSaveRepo").classList.contains("is-synced");
+        document.getElementById("btnDoneProbe").click();
+
+        return {
+          onCompletionScreen,
+          arenaStillOpenAfterEnter,
+          arenaOverflow,
+          saveBtnSynced,
+          arenaClosedOnDone: arena.hidden
+        };
+      })()
+    `);
+
+    assert.equal(arenaCompletionResult.onCompletionScreen, true, "Did not reach Arena probe completion screen");
+    assert.equal(arenaCompletionResult.arenaStillOpenAfterEnter, true, "Enter inside Arena note input prematurely closed Arena!");
+    assert.equal(arenaCompletionResult.arenaOverflow, false, "Horizontal overflow inside Arena completion screen");
+    assert.equal(arenaCompletionResult.saveBtnSynced, true, "Arena Save button did not transition to is-synced");
+    assert.equal(arenaCompletionResult.arenaClosedOnDone, true);
+    assert.equal(ghSrv.state.puts.length, 2);
+    assert.match(ghSrv.state.puts[1].decoded, /P4 · BND/);
+    assert.match(ghSrv.state.puts[1].decoded, /الحالة اليومية \*\*بعد مشي أو رياضة\*\*/);
+    assert.match(ghSrv.state.puts[1].decoded, /الملاحظة السياقية: ملاحظة من شاشة النتيجة مباشرة\./);
+
+    // Phase 3 E2E: Wipe local data & token, verify Modal z-index & Enter-key guard over Deep V3 Arena, then test Pull-from-Repo!
+    const phase3Result = await cdp.evalInPage(sessionId, `
       (async function () {
         const RS = window.NeuroLab.RepoSync;
         const A = window.NeuroLab.Analytics;
         const DC = window.NeuroLab.DeepCore;
 
-        // Clear local records & token to simulate fresh session inside Arena
         A.clearAllData();
         DC.clearState();
         RS.clearLocalCheckins();
         RS.clearToken();
         RS.saveConfig({ syncedFingerprints: {} });
 
-        // Launch V2 single probe intro inside #arenaOverlay, then record & render result screen
-        window.NeuroLab.Engine.startSingleProbe("updating");
         const arena = document.getElementById("arenaOverlay");
-        const arenaOpenOnIntro = !arena.hidden;
-
-        // Simulate finishing a Deep V3 probe right inside Arena or triggering Engine probe completion:
-        // Close intro, launch Falsify or Deep intro, and test Arena result screen via Falsify / Deep / Engine
-        window.NeuroLab.Engine.abort();
-
-        // Trigger a real V2 record + open Arena result screen via a fast synthetic probe or check Falsify/Deep toolbar buttons
         document.querySelector('.view-tabs [data-view="deep"]').click();
         const deepSaveBtnExists = Boolean(document.getElementById("btnSyncDeepRepo"));
         document.querySelector('.view-tabs [data-view="falsify"]').click();
         const falsifySaveBtnExists = Boolean(document.getElementById("btnSyncFalsifyRepo"));
 
-        // Open Arena via Deep.startExperiment, wait for VSync calibration if needed, then inspect z-index stacking when modal opens over Arena
         window.NeuroLab.Deep.startExperiment("d1_tbrs");
         for (let w = 0; w < 30; w++) {
           if (document.getElementById("btnDeepStart")) break;
@@ -431,12 +527,10 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
         }
         const arenaZ = Number(getComputedStyle(arena).zIndex || 0);
 
-        // Open setup modal while Arena is active
         RS.openSetupModal({ saveAfterConfig: false });
         const modal = document.getElementById("repoSyncModal");
         const modalZ = Number(getComputedStyle(modal).zIndex || 0);
 
-        // Dispatch Enter key inside modal input -> must NOT trigger #btnDeepStart in Arena underneath!
         const tokenInput = document.getElementById("modalRepoToken");
         tokenInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
         const introStillPresent = Boolean(document.getElementById("btnDeepStart"));
@@ -444,7 +538,7 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
         RS.closeSetupModal();
         window.NeuroLab.Deep.abort();
 
-        // Configure token in Data tab and click Pull from Repo (#btnDataPullRepo) to restore Day 1 & Day 2 from GitHub!
+        // Pull from Repo (#btnDataPullRepo) and verify full submetrics, dayCondition, notes, and zero "undefined" in verdict report!
         document.querySelector('.view-tabs [data-view="data"]').click();
         document.getElementById("repoTokenInput").value = "pat_zme_mock_0123456789_e2eBrowserTest99";
         document.getElementById("btnDataPullRepo").click();
@@ -454,23 +548,33 @@ test("Real Headless Chrome E2E: 360px mobile layout, modal over Arena, CORS pref
           await new Promise((r) => setTimeout(r, 50));
         }
 
+        const deepVerdict = DC.computeDeepVerdictSummary().plainTextReport;
+        const d2Restored = DC.loadState().results.d2_refback_m3;
+        const v2Restored = A.loadState().records;
+
         return {
-          arenaOpenOnIntro,
           deepSaveBtnExists,
           falsifySaveBtnExists,
           modalAboveArena: modalZ > arenaZ,
           introStillPresent,
-          restoredHistoryCount: DC.loadState().history.length
+          restoredHistoryCount: DC.loadState().history.length,
+          restoredV2Count: v2Restored.length,
+          d2Condition: d2Restored && d2Restored.dayCondition,
+          d2RedRtMs: d2Restored && d2Restored.redMeanRtMs,
+          verdictHasUndefined: deepVerdict.includes("undefined") || deepVerdict.includes("NaN")
         };
       })()
     `);
 
-    assert.equal(phase2Result.arenaOpenOnIntro, true);
-    assert.equal(phase2Result.deepSaveBtnExists, true);
-    assert.equal(phase2Result.falsifySaveBtnExists, true);
-    assert.equal(phase2Result.modalAboveArena, true);
-    assert.equal(phase2Result.introStillPresent, true);
-    assert.equal(phase2Result.restoredHistoryCount, 2);
+    assert.equal(phase3Result.deepSaveBtnExists, true);
+    assert.equal(phase3Result.falsifySaveBtnExists, true);
+    assert.equal(phase3Result.modalAboveArena, true);
+    assert.equal(phase3Result.introStillPresent, true);
+    assert.equal(phase3Result.restoredHistoryCount, 2);
+    assert.equal(phase3Result.restoredV2Count, 1);
+    assert.equal(phase3Result.d2Condition, "sleep_inertia");
+    assert.equal(phase3Result.d2RedRtMs, 1510);
+    assert.equal(phase3Result.verdictHasUndefined, false, "Restored DeepCore verdict contained undefined/NaN!");
 
     ws.close();
   } finally {

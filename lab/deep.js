@@ -94,6 +94,8 @@
     keyHandler = function (ev) {
       // Strictly reject keyboard auto-repeat events across all tasks
       if (ev && ev.repeat) return;
+      var RSKey = root.NeuroLab && root.NeuroLab.RepoSync;
+      if (RSKey && typeof RSKey.shouldIgnoreArenaKey === "function" && RSKey.shouldIgnoreArenaKey(ev)) return;
       fn(ev);
     };
     if (typeof window !== "undefined") {
@@ -1005,6 +1007,7 @@
       '<div class="score-hero"><div class="score-ring-val"><span class="ltr-iso">' + esc(headlineScore) + "</span></div></div>" +
       '<div class="submetrics-grid">' + cardsHtml + "</div>" +
       '<div class="diagnosis-callout">' + formatDeepRichHtml(summaryText) + "</div>" +
+      (RS && typeof RS.renderArenaContextBarHtml === "function" ? RS.renderArenaContextBarHtml() : "") +
       '<div class="result-actions">' + nextBtnHtml + "</div>" +
       "</div>";
 

@@ -574,9 +574,33 @@
     return (prefix || "nl") + "_" + ts + "_" + String(idSequence) + "_" + rand;
   }
 
+  function formatLocalTimeHm(ts) {
+    var d = new Date(typeof ts === "number" && Number.isFinite(ts) ? ts : Date.now());
+    var hh = String(d.getHours()).padStart(2, "0");
+    var mm = String(d.getMinutes()).padStart(2, "0");
+    return toAsciiDigits(hh + ":" + mm);
+  }
+
+  function resolveFallbackDayCondition(ctx) {
+    if (ctx && typeof ctx.dayCondition === "string" && sanitizePlainText(ctx.dayCondition).length > 0) {
+      return sanitizePlainText(ctx.dayCondition);
+    }
+    try {
+      var RS = (root.NeuroLab && root.NeuroLab.RepoSync) || root.RepoSync || null;
+      if (RS && typeof RS.loadConfig === "function") {
+        var cfg = RS.loadConfig();
+        if (cfg && typeof cfg.dayCondition === "string" && cfg.dayCondition.trim().length > 0) {
+          return sanitizePlainText(cfg.dayCondition);
+        }
+      }
+    } catch (_err) {}
+    return "normal";
+  }
+
   function createDefaultContext() {
     return {
       phase: "baseline",
+      dayCondition: "normal",
       sleepQuality: 6,
       alertness: 8,
       nasalPatency: 5,
@@ -635,6 +659,10 @@
         typeof ctx.phase === "string" && sanitizePlainText(ctx.phase).length > 0
           ? sanitizePlainText(ctx.phase)
           : base.phase,
+      dayCondition:
+        typeof ctx.dayCondition === "string" && sanitizePlainText(ctx.dayCondition).length > 0
+          ? sanitizePlainText(ctx.dayCondition)
+          : base.dayCondition,
       sleepQuality:
         ctx.sleepQuality !== undefined
           ? clamp(round1(ctx.sleepQuality), 0, 10)
@@ -697,6 +725,16 @@
         : null;
     var deltaBase = baselineVal !== null ? round1(score - baselineVal) : 0;
     var rciInfo = computeRCI(deltaBase, probeId, 1, 1);
+    var resolvedIsoDate =
+      typeof raw.localDateYmd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(toAsciiDigits(raw.localDateYmd))
+        ? toAsciiDigits(raw.localDateYmd)
+        : typeof raw.isoDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(toAsciiDigits(raw.isoDate))
+        ? toAsciiDigits(raw.isoDate)
+        : formatIsoDate(ts);
+    var resolvedTimeHm =
+      typeof raw.localTimeHm === "string" && /^\d{2}:\d{2}$/.test(toAsciiDigits(raw.localTimeHm))
+        ? toAsciiDigits(raw.localTimeHm)
+        : formatLocalTimeHm(ts);
 
     return {
       id:
@@ -704,10 +742,9 @@
           ? sanitizePlainText(raw.id)
           : generateId("rec"),
       timestamp: ts,
-      isoDate:
-        typeof raw.isoDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(toAsciiDigits(raw.isoDate))
-          ? toAsciiDigits(raw.isoDate)
-          : formatIsoDate(ts),
+      isoDate: resolvedIsoDate,
+      localDateYmd: resolvedIsoDate,
+      localTimeHm: resolvedTimeHm,
       timeOfDayBucket:
         typeof raw.timeOfDayBucket === "string" && raw.timeOfDayBucket.trim().length > 0
           ? sanitizePlainText(raw.timeOfDayBucket)
@@ -724,6 +761,10 @@
         typeof raw.phase === "string" && sanitizePlainText(raw.phase).length > 0
           ? sanitizePlainText(raw.phase)
           : ctx.phase,
+      dayCondition:
+        typeof raw.dayCondition === "string" && sanitizePlainText(raw.dayCondition).length > 0
+          ? sanitizePlainText(raw.dayCondition)
+          : resolveFallbackDayCondition(ctx),
       sleepQuality:
         raw.sleepQuality !== undefined
           ? clamp(round1(raw.sleepQuality), 0, 10)
@@ -825,6 +866,16 @@
     var compositeDeficitScore = roundInt(deficitSum / DEFICIT_PROBE_IDS.length, BASELINE_REF.compositeDeficitBaseline);
     var controlScore = probeScores.control;
     var compRci = computeRCI(compositeDeficitScore - BASELINE_REF.compositeDeficitBaseline, "composite", 1, 1);
+    var resolvedBatDate =
+      typeof raw.localDateYmd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(toAsciiDigits(raw.localDateYmd))
+        ? toAsciiDigits(raw.localDateYmd)
+        : typeof raw.isoDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(toAsciiDigits(raw.isoDate))
+        ? toAsciiDigits(raw.isoDate)
+        : formatIsoDate(ts);
+    var resolvedBatTime =
+      typeof raw.localTimeHm === "string" && /^\d{2}:\d{2}$/.test(toAsciiDigits(raw.localTimeHm))
+        ? toAsciiDigits(raw.localTimeHm)
+        : formatLocalTimeHm(ts);
 
     return {
       id:
@@ -832,14 +883,17 @@
           ? sanitizePlainText(raw.id)
           : generateId("bat"),
       timestamp: ts,
-      isoDate:
-        typeof raw.isoDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(toAsciiDigits(raw.isoDate))
-          ? toAsciiDigits(raw.isoDate)
-          : formatIsoDate(ts),
+      isoDate: resolvedBatDate,
+      localDateYmd: resolvedBatDate,
+      localTimeHm: resolvedBatTime,
       phase:
         typeof raw.phase === "string" && sanitizePlainText(raw.phase).length > 0
           ? sanitizePlainText(raw.phase)
           : ctx.phase,
+      dayCondition:
+        typeof raw.dayCondition === "string" && sanitizePlainText(raw.dayCondition).length > 0
+          ? sanitizePlainText(raw.dayCondition)
+          : resolveFallbackDayCondition(ctx),
       sleepQuality:
         raw.sleepQuality !== undefined
           ? clamp(round1(raw.sleepQuality), 0, 10)
@@ -860,6 +914,7 @@
         raw.sequenceLapses !== undefined
           ? Math.max(0, roundInt(raw.sequenceLapses, ctx.sequenceLapses))
           : ctx.sequenceLapses,
+      notes: typeof raw.notes === "string" ? sanitizePlainText(raw.notes) : "",
       probeScores: probeScores,
       compositeDeficitScore: compositeDeficitScore,
       controlScore: controlScore,
@@ -1046,12 +1101,16 @@
         id: runId,
         timestamp: nowTs,
         isoDate: formatIsoDate(nowTs),
+        localDateYmd: formatIsoDate(nowTs),
+        localTimeHm: formatLocalTimeHm(nowTs),
         phase: snap.phase,
+        dayCondition: snap.dayCondition,
         sleepQuality: snap.sleepQuality,
         alertness: snap.alertness,
         nasalPatency: snap.nasalPatency,
         delayAversionEpisodes: snap.delayAversionEpisodes,
         sequenceLapses: snap.sequenceLapses,
+        notes: typeof snap.notes === "string" ? snap.notes : "",
         probeScores: resolvedScores
       },
       st.activeContext

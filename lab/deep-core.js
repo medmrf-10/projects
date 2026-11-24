@@ -2555,16 +2555,20 @@
   }
 
   function buildEnvironmentSnapshot(refreshHz, frameMs, dateObj) {
-    var d = dateObj instanceof Date ? dateObj : new Date();
+    var d = dateObj instanceof Date && !Number.isNaN(dateObj.getTime()) ? dateObj : new Date();
     var hh = d.getHours();
     var mm = d.getMinutes();
     var pad = function (x) { return x < 10 ? "0" + x : String(x); };
+    var localYmd = toAsciiDigits(d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()));
+    var localHm = toAsciiDigits(pad(hh) + ":" + pad(mm));
     var hz = Number.isFinite(refreshHz) && refreshHz > 0 ? Math.round(refreshHz) : 60;
     var fms = Number.isFinite(frameMs) && frameMs > 0 ? round2(frameMs) : round2(1000 / hz);
     return {
       capturedAt: d.toISOString(),
+      isoTimestamp: d.toISOString(),
       minutesOfDay: hh * 60 + mm,
-      localTimeHHMM: toAsciiDigits(pad(hh) + ":" + pad(mm)),
+      localDateYmd: localYmd,
+      localTimeHHMM: localHm,
       browserOs: detectBrowserOsSummary(),
       refreshHz: hz,
       frameMs: fms
@@ -2799,7 +2803,9 @@
 
     var st = loadState();
     var ctx = (payload && payload.context) || readActiveClinicalContext();
-    var env = (payload && payload.env) || buildEnvironmentSnapshot(payload && payload.refreshHz, payload && payload.frameMs);
+    var refDate = payload && payload.timestamp ? new Date(payload.timestamp) : new Date();
+    if (Number.isNaN(refDate.getTime())) refDate = new Date();
+    var env = (payload && payload.env) || buildEnvironmentSnapshot(payload && payload.refreshHz, payload && payload.frameMs, refDate);
 
     var prevCount = 0;
     for (var h = 0; h < st.history.length; h += 1) {
@@ -2809,7 +2815,9 @@
     var entry = Object.assign(
       {
         expId: expId,
-        timestamp: new Date().toISOString(),
+        timestamp: refDate.toISOString(),
+        localDateYmd: env.localDateYmd || null,
+        localTimeHm: env.localTimeHHMM || null,
         formId: normalizeFormId((payload && payload.formId) || st.activeForm),
         phase: ctx.phase || "baseline",
         dayCondition: ctx.dayCondition || "normal",
@@ -2845,7 +2853,15 @@
 
   function reanchorBaselineToCurrent() {
     var st = loadState();
-    st.baselineResults = Object.assign({}, st.results);
+    var nextBase = {};
+    var rKeys = Object.keys(st.results || {});
+    for (var i = 0; i < rKeys.length; i += 1) {
+      var k = rKeys[i];
+      if (st.results[k]) {
+        nextBase[k] = Object.assign({}, st.results[k], { t0ManualAnchor: true });
+      }
+    }
+    st.baselineResults = nextBase;
     if (st.lastEnv) st.baselineEnv = st.lastEnv;
     return persistState(st);
   }
@@ -2921,11 +2937,13 @@
       var cRec = cur[spec.expId];
       if (!bRec || !Number.isFinite(bRec[spec.field])) continue;
 
+      var bTs = Date.parse(bRec.timestamp || "") || 0;
+      var cTs = cRec ? (Date.parse(cRec.timestamp || "") || 0) : 0;
       var isDistinctFollowup = Boolean(
         cRec &&
         Number.isFinite(cRec[spec.field]) &&
         cRec.timestamp !== bRec.timestamp &&
-        (cRec.runIndex || 1) > (bRec.runIndex || 1)
+        ((cRec.runIndex || 1) > (bRec.runIndex || 1) || (cTs > 0 && bTs > 0 && cTs > bTs))
       );
 
       var rciObj = computeRci90Metric(
@@ -3279,29 +3297,94 @@
     }
 
     var cur = loadState();
-    var mergedBase = Object.assign({}, incoming.baselineResults, cur.baselineResults);
-    var bKeys = Object.keys(incoming.results);
-    for (var i = 0; i < bKeys.length; i += 1) {
-      var k = bKeys[i];
-      if (!mergedBase[k]) mergedBase[k] = Object.assign({}, incoming.results[k]);
-    }
-    var mergedResults = Object.assign({}, cur.results, incoming.results);
     var combinedHist = incoming.history.concat(cur.history);
     var seenHist = {};
-    var mergedHistory = [];
-    for (var mh = 0; mh < combinedHist.length && mergedHistory.length < 90; mh += 1) {
+    var dedupedHistory = [];
+    for (var mh = 0; mh < combinedHist.length; mh += 1) {
       var hItem = combinedHist[mh];
       var hKey = hItem.syncRunKey || (hItem.expId + "|" + String(hItem.timestamp || ""));
       if (!seenHist[hKey]) {
         seenHist[hKey] = true;
-        mergedHistory.push(hItem);
+        dedupedHistory.push(Object.assign({}, hItem));
       }
     }
-    mergedHistory.sort(function (a, b) {
+    dedupedHistory.sort(function (a, b) {
       var ta = Date.parse(a.timestamp || "") || 0;
       var tb = Date.parse(b.timestamp || "") || 0;
       return tb - ta;
     });
+
+    // Assign chronological runIndex (1..N from oldest to newest per expId) before capping history
+    var runCounters = {};
+    var oldestFromHist = {};
+    var newestFromHist = {};
+    for (var ch = dedupedHistory.length - 1; ch >= 0; ch -= 1) {
+      var recCh = dedupedHistory[ch];
+      var ek = recCh.expId;
+      runCounters[ek] = (runCounters[ek] || 0) + 1;
+      recCh.runIndex = runCounters[ek];
+      if (!oldestFromHist[ek]) oldestFromHist[ek] = recCh;
+      newestFromHist[ek] = recCh;
+    }
+    var mergedHistory = dedupedHistory.slice(0, 90);
+
+    var pickNewest = function (candList) {
+      var best = null;
+      var bestTs = -1;
+      for (var p = 0; p < candList.length; p += 1) {
+        var c = candList[p];
+        if (!c) continue;
+        var ts = Date.parse(c.timestamp || "") || 0;
+        if (!best || ts > bestTs) {
+          best = c;
+          bestTs = ts;
+        }
+      }
+      return best ? Object.assign({}, best) : null;
+    };
+
+    var pickOldest = function (candList) {
+      var best = null;
+      var bestTs = Infinity;
+      for (var p = 0; p < candList.length; p += 1) {
+        var c = candList[p];
+        if (!c) continue;
+        var ts = Date.parse(c.timestamp || "") || Infinity;
+        if (!best || ts < bestTs) {
+          best = c;
+          bestTs = ts;
+        }
+      }
+      return best ? Object.assign({}, best) : null;
+    };
+
+    var mergedResults = {};
+    var mergedBase = {};
+    var expIds = Object.keys(VALID_EXP_IDS);
+    for (var i = 0; i < expIds.length; i += 1) {
+      var k = expIds[i];
+      var latestRec = pickNewest([cur.results[k], incoming.results[k], newestFromHist[k]]);
+      if (latestRec) {
+        if (newestFromHist[k] && latestRec.timestamp === newestFromHist[k].timestamp) {
+          latestRec.runIndex = newestFromHist[k].runIndex;
+        } else if (runCounters[k]) {
+          latestRec.runIndex = Math.max(latestRec.runIndex || 1, runCounters[k]);
+        }
+        mergedResults[k] = latestRec;
+      }
+
+      if (cur.baselineResults[k] && cur.baselineResults[k].t0ManualAnchor) {
+        mergedBase[k] = Object.assign({}, cur.baselineResults[k]);
+      } else if (incoming.baselineResults[k] && incoming.baselineResults[k].t0ManualAnchor && !cur.baselineResults[k]) {
+        mergedBase[k] = Object.assign({}, incoming.baselineResults[k]);
+      } else {
+        var earliestRec = pickOldest([cur.baselineResults[k], incoming.baselineResults[k], oldestFromHist[k], latestRec]);
+        if (earliestRec) {
+          earliestRec.runIndex = 1;
+          mergedBase[k] = earliestRec;
+        }
+      }
+    }
 
     var nextState = {
       version: SUITE_VERSION,
@@ -3372,6 +3455,10 @@
     buildEnvironmentSnapshot: buildEnvironmentSnapshot,
     evaluateEnvironmentAlerts: evaluateEnvironmentAlerts,
     loadState: loadState,
+    saveState: function (nextState) {
+      var clean = sanitizeStateObject(nextState) || createEmptyState();
+      return persistState(clean);
+    },
     setActiveForm: setActiveForm,
     rotateNextForm: rotateNextForm,
     markFamiliarizationComplete: markFamiliarizationComplete,

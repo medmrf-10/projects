@@ -199,6 +199,8 @@
     activeKeyHandler = function (ev) {
       if (!domRefs.overlay || domRefs.overlay.hidden) return;
       if (ev.repeat) return; // Reject held-key OS autorepeat artifacts
+      var RSKey = root.NeuroLab && root.NeuroLab.RepoSync;
+      if (RSKey && typeof RSKey.shouldIgnoreArenaKey === "function" && RSKey.shouldIgnoreArenaKey(ev)) return;
       handler(ev);
     };
     window.addEventListener("keydown", activeKeyHandler);
@@ -474,9 +476,13 @@
   function captureContext(opts) {
     var A = getAnalytics();
     var baseCtx = typeof A.getContext === "function" ? A.getContext() : {};
+    var RS = root.NeuroLab && root.NeuroLab.RepoSync;
+    var snapCtx = RS && typeof RS.getActiveClinicalSnapshot === "function"
+      ? { dayCondition: RS.getActiveClinicalSnapshot().dayCondition, notes: RS.getActiveClinicalSnapshot().notes }
+      : {};
     var uiCtx = typeof callbacks.getContext === "function" ? callbacks.getContext() : {};
     var passedCtx = opts && opts.context ? opts.context : opts || {};
-    return Object.assign({}, baseCtx, uiCtx, passedCtx);
+    return Object.assign({}, baseCtx, snapCtx, uiCtx, passedCtx);
   }
 
   function init(config) {
@@ -3217,6 +3223,7 @@
           rtMeanMs: rtMeanMs,
           submetrics: enrichedSubmetrics,
           phase: ctx.phase,
+          dayCondition: ctx.dayCondition || "normal",
           sleepQuality: ctx.sleepQuality,
           alertness: ctx.alertness,
           nasalPatency: ctx.nasalPatency,
@@ -3336,6 +3343,7 @@
       '<div class="diagnosis-callout">' +
       formatInlineTechHtml(diagnosisText) +
       "</div>" +
+      (RS && typeof RS.renderArenaContextBarHtml === "function" ? RS.renderArenaContextBarHtml() : "") +
       '<div class="result-actions">' +
       actionsHtml +
       "</div>" +
@@ -3459,6 +3467,9 @@
           : "تنبيه منهجي: سجلت مرساة الضبط هبوطا دون 82% مما يشير إلى إرهاق عام أو نعاس عارض في هذه الجلسة؛ راجع تبويب المنحنيات لمقارنة الجلسة بالسجل الطولي."
       ) +
       "</div>" +
+      (root.NeuroLab && root.NeuroLab.RepoSync && typeof root.NeuroLab.RepoSync.renderArenaContextBarHtml === "function"
+        ? root.NeuroLab.RepoSync.renderArenaContextBarHtml()
+        : "") +
       '<div class="result-actions">' +
       '<button id="btnBatterySaveRepo" type="button" class="btn-repo-save" data-repo-save-btn><span>حفظ في الريبو</span></button>' +
       '<button id="btnCloseBatterySummary" type="button" class="btn-primary"><span>العودة إلى لوحة القيادة والمنحنيات</span><kbd class="kbd-on-btn ltr-iso">Enter</kbd></button>' +

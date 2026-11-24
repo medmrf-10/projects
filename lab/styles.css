@@ -4303,3 +4303,71 @@ html[data-theme="dark"] .gate-pill.is-blue {
   color: var(--crimson);
 }
 
+/* Inline Post-Probe Session Tagging Bar Inside Arena Completion Screens */
+.arena-repo-context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.arena-repo-ctx-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.arena-repo-ctx-field .phase-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 36px;
+  padding: 5px 10px;
+  font-size: 0.83rem;
+}
+
+.arena-repo-note-input {
+  flex: 2 1 210px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body-ar, inherit);
+  font-size: 0.83rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 360px) {
+  .btn-repo-save {
+    white-space: normal;
+    text-align: center;
+    padding-inline: 12px;
+  }
+
+  #topRepoSaveBtn {
+    white-space: nowrap;
+    padding-inline: 8px;
+  }
+
+  .top-context-pill {
+    max-width: 145px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+

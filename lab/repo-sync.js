@@ -79,7 +79,8 @@
 
   var memConfig = Object.assign({}, DEFAULT_CONFIG, { syncedFingerprints: {} });
   var memCheckins = [];
-  var syncInFlightPromise = null;
+  var pushInFlightPromise = null;
+  var pullInFlightPromise = null;
   var customTransport = null;
   var customApiBaseUrl = "https://api.github.com";
   var uiHooks = {
@@ -89,6 +90,7 @@
   var pendingSaveAfterModal = false;
   var pendingPullAfterModal = false;
   var pendingTriggerButton = null;
+  var modalInitialCondition = "normal";
   var modalKeyCaptureBound = false;
 
   /* ================= 1. SANITIZATION, CODECS & DETERMINISTIC HASHING ================= */
@@ -284,6 +286,17 @@
     }
     var custom = sanitizeVaultText(id, true);
     return custom || "اعتيادي";
+  }
+
+  function getConditionIdFromLabel(labelOrId) {
+    var raw = sanitizeVaultText(labelOrId || "", true);
+    if (!raw) return "normal";
+    for (var i = 0; i < DAY_CONDITIONS.length; i += 1) {
+      if (DAY_CONDITIONS[i].id === raw || DAY_CONDITIONS[i].label === raw) {
+        return DAY_CONDITIONS[i].id;
+      }
+    }
+    return "normal";
   }
 
   function getPhaseLabel(phaseId) {
@@ -525,15 +538,24 @@
   function recordDailyCheckin(customOverrides) {
     var snap = Object.assign(getActiveClinicalSnapshot(), customOverrides || {});
     var nowMs = parseEpochMs(snap.timestamp) || Date.now();
-    var dayYmd = formatLocalYmd(nowMs);
+    var dayYmd = (typeof snap.localDateYmd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(toAsciiDigits(snap.localDateYmd)))
+      ? toAsciiDigits(snap.localDateYmd)
+      : formatLocalYmd(nowMs);
+    var timeHm = (typeof snap.localTimeHm === "string" && /^\d{2}:\d{2}$/.test(toAsciiDigits(snap.localTimeHm)))
+      ? toAsciiDigits(snap.localTimeHm)
+      : formatLocalHm(nowMs);
     var runKey = sanitizeRunKey(
-      "checkin-" + dayYmd + "-" + compactIsoStamp(nowMs) + "-" +
-      shortHash(dayYmd + "|" + snap.phase + "|" + snap.dayCondition + "|" + snap.alertness + "|" + snap.sleepQuality + "|" + snap.notes)
+      snap.id || (
+        "checkin-" + dayYmd + "-" + compactIsoStamp(nowMs) + "-" +
+        shortHash(dayYmd + "|" + snap.phase + "|" + snap.dayCondition + "|" + snap.alertness + "|" + snap.sleepQuality + "|" + snap.notes)
+      )
     );
     var item = {
       id: runKey,
       timestamp: nowMs,
       timestampIso: new Date(nowMs).toISOString(),
+      localDateYmd: dayYmd,
+      localTimeHm: timeHm,
       phase: snap.phase,
       dayCondition: snap.dayCondition,
       sleepQuality: snap.sleepQuality,
@@ -562,6 +584,33 @@
 
   /* ================= 4. MULTI-SUITE ENTRY COLLECTION & NORMALIZATION ================= */
 
+  function resolveEntryDayYmd(rec, epochMs) {
+    if (rec && typeof rec === "object") {
+      var cand1 = rec.localDateYmd ? toAsciiDigits(String(rec.localDateYmd).trim()) : "";
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cand1)) return cand1;
+      var cand2 = rec.env && rec.env.localDateYmd ? toAsciiDigits(String(rec.env.localDateYmd).trim()) : "";
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cand2)) return cand2;
+      var cand3 = rec.isoDate ? toAsciiDigits(String(rec.isoDate).trim()) : "";
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cand3)) return cand3;
+    }
+    return formatLocalYmd(epochMs);
+  }
+
+  function resolveEntryTimeHm(rec, epochMs) {
+    if (rec && typeof rec === "object") {
+      var t1 = rec.localTimeHm ? toAsciiDigits(String(rec.localTimeHm).trim()) : "";
+      if (/^\d{2}:\d{2}$/.test(t1)) return t1;
+      var envMs = rec.env && (rec.env.isoTimestamp || rec.env.capturedAt)
+        ? parseEpochMs(rec.env.isoTimestamp || rec.env.capturedAt)
+        : 0;
+      var t2 = rec.env && rec.env.localTimeHHMM ? toAsciiDigits(String(rec.env.localTimeHHMM).trim()) : "";
+      if (/^\d{2}:\d{2}$/.test(t2) && (!envMs || Math.abs(envMs - epochMs) < 180000)) {
+        return t2;
+      }
+    }
+    return formatLocalHm(epochMs);
+  }
+
   function formatSafeD4Soa(rec) {
     var DC = root.NeuroLab && root.NeuroLab.DeepCore;
     var raw = "";
@@ -586,17 +635,8 @@
     var epochMs = parseEpochMs(rec.timestamp);
     if (!epochMs) epochMs = Date.now();
     var isoStr = new Date(epochMs).toISOString();
-    var dayYmd = formatLocalYmd(epochMs);
-    var envMs = rec.env && rec.env.isoTimestamp ? parseEpochMs(rec.env.isoTimestamp) : 0;
-    var useEnvTime =
-      envMs > 0 &&
-      Math.abs(envMs - epochMs) < 120000 &&
-      rec.env &&
-      rec.env.localTimeHHMM &&
-      /^\d{2}:\d{2}$/.test(toAsciiDigits(rec.env.localTimeHHMM));
-    var timeHm = useEnvTime
-      ? toAsciiDigits(rec.env.localTimeHHMM)
-      : formatLocalHm(epochMs);
+    var dayYmd = resolveEntryDayYmd(rec, epochMs);
+    var timeHm = resolveEntryTimeHm(rec, epochMs);
 
     var phaseId = String(rec.phase || (fallbackSnap && fallbackSnap.phase) || "baseline");
     var phaseLabel = getPhaseLabel(phaseId);
@@ -648,7 +688,8 @@
         "%**، تبديل الأدوار **" + fmtNum(sw2, 1) + "%**، أثر متقادم **" + fmtNum(st2, 1) + "%**، تخمين صافي **" + fmtNum(gu2, 1) + "%**.";
       subLine =
         "المقاييس الفرعية: بوابة التحديث الحمراء **" + fmtNum(rec.redAccPct ?? 0, 1) + "%** بزمن **" + fmtNum(rec.redMeanRtMs ?? 0, 0) +
-        " ms**، وبوابة المقارنة الزرقاء **" + fmtNum(rec.blueAccPct ?? 0, 1) + "%** بزمن **" + fmtNum(rec.blueMeanRtMs ?? 0, 0) + " ms**.";
+        " ms**، وبوابة المقارنة الزرقاء **" + fmtNum(rec.blueAccPct ?? 0, 1) + "%** بزمن **" + fmtNum(rec.blueMeanRtMs ?? 0, 0) +
+        " ms**، ومعدل البوابة **" + fmtNum(rec.gateMeanRtMs ?? Math.round(((Number(rec.redMeanRtMs) || 0) + (Number(rec.blueMeanRtMs) || 0)) / 2), 0) + " ms**.";
     } else if (expId === "d3_bays_analog") {
       var kVal = Number(rec.K ?? 0);
       var cal3 = Number(rec.calibratedScorePct ?? 0);
@@ -659,8 +700,12 @@
         "**، احتمال الهدف **" + fmtNum(rec.alphaPct ?? 0, 1) + "%**، التبديل المكاني **" + fmtNum(rec.betaPct ?? 0, 1) +
         "%**، التخمين **" + fmtNum(rec.gammaPct ?? 0, 1) + "%**، انحراف الدقة **" + fmtNum(rec.sigmaDeg ?? 0, 1) + "°**.";
       subLine =
-        "المقاييس الفرعية: تبديل الفاصل القصير **" + fmtNum(rec.betaShortPct ?? 0, 1) + "%**، تغير التخمين عبر التأخير **" +
-        fmtSignedNum(rec.deltaGammaDelayPct ?? 0, "%", 1) + "**، متوسط الخطأ الزاوي **" + fmtNum(rec.cMAE ?? 0, 1) + "°**.";
+        "المقاييس الفرعية: تبديل الفاصل القصير **" + fmtNum(rec.betaShortPct ?? rec.betaPct ?? 0, 1) +
+        "%**، مؤشر التبديل اللامعلمي **" + fmtNum(rec.bays2016SwapPct ?? rec.betaPct ?? 0, 1) +
+        "%**، تغير التخمين عبر التأخير **" + fmtSignedNum(rec.deltaGammaDelayPct ?? 0, "%", 1) +
+        "**، فقد القصير والطويل **" + fmtNum(rec.gammaShortPct ?? rec.gammaPct ?? 0, 1) + "% / " + fmtNum(rec.gammaLongPct ?? rec.gammaPct ?? 0, 1) +
+        "%**، انحراف القصير والطويل **" + fmtNum(rec.sigmaShortDeg ?? rec.sigmaDeg ?? 0, 1) + "° / " + fmtNum(rec.sigmaLongDeg ?? rec.sigmaDeg ?? 0, 1) +
+        "°**، متوسط الخطأ الزاوي **" + fmtNum(rec.cMAE ?? 0, 1) + "°**.";
     } else if (expId === "d4_consolidation_soa") {
       var soaTxt = formatSafeD4Soa(rec);
       var auc = Number(rec.aucConsPct ?? 0);
@@ -738,8 +783,8 @@
 
     var epochMs = parseEpochMs(rec.timestamp) || Date.now();
     var isoStr = new Date(epochMs).toISOString();
-    var dayYmd = formatLocalYmd(epochMs);
-    var timeHm = formatLocalHm(epochMs);
+    var dayYmd = resolveEntryDayYmd(rec, epochMs);
+    var timeHm = resolveEntryTimeHm(rec, epochMs);
 
     var score = Number(rec.score ?? 0);
     var delta = Number.isFinite(Number(rec.deltaFromBaseline))
@@ -820,8 +865,8 @@
     if (!bat || typeof bat !== "object") return null;
     var epochMs = parseEpochMs(bat.timestamp) || Date.now();
     var isoStr = new Date(epochMs).toISOString();
-    var dayYmd = formatLocalYmd(epochMs);
-    var timeHm = formatLocalHm(epochMs);
+    var dayYmd = resolveEntryDayYmd(bat, epochMs);
+    var timeHm = resolveEntryTimeHm(bat, epochMs);
 
     var comp = Number(bat.compositeDeficitScore ?? 0);
     var ctrl = Number(bat.controlScore ?? 98);
@@ -831,6 +876,9 @@
     var phaseLabel = getPhaseLabel(phaseId);
     var condId = String(bat.dayCondition || (fallbackSnap && fallbackSnap.dayCondition) || "normal");
     var condLabel = getConditionLabel(condId);
+    var alertness = Number.isFinite(Number(bat.alertness)) ? Number(bat.alertness) : 8;
+    var sleepQuality = Number.isFinite(Number(bat.sleepQuality)) ? Number(bat.sleepQuality) : 6;
+    var nasalPatency = Number.isFinite(Number(bat.nasalPatency)) ? Number(bat.nasalPatency) : 5;
 
     var scores = bat.probeScores && typeof bat.probeScores === "object" ? bat.probeScores : {};
     var subParts = [];
@@ -870,7 +918,8 @@
       higherIsBetter: true,
       contextLine:
         "السياق اليومي: المرحلة **" + phaseLabel + "** بمعرف **" + sanitizeVaultText(phaseId, true) +
-        "**، الحالة اليومية **" + condLabel + "**.",
+        "**، الحالة اليومية **" + condLabel + "**، اليقظة **" + fmtNum(alertness, 0) +
+        "/10**، النوم **" + fmtNum(sleepQuality, 0) + "/10**، المجرى الهوائي **" + fmtNum(nasalPatency, 0) + "/10**.",
       mainMetricsLine:
         "المؤشرات الرئيسية: مركب المناطق الخمس **" + headlineVal + "**، الفارق عن الأساس **" +
         fmtSignedNum(delta, "%", 1) + "**، مرساة الضبط **" + fmtNum(ctrl, 1) + "%**، فجوة التباين **" + fmtNum(gap, 1) + "%**.",
@@ -887,8 +936,8 @@
 
     var epochMs = parseEpochMs(rec.timestamp) || Date.now();
     var isoStr = new Date(epochMs).toISOString();
-    var dayYmd = formatLocalYmd(epochMs);
-    var timeHm = formatLocalHm(epochMs);
+    var dayYmd = resolveEntryDayYmd(rec, epochMs);
+    var timeHm = resolveEntryTimeHm(rec, epochMs);
     var phaseId = String(rec.phase || (fallbackSnap && fallbackSnap.phase) || "baseline");
     var phaseLabel = getPhaseLabel(phaseId);
     var condId = String(rec.dayCondition || (fallbackSnap && fallbackSnap.dayCondition) || "normal");
@@ -966,8 +1015,8 @@
     if (!chk || typeof chk !== "object") return null;
     var epochMs = parseEpochMs(chk.timestamp) || Date.now();
     var isoStr = new Date(epochMs).toISOString();
-    var dayYmd = formatLocalYmd(epochMs);
-    var timeHm = formatLocalHm(epochMs);
+    var dayYmd = resolveEntryDayYmd(chk, epochMs);
+    var timeHm = resolveEntryTimeHm(chk, epochMs);
     var phaseId = String(chk.phase || "baseline");
     var phaseLabel = getPhaseLabel(phaseId);
     var condId = String(chk.dayCondition || "normal");
@@ -1159,9 +1208,146 @@
     return lines;
   }
 
+  function hasArabicFirstChar(str) {
+    var trimmed = String(str == null ? "" : str).replace(/^\*+/, "").trim();
+    if (!trimmed) return false;
+    var first = trimmed.charCodeAt(0);
+    return (
+      (first >= 0x0600 && first <= 0x06FF) ||
+      (first >= 0x0750 && first <= 0x077F) ||
+      (first >= 0x08A0 && first <= 0x08FF) ||
+      (first >= 0xFB50 && first <= 0xFDFF) ||
+      (first >= 0xFE70 && first <= 0xFEFF)
+    );
+  }
+
+  function normalizeBlockChildrenLines(rawChildLines) {
+    if (!Array.isArray(rawChildLines) || rawChildLines.length === 0) return [];
+    var minSpaces = Infinity;
+    for (var s = 0; s < rawChildLines.length; s += 1) {
+      var spMatch = rawChildLines[s].match(/^( +)\S/);
+      if (spMatch && spMatch[1].length > 0 && spMatch[1].length < minSpaces) {
+        minSpaces = spMatch[1].length;
+      }
+    }
+    var spaceUnit = minSpaces !== Infinity && minSpaces < 4 ? 2 : 4;
+
+    var out = [];
+    var counters = [0]; // counters[depth], depth >= 1
+    var prevDepth = 0;
+
+    for (var i = 0; i < rawChildLines.length; i += 1) {
+      var rawLn = rawChildLines[i];
+      if (!rawLn || !rawLn.trim()) continue;
+
+      var tabMatch = rawLn.match(/^(\t+)(.*)$/);
+      var spaceMatch = !tabMatch ? rawLn.match(/^( +)(.*)$/) : null;
+      var depth = 1;
+      var rest = rawLn.trim();
+
+      if (tabMatch) {
+        depth = tabMatch[1].length;
+        rest = tabMatch[2].trim();
+      } else if (spaceMatch) {
+        depth = Math.max(1, Math.round(spaceMatch[1].length / spaceUnit));
+        rest = spaceMatch[2].trim();
+      }
+
+      if (depth > prevDepth + 1) {
+        depth = prevDepth + 1;
+      }
+      prevDepth = depth;
+
+      rest = rest.replace(/^(?:[0-9]+\.\s+|[-*+•▪◦‣–—]+\s+)/, "").trim();
+      rest = sanitizeVaultText(rest, false);
+      if (!rest) continue;
+
+      counters.length = depth + 1;
+      counters[depth] = (counters[depth] || 0) + 1;
+      out.push("\t".repeat(depth) + counters[depth] + ". " + ensureArabicStart(rest));
+    }
+    return out;
+  }
+
+  function normalizeExtraSectionBodyLines(rawBodyLines) {
+    if (!Array.isArray(rawBodyLines) || rawBodyLines.length === 0) return [];
+    var minSpaces = Infinity;
+    for (var s = 0; s < rawBodyLines.length; s += 1) {
+      var spM = rawBodyLines[s].match(/^( +)\S/);
+      if (spM && spM[1].length > 0 && spM[1].length < minSpaces) {
+        minSpaces = spM[1].length;
+      }
+    }
+    var spaceUnit = minSpaces !== Infinity && minSpaces < 4 ? 2 : 4;
+
+    var out = [];
+    var counters = [0];
+    var prevDepth = 0;
+    var sawItemUnderHeading = false;
+
+    for (var i = 0; i < rawBodyLines.length; i += 1) {
+      var ln = rawBodyLines[i];
+      var trimmed = ln ? ln.trim() : "";
+      if (!trimmed) {
+        // Preserve a single blank line only right before a subheading (### ...)
+        var nextNonEmpty = "";
+        for (var j = i + 1; j < rawBodyLines.length; j += 1) {
+          if (rawBodyLines[j] && rawBodyLines[j].trim()) {
+            nextNonEmpty = rawBodyLines[j].trim();
+            break;
+          }
+        }
+        if (/^#{3,6}\s+/.test(nextNonEmpty) && out.length > 0 && out[out.length - 1] !== "") {
+          out.push("");
+        }
+        continue;
+      }
+
+      var subHeadMatch = trimmed.match(/^(#{3,6})\s+(.*)$/);
+      if (subHeadMatch) {
+        if (out.length > 0 && out[out.length - 1] !== "") {
+          out.push("");
+        }
+        var cleanSubTitle = ensureArabicStart(sanitizeVaultText(subHeadMatch[2], false));
+        out.push(subHeadMatch[1] + " " + cleanSubTitle);
+        counters = [0];
+        prevDepth = 0;
+        sawItemUnderHeading = false;
+        continue;
+      }
+
+      var tabM = ln.match(/^(\t+)(.*)$/);
+      var spM2 = !tabM ? ln.match(/^( +)(.*)$/) : null;
+      var depth = 0;
+      var bodyTxt = trimmed;
+      if (tabM) {
+        depth = tabM[1].length;
+        bodyTxt = tabM[2].trim();
+      } else if (spM2) {
+        depth = Math.max(1, Math.round(spM2[1].length / spaceUnit));
+        bodyTxt = spM2[2].trim();
+      }
+      if (!sawItemUnderHeading) depth = 0;
+      if (depth > prevDepth + 1) depth = prevDepth + 1;
+      prevDepth = depth;
+      sawItemUnderHeading = true;
+
+      bodyTxt = bodyTxt.replace(/^(?:[0-9]+\.\s+|[-*+•▪◦‣–—]+\s+)/, "").trim();
+      bodyTxt = sanitizeVaultText(bodyTxt, false);
+      if (!bodyTxt) continue;
+
+      counters.length = depth + 1;
+      counters[depth] = (counters[depth] || 0) + 1;
+      out.push("\t".repeat(depth) + counters[depth] + ". " + ensureArabicStart(bodyTxt));
+    }
+    return out;
+  }
+
   function parseSingleDayEntryBlock(dayYmd, rawLinesWithoutTopNum, orderIdx) {
-    var head = rawLinesWithoutTopNum[0] || "";
-    var joined = rawLinesWithoutTopNum.join("\n");
+    var head = ensureArabicStart(sanitizeVaultText(rawLinesWithoutTopNum[0] || "", false));
+    var normalizedChildren = normalizeBlockChildrenLines(rawLinesWithoutTopNum.slice(1));
+    var normalizedBlock = [head].concat(normalizedChildren);
+    var joined = normalizedBlock.join("\n");
 
     var keyMatch = joined.match(/المعرف \*\*([A-Za-z0-9_-]+)\*\*/);
     var suiteMatch = joined.match(/والمنظومة \*\*([A-Za-z0-9_-]+)\*\*/);
@@ -1174,17 +1360,24 @@
     var phaseIdMatch = joined.match(/بمعرف \*\*([A-Za-z0-9_-]+)\*\*/);
     var condMatch = joined.match(/الحالة اليومية \*\*([^*]+)\*\*/);
     var formMatch = joined.match(/النموذج \*\*Form ([ABC])\*\*/);
+    var noteMatch = joined.match(/الملاحظة السياقية:\s*([^\n]+?)\.?\s*(?:\n|$)/);
 
-    var timeHm = timeMatch ? timeMatch[1] : "12:00";
-    var isoStr = tsMatch ? tsMatch[1] : (dayYmd + "T" + timeHm + ":00.000Z");
-    var epochMs = parseEpochMs(isoStr);
+    var isManual = !(keyMatch || suiteMatch || tsMatch || timeMatch);
+    var timeHm = timeMatch ? timeMatch[1] : (isManual ? "" : "12:00");
+    var isoStr = tsMatch
+      ? tsMatch[1]
+      : (isManual ? (dayYmd + "T23:59:00.000Z") : (dayYmd + "T" + timeHm + ":00.000Z"));
+    var epochMs = isManual
+      ? (parseEpochMs(dayYmd + "T23:59:00.000Z") + orderIdx)
+      : parseEpochMs(isoStr);
     if (!epochMs) {
       epochMs = parseEpochMs(dayYmd + "T12:00:00Z") + orderIdx;
     }
 
     var probeKey = probeMatch ? probeMatch[1] : "";
-    var probeCode = codeMatch ? codeMatch[1] : (probeKey || "فحص");
-    var headlineVal = valMatch ? valMatch[1].trim() : "";
+    var probeCode = isManual ? "" : (codeMatch ? codeMatch[1] : (probeKey || "فحص"));
+    var headlineVal = isManual ? "" : (valMatch ? valMatch[1].trim() : "");
+    var condLabel = condMatch ? condMatch[1] : "اعتيادي";
 
     var numericMetric = null;
     var metricUnit = "";
@@ -1192,7 +1385,7 @@
     if (headlineVal) {
       var kMatch = headlineVal.match(/^K\s*=\s*([+-]?\d+(?:\.\d+)?)/i);
       var aucMatch = headlineVal.match(/AUC\s+([+-]?\d+(?:\.\d+)?)%/i);
-      var speedMatch = headlineVal.match(/([+-]?\d+(?:\.\d+)?)\s*s⁻¹/);
+      var speedMatch = headlineVal.match(/([+-]?\d+(?:\.\d+)?)\s*(?:s⁻¹|s\^-1)/i);
       var pctMatch = headlineVal.match(/([+-]?\d+(?:\.\d+)?)%/);
       if (kMatch) {
         numericMetric = Number(kMatch[1]);
@@ -1212,21 +1405,24 @@
     return {
       runKey: keyMatch ? keyMatch[1] : null,
       suiteKind: suiteMatch ? suiteMatch[1] : "manual",
+      isManual: isManual,
       probeKey: probeKey,
       probeCode: probeCode,
       dayYmd: dayYmd,
-      timeHm: timeHm,
+      timeHm: timeHm || "12:00",
       timestampIso: isoStr,
       epochMs: epochMs,
       phaseId: phaseIdMatch ? phaseIdMatch[1] : "baseline",
       phaseLabel: phaseLabelMatch ? phaseLabelMatch[1] : "خط الأساس القاعدي",
-      conditionLabel: condMatch ? condMatch[1] : "اعتيادي",
+      conditionId: getConditionIdFromLabel(condLabel),
+      conditionLabel: condLabel,
       formId: formMatch ? formMatch[1] : "A",
       headlineVal: headlineVal,
       numericMetric: numericMetric,
       metricUnit: metricUnit,
       metricPrefix: metricPrefix,
-      rawLines: rawLinesWithoutTopNum.slice()
+      noteText: noteMatch ? sanitizeVaultText(noteMatch[1], true) : "",
+      rawLines: normalizedBlock
     };
   }
 
@@ -1263,16 +1459,11 @@
       }
       var dayMatch = sec.heading.match(/^##\s+سجل يوم\s+\**(\d{4}-\d{2}-\d{2})\**/);
       if (!dayMatch) {
-        var trimmedBody = sec.bodyLines.slice();
-        while (trimmedBody.length > 0 && !trimmedBody[trimmedBody.length - 1].trim()) {
-          trimmedBody.pop();
-        }
-        while (trimmedBody.length > 0 && !trimmedBody[0].trim()) {
-          trimmedBody.shift();
-        }
+        var cleanHeadingTitle = ensureArabicStart(sanitizeVaultText(sec.heading.replace(/^##\s+/, ""), false));
+        var normalizedExtraBody = normalizeExtraSectionBodyLines(sec.bodyLines);
         result.extraSections.push({
-          heading: sec.heading,
-          bodyLines: trimmedBody
+          heading: "## " + cleanHeadingTitle,
+          bodyLines: normalizedExtraBody
         });
         continue;
       }
@@ -1289,10 +1480,11 @@
         if (topMatch) {
           if (curBlock) blocks.push(curBlock);
           curBlock = [topMatch[2]];
-        } else if (curBlock && /^\t+/.test(bLine)) {
-          curBlock.push(bLine);
         } else if (curBlock) {
-          curBlock.push("\t" + bLine.trim());
+          curBlock.push(bLine);
+        } else {
+          // Recover an unnumbered manual top-level line inside a day section
+          curBlock = [bLine.trim()];
         }
       }
       if (curBlock) blocks.push(curBlock);
@@ -1300,7 +1492,9 @@
       for (var k = 0; k < blocks.length; k += 1) {
         var parsedItem = parseSingleDayEntryBlock(dayYmd, blocks[k], k);
         result.dayMap[dayYmd].push(parsedItem);
-        result.allParsedEntries.push(parsedItem);
+        if (!parsedItem.isManual) {
+          result.allParsedEntries.push(parsedItem);
+        }
         if (parsedItem.runKey) {
           result.existingRunKeys[parsedItem.runKey] = true;
         }
@@ -1326,9 +1520,11 @@
     for (var d = dayKeysDesc.length - 1; d >= 0; d -= 1) {
       var dk = dayKeysDesc[d];
       var items = dayMap[dk] || [];
-      totalRuns += items.length;
       for (var j = 0; j < items.length; j += 1) {
-        chronologicalEntries.push(items[j]);
+        if (!items[j].isManual) {
+          totalRuns += 1;
+          chronologicalEntries.push(items[j]);
+        }
       }
     }
 
@@ -1343,28 +1539,31 @@
     for (var i = 0; i < dayKeysDesc.length; i += 1) {
       var dayKey = dayKeysDesc[i];
       var dayEntries = dayMap[dayKey] || [];
-      var lastEntry = dayEntries[dayEntries.length - 1] || {};
+      var scoredForDay = dayEntries.filter(function (x) { return !x.isManual; });
+      var lastEntry = scoredForDay.length > 0
+        ? scoredForDay[scoredForDay.length - 1]
+        : (dayEntries[dayEntries.length - 1] || {});
       var phLbl = sanitizeVaultText(lastEntry.phaseLabel || "خط الأساس القاعدي", true);
       var condLbl = sanitizeVaultText(lastEntry.conditionLabel || "اعتيادي", true);
 
       var metricSummaries = [];
-      for (var m = 0; m < dayEntries.length; m += 1) {
-        var de = dayEntries[m];
+      for (var m = 0; m < scoredForDay.length; m += 1) {
+        var de = scoredForDay[m];
         if (de.probeCode && de.headlineVal) {
           metricSummaries.push("**" + sanitizeVaultText(de.probeCode, true) + "** بقيمة **" + sanitizeVaultText(de.headlineVal, true) + "**");
         }
       }
       var metricsTail = metricSummaries.length > 0
         ? metricSummaries.slice(0, 8).join("، ")
-        : "جلسة مدونة";
+        : "ملاحظات يدوية مدونة";
 
       out.push(
-        "\t" + (i + 1) + ". يوم **" + dayKey + "** بعدد **" + dayEntries.length +
+        "\t" + (i + 1) + ". يوم **" + dayKey + "** بعدد **" + scoredForDay.length +
         "** قياس ضمن مرحلة **" + phLbl + "** وحالة **" + condLbl + "**: سجل " + metricsTail + "."
       );
     }
 
-    // Cross-day repeated probe deltas
+    // Cross-day (and diurnal same-day) repeated probe deltas
     var byProbe = {};
     var probeOrder = [];
     for (var c = 0; c < chronologicalEntries.length; c += 1) {
@@ -1389,11 +1588,14 @@
       var firstDisp = (first.metricPrefix || "") + fmtNum(first.numericMetric, dec) + (first.metricUnit || "");
       var latestDisp = (latest.metricPrefix || "") + fmtNum(latest.numericMetric, dec) + (latest.metricUnit || "");
       var diffDisp = fmtSignedNum(diff, latest.metricUnit || "", dec);
+      var sameDay = first.dayYmd === latest.dayYmd;
+      var firstWhen = sameDay ? ("**" + first.dayYmd + "** الساعة **" + (first.timeHm || "00:00") + "**") : ("**" + first.dayYmd + "**");
+      var latestWhen = sameDay ? ("**" + latest.dayYmd + "** الساعة **" + (latest.timeHm || "00:00") + "**") : ("**" + latest.dayYmd + "**");
 
       repeatedLines.push(
         "مسبار **" + sanitizeVaultText(latest.probeCode, true) + "**: انتقل من **" + firstDisp +
-        "** في **" + first.dayYmd + "** إلى **" + latestDisp + "** في **" + latest.dayYmd +
-        "** بفارق **" + diffDisp + "** عبر **" + arr.length + "** قياسات."
+        "** في " + firstWhen + " إلى **" + latestDisp + "** في " + latestWhen +
+        " بفارق **" + diffDisp + "** عبر **" + arr.length + "** قياسات."
       );
     }
 
@@ -1425,7 +1627,8 @@
 
     var lines = text.replace(/\r\n/g, "\n").split("\n");
     var inSection = false;
-    var expectedTopNum = 1;
+    var depthCounters = [0];
+    var prevDepth = 0;
     var sawListItemInSection = false;
     var blankAfterListItem = false;
 
@@ -1437,18 +1640,30 @@
         }
         continue;
       }
-      if (/^\t*[-*+•]\s/.test(ln)) {
+      if (/^[\t ]*[-*+•▪◦‣]\s/.test(ln)) {
         errors.push("Unnumbered bullet detected at line " + (i + 1));
       }
-      if (ln.indexOf("# ") === 0) {
+      if (/^[ ]+[0-9]+\.\s/.test(ln)) {
+        errors.push("Space indentation detected instead of real Tab at line " + (i + 1));
+      }
+      var h1Match = ln.match(/^#\s+(.*)$/);
+      if (h1Match) {
         inSection = false;
+        if (!hasArabicFirstChar(h1Match[1])) {
+          errors.push("Document H1 heading does not start with an Arabic word at line " + (i + 1));
+        }
         continue;
       }
-      if (ln.indexOf("## ") === 0) {
+      var subHMatch = ln.match(/^#{2,6}\s+(.*)$/);
+      if (subHMatch) {
         inSection = true;
-        expectedTopNum = 1;
+        depthCounters = [0];
+        prevDepth = 0;
         sawListItemInSection = false;
         blankAfterListItem = false;
+        if (!hasArabicFirstChar(subHMatch[1])) {
+          errors.push("Section heading does not start with an Arabic word at line " + (i + 1));
+        }
         continue;
       }
       if (inSection) {
@@ -1456,16 +1671,32 @@
           errors.push("Blank line between list items inside section at line " + (i + 1));
           blankAfterListItem = false;
         }
-        var topM = ln.match(/^([0-9]+)\.\s+(.*)$/);
-        if (topM) {
-          var actualNum = Number(topM[1]);
-          if (actualNum !== expectedTopNum) {
-            errors.push("Expected top-level item " + expectedTopNum + ". but found " + actualNum + ". at line " + (i + 1));
-          }
-          expectedTopNum = actualNum + 1;
-          sawListItemInSection = true;
-        } else if (/^\t+[0-9]+\.\s+/.test(ln)) {
-          sawListItemInSection = true;
+        var itemM = ln.match(/^(\t*)([0-9]+)\.\s+(.*)$/);
+        if (!itemM) {
+          errors.push("Non-numbered line inside section at line " + (i + 1));
+          continue;
+        }
+        var depth = itemM[1].length;
+        var actualNum = Number(itemM[2]);
+        var itemBody = itemM[3];
+
+        if (!sawListItemInSection && depth > 0) {
+          errors.push("Section started with indented child item instead of top-level 1. at line " + (i + 1));
+        } else if (depth > prevDepth + 1) {
+          errors.push("Indentation jumped from depth " + prevDepth + " to " + depth + " at line " + (i + 1));
+        }
+
+        depthCounters.length = depth + 1;
+        var expectedNum = (depthCounters[depth] || 0) + 1;
+        if (actualNum !== expectedNum) {
+          errors.push("Expected item " + expectedNum + ". at depth " + depth + " but found " + actualNum + ". at line " + (i + 1));
+        }
+        depthCounters[depth] = actualNum;
+        prevDepth = depth;
+        sawListItemInSection = true;
+
+        if (!hasArabicFirstChar(itemBody)) {
+          errors.push("List item does not start with an Arabic word (RTL violation) at line " + (i + 1));
         }
       }
     }
@@ -1495,6 +1726,7 @@
       dayMap[ent.dayYmd].push({
         runKey: ent.runKey,
         suiteKind: ent.suiteKind,
+        isManual: false,
         probeKey: ent.probeKey,
         probeCode: ent.probeCode,
         dayYmd: ent.dayYmd,
@@ -1503,12 +1735,14 @@
         epochMs: ent.epochMs,
         phaseId: ent.phaseId,
         phaseLabel: ent.phaseLabel,
+        conditionId: ent.conditionId || getConditionIdFromLabel(ent.conditionLabel),
         conditionLabel: ent.conditionLabel,
         formId: ent.formId,
         headlineVal: ent.headlineVal,
         numericMetric: ent.numericMetric,
         metricUnit: ent.metricUnit,
         metricPrefix: ent.metricPrefix,
+        noteText: ent.noteText || "",
         rawLines: renderEntryBodyLines(ent)
       });
     }
@@ -1521,9 +1755,14 @@
     for (var d = 0; d < dayKeysDesc.length; d += 1) {
       var dk = dayKeysDesc[d];
       dayMap[dk].sort(function (a, b) {
+        if (Boolean(a.isManual) !== Boolean(b.isManual)) {
+          return a.isManual ? 1 : -1;
+        }
         return (a.epochMs || 0) - (b.epochMs || 0);
       });
-      totalRuns += dayMap[dk].length;
+      for (var cIdx = 0; cIdx < dayMap[dk].length; cIdx += 1) {
+        if (!dayMap[dk][cIdx].isManual) totalRuns += 1;
+      }
     }
 
     var refMs = parseEpochMs(nowEpochMs) || Date.now();
@@ -1754,13 +1993,18 @@
   }
 
   async function pushToRepo(options) {
-    if (syncInFlightPromise) {
-      return syncInFlightPromise;
+    if (pushInFlightPromise) {
+      return pushInFlightPromise;
+    }
+    if (pullInFlightPromise) {
+      try { await pullInFlightPromise; } catch (_) {}
     }
 
     var opts = options || {};
-    syncInFlightPromise = (async function () {
-      syncSettingsInputsIfPresent();
+    pushInFlightPromise = (async function () {
+      if (opts.syncFromDataTab) {
+        syncDataTabInputsToConfig(false);
+      }
       var currentCfg = opts.config ? normalizeConfig(Object.assign({}, loadConfig(), opts.config)) : loadConfig();
       var check = validateConfig(currentCfg, true);
       if (!check.ok) {
@@ -1877,6 +2121,8 @@
             repo: cfg.repo,
             branch: cfg.branch,
             filePath: cfg.filePath,
+            rememberToken: cfg.rememberToken,
+            dayCondition: cfg.dayCondition,
             token: cfg.token,
             lastSyncedAt: nowIso,
             lastCommitSha: commitSha,
@@ -1928,9 +2174,9 @@
 
     try {
       setGlobalButtonsLoading(true);
-      return await syncInFlightPromise;
+      return await pushInFlightPromise;
     } finally {
-      syncInFlightPromise = null;
+      pushInFlightPromise = null;
       setGlobalButtonsLoading(false);
     }
   }
@@ -1943,10 +2189,17 @@
     return m ? Number(m[1]) : null;
   }
 
+  function parseMinutesOfDayFromHm(hm) {
+    var m = String(hm || "").match(/^(\d{2}):(\d{2})$/);
+    if (!m) return 720;
+    return Number(m[1]) * 60 + Number(m[2]);
+  }
+
   function reconstructLocalStatesFromParsed(parsedEntries) {
     var importedDeep = 0;
     var importedV2 = 0;
     var importedFalsify = 0;
+    var importedCheckins = 0;
 
     var DC = root.NeuroLab && root.NeuroLab.DeepCore;
     var A = (root.NeuroLab && root.NeuroLab.Analytics) || root.Analytics || null;
@@ -1963,13 +2216,24 @@
       }
     }
 
+    var existingChkIds = {};
+    var curChks = loadCheckins();
+    for (var ck = 0; ck < curChks.length; ck += 1) {
+      if (curChks[ck] && curChks[ck].id) existingChkIds[curChks[ck].id] = true;
+    }
+
     var deepToMerge = [];
     var v2RecordsToMerge = [];
+    var v2BatteriesToMerge = [];
     var falsifyToMerge = [];
+    var checkinsToMerge = [];
 
     for (var i = 0; i < parsedEntries.length; i += 1) {
       var pe = parsedEntries[i];
+      if (!pe || pe.isManual) continue;
       var fullText = (pe.rawLines || []).join(" ");
+      var condId = pe.conditionId || getConditionIdFromLabel(pe.conditionLabel);
+      var noteTxt = pe.noteText || "";
 
       if (pe.suiteKind === "deep_v3" && V3_PROBE_META[pe.probeKey]) {
         var semKey = "sem|" + pe.probeKey + "|" + Math.floor(pe.epochMs / 1000);
@@ -1977,26 +2241,45 @@
         deepExistingKeys[pe.runKey] = true;
         deepExistingKeys[semKey] = true;
 
+        var hzVal = extractNumberAfterLabel(fullText, "التردد") ?? 60;
         var rec = {
           expId: pe.probeKey,
           syncRunKey: pe.runKey,
           timestamp: pe.timestampIso,
+          localDateYmd: pe.dayYmd,
+          localTimeHm: pe.timeHm,
           formId: pe.formId || "A",
           phase: pe.phaseId || "baseline",
+          dayCondition: condId,
+          notes: noteTxt,
           isFamiliarization: false,
           calibratedScorePct: extractNumberAfterLabel(fullText, "الدرجة المعايرة") ?? 0,
           alertness: extractNumberAfterLabel(fullText, "اليقظة") ?? 8,
           sleepQuality: extractNumberAfterLabel(fullText, "النوم") ?? 6,
           nasalPatency: extractNumberAfterLabel(fullText, "المجرى الهوائي") ?? 5,
-          refreshHz: extractNumberAfterLabel(fullText, "التردد") ?? 60
+          refreshHz: hzVal,
+          env: {
+            capturedAt: pe.timestampIso,
+            isoTimestamp: pe.timestampIso,
+            localDateYmd: pe.dayYmd,
+            localTimeHHMM: pe.timeHm,
+            minutesOfDay: parseMinutesOfDayFromHm(pe.timeHm),
+            refreshHz: hzVal,
+            frameMs: Math.round((1000 / Math.max(30, hzVal)) * 100) / 100
+          }
         };
 
         if (pe.probeKey === "d1_tbrs") {
           rec.pTargetHighPct = extractNumberAfterLabel(fullText, "صمود الحمل العالي") ?? (pe.numericMetric || 0);
           rec.pTargetLowPct = extractNumberAfterLabel(fullText, "دقة الحمل المنخفض") ?? rec.pTargetHighPct;
+          rec.rawLoadDropPct = rec.pTargetLowPct - rec.pTargetHighPct;
           rec.deltaTbrs = extractNumberAfterLabel(fullText, "فارق الحمل") ?? 0;
           rec.pSwapHighCorrPct = extractNumberAfterLabel(fullText, "تبديل المواقع") ?? 0;
           rec.pGuessHighPct = extractNumberAfterLabel(fullText, "تخمين عشوائي") ?? 0;
+          rec.pTargetHigh = rec.pTargetHighPct / 100;
+          rec.pTargetLow = rec.pTargetLowPct / 100;
+          rec.pSwapHighCorr = rec.pSwapHighCorrPct / 100;
+          rec.pGuessHigh = rec.pGuessHighPct / 100;
           rec.clLow = extractNumberAfterLabel(fullText, "حمل المعالجة المنخفض") ?? 0.33;
           rec.clHigh = extractNumberAfterLabel(fullText, "والعالي") ?? 0.58;
           rec.procAccPct = extractNumberAfterLabel(fullText, "دقة الأحكام البصرية") ?? 90;
@@ -2008,8 +2291,18 @@
           rec.pSwapCorrPct = extractNumberAfterLabel(fullText, "تبديل الأدوار") ?? 0;
           rec.pStaleCorrPct = extractNumberAfterLabel(fullText, "أثر متقادم") ?? 0;
           rec.pGuessPct = extractNumberAfterLabel(fullText, "تخمين صافي") ?? 0;
-          rec.redAccPct = extractNumberAfterLabel(fullText, "بوابة التحديث الحمراء") ?? 85;
-          rec.blueAccPct = extractNumberAfterLabel(fullText, "وبوابة المقارنة الزرقاء") ?? 85;
+          rec.pTarget = rec.pTargetPct / 100;
+          rec.pSwapCorr = rec.pSwapCorrPct / 100;
+          rec.pStaleCorr = rec.pStaleCorrPct / 100;
+          rec.pGuess = rec.pGuessPct / 100;
+          var redM = fullText.match(/بوابة التحديث الحمراء\s*\*\*([+-]?\d+(?:\.\d+)?)%\*\*(?:\s*بزمن\s*\*\*(\d+)\s*ms\*\*)?/);
+          var blueM = fullText.match(/وبوابة المقارنة الزرقاء\s*\*\*([+-]?\d+(?:\.\d+)?)%\*\*(?:\s*بزمن\s*\*\*(\d+)\s*ms\*\*)?/);
+          rec.redAccPct = redM ? Number(redM[1]) : 85;
+          rec.redMeanRtMs = redM && redM[2] ? Number(redM[2]) : 1500;
+          rec.blueAccPct = blueM ? Number(blueM[1]) : 85;
+          rec.blueMeanRtMs = blueM && blueM[2] ? Number(blueM[2]) : 1500;
+          rec.gateAccPct = Math.round((rec.redAccPct + rec.blueAccPct) / 2);
+          rec.gateMeanRtMs = extractNumberAfterLabel(fullText, "ومعدل البوابة") ?? Math.round((rec.redMeanRtMs + rec.blueMeanRtMs) / 2);
         } else if (pe.probeKey === "d3_bays_analog") {
           var kM = fullText.match(/السعة الفعالة \*\*K=([+-]?\d+(?:\.\d+)?)\*\*/);
           rec.K = kM ? Number(kM[1]) : (pe.numericMetric || 0);
@@ -2018,8 +2311,21 @@
           rec.gammaPct = extractNumberAfterLabel(fullText, "التخمين") ?? 0;
           rec.sigmaDeg = extractNumberAfterLabel(fullText, "انحراف الدقة") ?? 15;
           rec.betaShortPct = extractNumberAfterLabel(fullText, "تبديل الفاصل القصير") ?? rec.betaPct;
+          rec.bays2016SwapPct = extractNumberAfterLabel(fullText, "مؤشر التبديل اللامعلمي") ?? rec.betaPct;
           rec.deltaGammaDelayPct = extractNumberAfterLabel(fullText, "تغير التخمين عبر التأخير") ?? 0;
           rec.cMAE = extractNumberAfterLabel(fullText, "متوسط الخطأ الزاوي") ?? 15;
+          var gPairM = fullText.match(/فقد القصير والطويل\s*\*\*([+-]?\d+(?:\.\d+)?)%\s*\/\s*([+-]?\d+(?:\.\d+)?)%\*\*/);
+          rec.gammaShortPct = gPairM ? Number(gPairM[1]) : rec.gammaPct;
+          rec.gammaLongPct = gPairM ? Number(gPairM[2]) : Math.max(0, rec.gammaPct + rec.deltaGammaDelayPct);
+          var sPairM = fullText.match(/انحراف القصير والطويل\s*\*\*([+-]?\d+(?:\.\d+)?)°\s*\/\s*([+-]?\d+(?:\.\d+)?)°\*\*/);
+          rec.sigmaShortDeg = sPairM ? Number(sPairM[1]) : rec.sigmaDeg;
+          rec.sigmaLongDeg = sPairM ? Number(sPairM[2]) : rec.sigmaDeg;
+          rec.alpha = rec.alphaPct / 100;
+          rec.beta = rec.betaPct / 100;
+          rec.gamma = rec.gammaPct / 100;
+          rec.betaShort = rec.betaShortPct / 100;
+          rec.bays2016SwapIdx = rec.bays2016SwapPct / 100;
+          rec.deltaGammaDelay = rec.deltaGammaDelayPct / 100;
         } else if (pe.probeKey === "d4_consolidation_soa") {
           var soaM = fullText.match(/عتبة التوطيد \*\*([^*]+)\*\*/);
           var soaRaw = soaM ? soaM[1] : "850 ms";
@@ -2030,38 +2336,89 @@
           rec.soa75ExceededCeiling = soaRaw.indexOf("فوق") !== -1 || soaRaw.indexOf("≥") !== -1;
           rec.aucConsPct = extractNumberAfterLabel(fullText, "مساحة التوطيد") ?? (pe.numericMetric || 0);
           rec.aucRawPct = extractNumberAfterLabel(fullText, "المتوسط الخام") ?? rec.aucConsPct;
-          rec.interruptAccPct = extractNumberAfterLabel(fullText, "القرار الرجعي") ?? 90;
+          var acc4M = fullText.match(/الدقة عبر الفواصل الأربع\s*\*\*(\d+)%\s*\/\s*(\d+)%\s*\/\s*(\d+)%\s*\/\s*(\d+)%\*\*/);
+          rec.acc350Pct = acc4M ? Number(acc4M[1]) : rec.aucRawPct;
+          rec.acc650Pct = acc4M ? Number(acc4M[2]) : rec.aucRawPct;
+          rec.acc1050Pct = acc4M ? Number(acc4M[3]) : rec.aucRawPct;
+          rec.acc1450Pct = acc4M ? Number(acc4M[4]) : rec.aucRawPct;
+          var swPairM = fullText.match(/التبديل السريع مقابل البطيء\s*\*\*(\d+)%\s*\/\s*(\d+)%\*\*/);
+          rec.fastSwapCorrPct = swPairM ? Number(swPairM[1]) : 0;
+          rec.slowSwapCorrPct = swPairM ? Number(swPairM[2]) : 0;
+          var intM = fullText.match(/القرار الرجعي\s*\*\*(\d+)%\*\*(?:\s*بزمن\s*\*\*(\d+)\s*ms\*\*)?/);
+          rec.interruptAccPct = intM ? Number(intM[1]) : 90;
+          rec.interruptMeanRtMs = intM && intM[2] ? Number(intM[2]) : 850;
         } else if (pe.probeKey === "d5_pvt5") {
           rec.meanReciprocalSpeed = extractNumberAfterLabel(fullText, "السرعة التبادلية") ?? (pe.numericMetric || 0);
           rec.medianRtMs = extractNumberAfterLabel(fullText, "الوسيط") ?? 280;
-          rec.lapses500Pct = extractNumberAfterLabel(fullText, "الهفوات الكبرى والصغرى") ?? 0;
+          var fastSlowM = fullText.match(/أسرع وأبطأ عشرة بالمئة\s*\*\*(\d+)\s*\/\s*(\d+)\s*ms\*\*/);
+          rec.fastest10RtMs = fastSlowM ? Number(fastSlowM[1]) : Math.max(150, rec.medianRtMs - 35);
+          rec.slowest10RtMs = fastSlowM ? Number(fastSlowM[2]) : rec.medianRtMs + 75;
+          var lapM = fullText.match(/الهفوات الكبرى والصغرى\s*\*\*([+-]?\d+(?:\.\d+)?)%\s*\/\s*([+-]?\d+(?:\.\d+)?)%\*\*/);
+          rec.lapses500Pct = lapM ? Number(lapM[1]) : (extractNumberAfterLabel(fullText, "الهفوات الكبرى والصغرى") ?? 0);
+          rec.lapses355Pct = lapM ? Number(lapM[2]) : rec.lapses500Pct;
           rec.falseStarts = extractNumberAfterLabel(fullText, "الاستباق") ?? 0;
-          var distM = fullText.match(/تفكيك التوزيع \*\*(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)\s*ms\*\*/);
+          var distM = fullText.match(/تفكيك التوزيع\s*\*\*(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)\s*ms\*\*/);
           rec.muMs = distM ? Number(distM[1]) : 250;
           rec.sigmaMs = distM ? Number(distM[2]) : 20;
           rec.tauMs = distM ? Number(distM[3]) : 35;
+          var isiTauM = fullText.match(/ذيل الفاصل البطيء والسريع والمبكر\s*\*\*(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)\s*ms\*\*/);
+          rec.slowIsiTauMs = isiTauM ? Number(isiTauM[1]) : rec.tauMs;
+          rec.fastIsiTauMs = isiTauM ? Number(isiTauM[2]) : rec.tauMs;
+          rec.earlySlowIsiTauMs = isiTauM ? Number(isiTauM[3]) : rec.slowIsiTauMs;
           rec.betaToTRecipPerMin = extractNumberAfterLabel(fullText, "ميل الاستدامة") ?? 0;
         }
 
         deepToMerge.push(rec);
+      } else if (pe.suiteKind === "surgical_v2" && pe.probeKey === "battery_v2") {
+        var pScores = {};
+        var pKeys = ["isolation", "updating", "gating", "binding", "vigilance", "control"];
+        for (var pkIdx = 0; pkIdx < pKeys.length; pkIdx += 1) {
+          var pkId = pKeys[pkIdx];
+          var codeEsc = V2_PROBE_META[pkId].code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          var scVal = extractNumberAfterLabel(fullText, codeEsc);
+          if (scVal !== null) pScores[pkId] = scVal;
+        }
+        v2BatteriesToMerge.push({
+          id: pe.runKey ? pe.runKey.replace(/^v2bat-/, "") : ("bat_" + pe.epochMs),
+          timestamp: pe.epochMs,
+          isoDate: pe.dayYmd,
+          localDateYmd: pe.dayYmd,
+          localTimeHm: pe.timeHm,
+          phase: pe.phaseId || "baseline",
+          dayCondition: condId,
+          alertness: extractNumberAfterLabel(fullText, "اليقظة") ?? 8,
+          sleepQuality: extractNumberAfterLabel(fullText, "النوم") ?? 6,
+          nasalPatency: extractNumberAfterLabel(fullText, "المجرى الهوائي") ?? 5,
+          notes: noteTxt,
+          probeScores: pScores
+        });
       } else if (pe.suiteKind === "surgical_v2" && pe.probeKey && pe.probeKey !== "battery_v2" && V2_PROBE_META[pe.probeKey]) {
         v2RecordsToMerge.push({
-          id: pe.runKey.replace(/^v2-/, ""),
+          id: pe.runKey ? pe.runKey.replace(/^v2-/, "") : ("rec_" + pe.probeKey + "_" + pe.epochMs),
           probeId: pe.probeKey,
           timestamp: pe.epochMs,
+          isoDate: pe.dayYmd,
+          localDateYmd: pe.dayYmd,
+          localTimeHm: pe.timeHm,
           score: Number.isFinite(pe.numericMetric) ? pe.numericMetric : 0,
           rtMeanMs: extractNumberAfterLabel(fullText, "متوسط زمن الاستجابة") ?? 0,
           phase: pe.phaseId || "baseline",
+          dayCondition: condId,
           alertness: extractNumberAfterLabel(fullText, "اليقظة") ?? 8,
           sleepQuality: extractNumberAfterLabel(fullText, "النوم") ?? 6,
-          nasalPatency: extractNumberAfterLabel(fullText, "المجرى الهوائي") ?? 5
+          nasalPatency: extractNumberAfterLabel(fullText, "المجرى الهوائي") ?? 5,
+          notes: noteTxt
         });
       } else if (pe.suiteKind === "falsify_v1" && FALSIFY_PROBE_META[pe.probeKey]) {
         var fRec = {
           expId: pe.probeKey,
           syncRunKey: pe.runKey,
           timestamp: pe.timestampIso,
-          phase: pe.phaseId || "baseline"
+          localDateYmd: pe.dayYmd,
+          localTimeHm: pe.timeHm,
+          phase: pe.phaseId || "baseline",
+          dayCondition: condId,
+          notes: noteTxt
         };
         if (pe.probeKey === "f1_crossmodal") {
           fRec.svPct = extractNumberAfterLabel(fullText, "مربعات مع حساب") ?? (pe.numericMetric || 0);
@@ -2084,6 +2441,23 @@
           fRec.nonSpatialRuleFlipCostMs = extractNumberAfterLabel(fullText, "عكس القاعدة غير المكاني") ?? 0;
         }
         falsifyToMerge.push(fRec);
+      } else if (pe.suiteKind === "daily_checkin" && pe.runKey && !existingChkIds[pe.runKey]) {
+        existingChkIds[pe.runKey] = true;
+        checkinsToMerge.push({
+          id: pe.runKey,
+          timestamp: pe.epochMs,
+          timestampIso: pe.timestampIso,
+          localDateYmd: pe.dayYmd,
+          localTimeHm: pe.timeHm,
+          phase: pe.phaseId || "baseline",
+          dayCondition: condId,
+          alertness: extractNumberAfterLabel(fullText, "اليقظة") ?? 8,
+          sleepQuality: extractNumberAfterLabel(fullText, "جودة النوم") ?? 6,
+          nasalPatency: extractNumberAfterLabel(fullText, "انفتاح المجرى الهوائي") ?? 5,
+          delayAversionEpisodes: extractNumberAfterLabel(fullText, "نوبات ضيق البطء") ?? 0,
+          sequenceLapses: extractNumberAfterLabel(fullText, "هفوات التسلسل اليومي") ?? 0,
+          notes: noteTxt
+        });
       }
     }
 
@@ -2105,8 +2479,11 @@
       if (dImport && dImport.ok) importedDeep = deepToMerge.length;
     }
 
-    if (v2RecordsToMerge.length > 0 && A && typeof A.importJSON === "function") {
-      var aImport = A.importJSON(JSON.stringify({ records: v2RecordsToMerge }));
+    if ((v2RecordsToMerge.length > 0 || v2BatteriesToMerge.length > 0) && A && typeof A.importJSON === "function") {
+      var aImport = A.importJSON(JSON.stringify({
+        records: v2RecordsToMerge,
+        batteryRuns: v2BatteriesToMerge
+      }));
       if (aImport && aImport.ok) importedV2 = Number(aImport.count || 0);
     }
 
@@ -2133,80 +2510,106 @@
       }
     }
 
+    if (checkinsToMerge.length > 0) {
+      var combinedChk = checkinsToMerge.concat(curChks).sort(function (a, b) {
+        return (parseEpochMs(b.timestamp) || 0) - (parseEpochMs(a.timestamp) || 0);
+      });
+      saveCheckins(combinedChk);
+      importedCheckins = checkinsToMerge.length;
+    }
+
     return {
-      importedTotal: importedDeep + importedV2 + importedFalsify,
+      importedTotal: importedDeep + importedV2 + importedFalsify + importedCheckins,
       importedDeep: importedDeep,
       importedV2: importedV2,
-      importedFalsify: importedFalsify
+      importedFalsify: importedFalsify,
+      importedCheckins: importedCheckins
     };
   }
 
-  async function pullFromRepo(configOverride) {
-    if (syncInFlightPromise) return syncInFlightPromise;
-    syncSettingsInputsIfPresent();
-    var candidate = configOverride ? normalizeConfig(Object.assign({}, loadConfig(), configOverride)) : loadConfig();
-    var check = validateConfig(candidate, true);
-    if (!check.ok) {
-      return {
-        ok: false,
-        needsToken: Boolean(check.needsToken),
-        isAuthError: Boolean(check.isAuthError),
-        message: check.error
-      };
-    }
-    var cfg = check.config;
-
-    var remote;
-    try {
-      remote = await fetchRemoteMarkdownFile(cfg);
-    } catch (_) {
-      return { ok: false, isNetworkError: true, message: "تعذر الاتصال بالإنترنت لاسترجاع السجل." };
+  async function pullFromRepo(configOverride, extraOpts) {
+    if (pullInFlightPromise) return pullInFlightPromise;
+    if (pushInFlightPromise) {
+      try { await pushInFlightPromise; } catch (_) {}
     }
 
-    if (!remote.ok) {
-      return { ok: false, isAuthError: Boolean(remote.isAuthError), message: remote.error };
-    }
-    if (!remote.exists || !remote.content.trim()) {
-      return { ok: true, status: "empty_remote", importedTotal: 0, message: "ملف السجل في الريبو فارغ حالياً ولا يحتوي على جلسات سابقة." };
-    }
-
-    var parsed = parseLongitudinalMarkdown(remote.content);
-    var recStats = reconstructLocalStatesFromParsed(parsed.allParsedEntries);
-
-    var nextFps = Object.assign({}, cfg.syncedFingerprints, parsed.existingRunKeys);
-    var localNow = collectAllLocalEntries();
-    for (var i = 0; i < localNow.length; i += 1) {
-      if (parsed.existingRunKeys[localNow[i].runKey]) {
-        nextFps[localNow[i].runKey] = true;
+    var opts = extraOpts || {};
+    pullInFlightPromise = (async function () {
+      if (opts.syncFromDataTab) {
+        syncDataTabInputsToConfig(false);
       }
+      var candidate = configOverride ? normalizeConfig(Object.assign({}, loadConfig(), configOverride)) : loadConfig();
+      var check = validateConfig(candidate, true);
+      if (!check.ok) {
+        return {
+          ok: false,
+          needsToken: Boolean(check.needsToken),
+          isAuthError: Boolean(check.isAuthError),
+          message: check.error
+        };
+      }
+      var cfg = check.config;
+
+      var remote;
+      try {
+        remote = await fetchRemoteMarkdownFile(cfg);
+      } catch (_) {
+        return { ok: false, isNetworkError: true, message: "تعذر الاتصال بالإنترنت لاسترجاع السجل." };
+      }
+
+      if (!remote.ok) {
+        return { ok: false, isAuthError: Boolean(remote.isAuthError), message: remote.error };
+      }
+      if (!remote.exists || !remote.content.trim()) {
+        return { ok: true, status: "empty_remote", importedTotal: 0, message: "ملف السجل في الريبو فارغ حالياً ولا يحتوي على جلسات سابقة." };
+      }
+
+      var parsed = parseLongitudinalMarkdown(remote.content);
+      var recStats = reconstructLocalStatesFromParsed(parsed.allParsedEntries);
+
+      var nextFps = Object.assign({}, cfg.syncedFingerprints, parsed.existingRunKeys);
+      var localNow = collectAllLocalEntries();
+      for (var i = 0; i < localNow.length; i += 1) {
+        if (parsed.existingRunKeys[localNow[i].runKey]) {
+          nextFps[localNow[i].runKey] = true;
+        }
+      }
+
+      saveConfig({
+        owner: cfg.owner,
+        repo: cfg.repo,
+        branch: cfg.branch,
+        filePath: cfg.filePath,
+        rememberToken: cfg.rememberToken,
+        dayCondition: cfg.dayCondition,
+        token: cfg.token,
+        syncedFingerprints: nextFps
+      });
+
+      if (typeof uiHooks.onRefreshViews === "function") {
+        try { uiHooks.onRefreshViews(); } catch (_) {}
+      }
+      refreshUi();
+
+      var dayCount = Object.keys(parsed.dayMap).length;
+      return {
+        ok: true,
+        status: "pulled",
+        totalDays: dayCount,
+        totalRemoteRuns: parsed.allParsedEntries.length,
+        importedTotal: recStats.importedTotal,
+        message:
+          recStats.importedTotal > 0
+            ? "تم استرجاع ودمج " + recStats.importedTotal + " قياس جديد من الريبو عبر " + dayCount + " أيام ✓"
+            : "السجل المحلي متطابق بالفعل مع الريبو (" + parsed.allParsedEntries.length + " قياس عبر " + dayCount + " أيام) ✓"
+      };
+    })();
+
+    try {
+      return await pullInFlightPromise;
+    } finally {
+      pullInFlightPromise = null;
     }
-
-    saveConfig({
-      owner: cfg.owner,
-      repo: cfg.repo,
-      branch: cfg.branch,
-      filePath: cfg.filePath,
-      token: cfg.token,
-      syncedFingerprints: nextFps
-    });
-
-    if (typeof uiHooks.onRefreshViews === "function") {
-      try { uiHooks.onRefreshViews(); } catch (_) {}
-    }
-    refreshUi();
-
-    var dayCount = Object.keys(parsed.dayMap).length;
-    return {
-      ok: true,
-      status: "pulled",
-      totalDays: dayCount,
-      totalRemoteRuns: parsed.allParsedEntries.length,
-      importedTotal: recStats.importedTotal,
-      message:
-        recStats.importedTotal > 0
-          ? "تم استرجاع ودمج " + recStats.importedTotal + " قياس جديد من الريبو عبر " + dayCount + " أيام ✓"
-          : "السجل المحلي متطابق بالفعل مع الريبو (" + parsed.allParsedEntries.length + " قياس عبر " + dayCount + " أيام) ✓"
-    };
   }
 
   /* ================= 8. CROSS-DAY UI RENDERING & BUTTON ORCHESTRATION ================= */
@@ -2230,6 +2633,191 @@
     if (typeof document === "undefined") return false;
     var modal = document.getElementById("repoSyncModal");
     return Boolean(modal && !modal.hidden);
+  }
+
+  function shouldIgnoreArenaKey(ev) {
+    if (isModalOpen()) return true;
+    if (!ev || !ev.target) return false;
+    var el = ev.target;
+    if (el.closest && el.closest("#repoSyncModal, [data-repo-context-bar]")) {
+      return true;
+    }
+    var tag = String(el.tagName || "").toUpperCase();
+    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") {
+      return true;
+    }
+    return false;
+  }
+
+  function renderArenaContextBarHtml() {
+    var cfg = loadConfig();
+    var stats = getSyncStats();
+    var latestUnsynced = stats.unsyncedEntries.length > 0
+      ? stats.unsyncedEntries[stats.unsyncedEntries.length - 1]
+      : null;
+    var activeCond = (latestUnsynced && latestUnsynced.conditionId) || cfg.dayCondition || "normal";
+    var activeNote = (latestUnsynced && latestUnsynced.noteText) || getActiveSessionNotes() || "";
+    var optsHtml = DAY_CONDITIONS.map(function (c) {
+      return '<option value="' + escapeHtml(c.id) + '"' + (c.id === activeCond ? " selected" : "") + ">" + escapeHtml(c.label) + "</option>";
+    }).join("");
+
+    return (
+      '<div class="arena-repo-context-bar" data-repo-context-bar>' +
+      '<label class="arena-repo-ctx-field">' +
+      '<span>حالة الجلسة:</span>' +
+      '<select class="phase-select js-day-condition-select js-arena-condition-select" aria-label="حالة اليوم للجلسة الحالية">' +
+      optsHtml +
+      '</select>' +
+      '</label>' +
+      '<input type="text" class="arena-repo-note-input js-arena-note-input" maxlength="160" ' +
+      'placeholder="ملاحظة سياقية سريعة قبل الحفظ (اختياري)..." value="' + escapeHtml(activeNote) + '" aria-label="ملاحظة مرافقة للجلسة" />' +
+      '</div>'
+    );
+  }
+
+  function applyContextToRecentUnsyncedRuns(opts) {
+    var o = opts || {};
+    var stats = getSyncStats();
+    if (!stats.unsyncedEntries || stats.unsyncedEntries.length === 0) return 0;
+
+    var latest = stats.unsyncedEntries[stats.unsyncedEntries.length - 1];
+    var windowMs = 90 * 60 * 1000;
+    var targetRunKeys = {};
+    for (var i = 0; i < stats.unsyncedEntries.length; i += 1) {
+      var u = stats.unsyncedEntries[i];
+      if (u.dayYmd === latest.dayYmd && Math.abs((latest.epochMs || 0) - (u.epochMs || 0)) <= windowMs) {
+        targetRunKeys[u.runKey] = true;
+      }
+    }
+
+    var cleanCond = o.dayCondition ? String(o.dayCondition).trim() : "";
+    var cleanNote = o.noteText != null ? sanitizeVaultText(o.noteText, true) : "";
+    var snap = getActiveClinicalSnapshot();
+    var updatedCount = 0;
+
+    // 1. DeepCore unsynced sitting entries
+    var DC = root.NeuroLab && root.NeuroLab.DeepCore;
+    if (DC && typeof DC.loadState === "function" && typeof DC.saveState === "function") {
+      try {
+        var dst = DC.loadState();
+        var deepChanged = false;
+        var patchDeepObj = function (rec) {
+          if (!rec || typeof rec !== "object") return;
+          var norm = normalizeDeepEntry(rec, snap);
+          if (!norm || !targetRunKeys[norm.runKey]) return;
+          if (cleanCond && (o.forceCondition || !rec.dayCondition || rec.dayCondition === "normal")) {
+            rec.dayCondition = cleanCond;
+            deepChanged = true;
+          }
+          if (o.forceNote) {
+            rec.notes = cleanNote;
+            deepChanged = true;
+          } else if (cleanNote && !rec.notes) {
+            rec.notes = cleanNote;
+            deepChanged = true;
+          }
+        };
+        if (Array.isArray(dst.history)) {
+          for (var dh = 0; dh < dst.history.length; dh += 1) patchDeepObj(dst.history[dh]);
+        }
+        if (dst.results && typeof dst.results === "object") {
+          Object.keys(dst.results).forEach(function (k) { patchDeepObj(dst.results[k]); });
+        }
+        if (dst.baselineResults && typeof dst.baselineResults === "object") {
+          Object.keys(dst.baselineResults).forEach(function (k) { patchDeepObj(dst.baselineResults[k]); });
+        }
+        if (deepChanged) {
+          DC.saveState(dst);
+          updatedCount += 1;
+        }
+      } catch (_) {}
+    }
+
+    // 2. Analytics V2 unsynced sitting records & batteryRuns
+    var A = (root.NeuroLab && root.NeuroLab.Analytics) || root.Analytics || null;
+    if (A && typeof A.loadState === "function" && typeof A.saveState === "function") {
+      try {
+        var ast = A.loadState();
+        var aChanged = false;
+        if (Array.isArray(ast.records)) {
+          for (var ar = 0; ar < ast.records.length; ar += 1) {
+            var rItem = ast.records[ar];
+            var nV2 = normalizeV2Record(rItem, snap);
+            if (!nV2 || !targetRunKeys[nV2.runKey]) continue;
+            if (cleanCond && (o.forceCondition || !rItem.dayCondition || rItem.dayCondition === "normal")) {
+              rItem.dayCondition = cleanCond;
+              aChanged = true;
+            }
+            if (o.forceNote) {
+              rItem.notes = cleanNote;
+              aChanged = true;
+            } else if (cleanNote && !rItem.notes) {
+              rItem.notes = cleanNote;
+              aChanged = true;
+            }
+          }
+        }
+        if (Array.isArray(ast.batteryRuns)) {
+          for (var ab = 0; ab < ast.batteryRuns.length; ab += 1) {
+            var bItem = ast.batteryRuns[ab];
+            var nBat = normalizeV2BatteryRun(bItem, snap);
+            if (!nBat || !targetRunKeys[nBat.runKey]) continue;
+            if (cleanCond && (o.forceCondition || !bItem.dayCondition || bItem.dayCondition === "normal")) {
+              bItem.dayCondition = cleanCond;
+              aChanged = true;
+            }
+            if (o.forceNote) {
+              bItem.notes = cleanNote;
+              aChanged = true;
+            } else if (cleanNote && !bItem.notes) {
+              bItem.notes = cleanNote;
+              aChanged = true;
+            }
+          }
+        }
+        if (aChanged) {
+          A.saveState(ast);
+          updatedCount += 1;
+        }
+      } catch (_) {}
+    }
+
+    // 3. FalsifyCore unsynced sitting entries
+    var FC = root.NeuroLab && root.NeuroLab.FalsifyCore;
+    if (FC && typeof FC.loadState === "function" && typeof FC.saveState === "function") {
+      try {
+        var fst = FC.loadState();
+        var fChanged = false;
+        var patchFalsifyObj = function (rec) {
+          if (!rec || typeof rec !== "object") return;
+          var normF = normalizeFalsifyEntry(rec, snap);
+          if (!normF || !targetRunKeys[normF.runKey]) return;
+          if (cleanCond && (o.forceCondition || !rec.dayCondition || rec.dayCondition === "normal")) {
+            rec.dayCondition = cleanCond;
+            fChanged = true;
+          }
+          if (o.forceNote) {
+            rec.notes = cleanNote;
+            fChanged = true;
+          } else if (cleanNote && !rec.notes) {
+            rec.notes = cleanNote;
+            fChanged = true;
+          }
+        };
+        if (Array.isArray(fst.history)) {
+          for (var fh = 0; fh < fst.history.length; fh += 1) patchFalsifyObj(fst.history[fh]);
+        }
+        if (fst.results && typeof fst.results === "object") {
+          Object.keys(fst.results).forEach(function (k) { patchFalsifyObj(fst.results[k]); });
+        }
+        if (fChanged) {
+          FC.saveState(fst);
+          updatedCount += 1;
+        }
+      } catch (_) {}
+    }
+
+    return updatedCount;
   }
 
   function buildDayGroupsForUi() {
@@ -2413,7 +3001,7 @@
     }
   }
 
-  function syncSettingsInputsIfPresent() {
+  function syncDataTabInputsToConfig(allowEmptyTokenOverwrite) {
     if (typeof document === "undefined") return;
     var ownerEl = document.getElementById("repoOwnerInput");
     var repoEl = document.getElementById("repoNameInput");
@@ -2430,7 +3018,12 @@
     if (branchEl && branchEl.value.trim()) { patch.branch = branchEl.value; touched = true; }
     if (pathEl && pathEl.value.trim()) { patch.filePath = pathEl.value; touched = true; }
     if (remEl) { patch.rememberToken = Boolean(remEl.checked); touched = true; }
-    if (tokenEl && tokenEl.value.trim()) { patch.token = tokenEl.value; touched = true; }
+    if (tokenEl) {
+      if (allowEmptyTokenOverwrite || tokenEl.value.trim()) {
+        patch.token = tokenEl.value;
+        touched = true;
+      }
+    }
     if (condEl && condEl.value) { patch.dayCondition = condEl.value; touched = true; }
 
     if (touched) {
@@ -2465,7 +3058,7 @@
           return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.label) + "</option>";
         }).join("");
       }
-      if (sel.value !== cfg.dayCondition) {
+      if (!sel.classList.contains("js-arena-condition-select") && sel.value !== cfg.dayCondition) {
         sel.value = cfg.dayCondition;
       }
     }
@@ -2489,14 +3082,14 @@
     var stats = getSyncStats();
 
     var topBtn = document.getElementById("topRepoSaveBtn");
-    if (topBtn && !syncInFlightPromise) {
+    if (topBtn && !pushInFlightPromise) {
       updateTopbarButtonDom(topBtn, stats);
     }
 
     var allSaveBtns = document.querySelectorAll("[data-repo-save-btn]");
     for (var i = 0; i < allSaveBtns.length; i += 1) {
       var b = allSaveBtns[i];
-      if (b.id === "topRepoSaveBtn" || syncInFlightPromise) continue;
+      if (b.id === "topRepoSaveBtn" || pushInFlightPromise) continue;
       b.classList.toggle("is-synced", stats.totalLocal > 0 && stats.unsyncedCount === 0);
       b.innerHTML = renderSaveButtonInnerHtml(stats);
     }
@@ -2524,6 +3117,13 @@
     if (!modal) return;
 
     var cfg = loadConfig();
+    var stats = getSyncStats();
+    var latestUnsynced = stats.unsyncedEntries.length > 0
+      ? stats.unsyncedEntries[stats.unsyncedEntries.length - 1]
+      : null;
+    var initialCond = (latestUnsynced && latestUnsynced.conditionId) || cfg.dayCondition || "normal";
+    modalInitialCondition = initialCond;
+
     var mOwner = document.getElementById("modalRepoOwner");
     var mRepo = document.getElementById("modalRepoName");
     var mBranch = document.getElementById("modalRepoBranch");
@@ -2542,11 +3142,11 @@
     if (mRem) mRem.checked = cfg.rememberToken !== false;
     if (mCond) {
       mCond.innerHTML = DAY_CONDITIONS.map(function (c) {
-        return '<option value="' + escapeHtml(c.id) + '"' + (c.id === cfg.dayCondition ? " selected" : "") + ">" + escapeHtml(c.label) + "</option>";
+        return '<option value="' + escapeHtml(c.id) + '"' + (c.id === initialCond ? " selected" : "") + ">" + escapeHtml(c.label) + "</option>";
       }).join("");
     }
     if (mNote) {
-      mNote.value = getActiveSessionNotes();
+      mNote.value = (latestUnsynced && latestUnsynced.noteText) || getActiveSessionNotes();
     }
     if (mFeedback) {
       mFeedback.hidden = true;
@@ -2568,8 +3168,15 @@
     pendingTriggerButton = null;
   }
 
+  function isButtonInsideDataTab(btnEl) {
+    if (!btnEl || !btnEl.closest) return false;
+    return Boolean(btnEl.closest("#view-data"));
+  }
+
   async function handleSaveButtonTrigger(btnEl, extraOpts) {
-    syncSettingsInputsIfPresent();
+    if (isButtonInsideDataTab(btnEl)) {
+      syncDataTabInputsToConfig(false);
+    }
     var cfg = loadConfig();
     var stats = getSyncStats();
 
@@ -2631,7 +3238,9 @@
       var pullBtn = ev.target && ev.target.closest ? ev.target.closest("[data-repo-pull-btn]") : null;
       if (pullBtn) {
         ev.preventDefault();
-        syncSettingsInputsIfPresent();
+        if (isButtonInsideDataTab(pullBtn)) {
+          syncDataTabInputsToConfig(false);
+        }
         var curCfg = loadConfig();
         if (!curCfg.token) {
           openSetupModal({ saveAfterConfig: false, pullAfterConfig: true, triggerBtn: pullBtn });
@@ -2660,14 +3269,39 @@
       if (!target) return;
       if (target.classList && target.classList.contains("js-day-condition-select")) {
         saveConfig({ dayCondition: target.value });
+        if (target.classList.contains("js-arena-condition-select")) {
+          applyContextToRecentUnsyncedRuns({
+            dayCondition: target.value,
+            forceCondition: true
+          });
+        }
         refreshUi();
+      }
+    });
+
+    document.addEventListener("input", function (ev) {
+      var target = ev.target;
+      if (!target || !target.classList) return;
+      if (target.classList.contains("js-arena-note-input")) {
+        var val = target.value;
+        var mainNoteInp = document.getElementById("sessionNotesInput");
+        if (mainNoteInp) mainNoteInp.value = val;
+        try {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(NOTES_STORAGE_KEY, val.trim());
+          }
+        } catch (_) {}
+        applyContextToRecentUnsyncedRuns({
+          noteText: val,
+          forceNote: true
+        });
       }
     });
 
     var testBtn = document.getElementById("btnRepoTestConn");
     if (testBtn) {
       testBtn.addEventListener("click", async function () {
-        syncSettingsInputsIfPresent();
+        syncDataTabInputsToConfig(false);
         testBtn.disabled = true;
         var origTxt = testBtn.textContent;
         testBtn.textContent = "جارٍ الاختبار...";
@@ -2682,7 +3316,7 @@
     var saveCfgBtn = document.getElementById("btnRepoSaveConfig");
     if (saveCfgBtn) {
       saveCfgBtn.addEventListener("click", function () {
-        syncSettingsInputsIfPresent();
+        syncDataTabInputsToConfig(true);
         refreshUi();
         notifyToast("تم حفظ إعدادات مستودع GitHub على هذا الجهاز.");
       });
@@ -2732,7 +3366,6 @@
     }
 
     var modalCloseBtn = document.getElementById("btnCloseRepoModal");
-    var modalBackdrop = document.getElementById("repoSyncModal");
     if (modalCloseBtn) {
       modalCloseBtn.addEventListener("click", closeSetupModal);
     }
@@ -2774,6 +3407,10 @@
         var mFeedback = document.getElementById("modalRepoFeedback");
         var submitBtn = document.getElementById("btnModalSaveAndPush");
 
+        var chosenCond = mCond ? mCond.value : "normal";
+        var condExplicitlyChanged = chosenCond !== modalInitialCondition;
+        var chosenNote = mNote ? mNote.value.trim() : "";
+
         var nextCfg = saveConfig({
           owner: mOwner ? mOwner.value : DEFAULT_CONFIG.owner,
           repo: mRepo ? mRepo.value : DEFAULT_CONFIG.repo,
@@ -2781,7 +3418,7 @@
           filePath: mPath ? mPath.value : DEFAULT_CONFIG.filePath,
           token: mToken ? mToken.value : "",
           rememberToken: mRem ? mRem.checked : true,
-          dayCondition: mCond ? mCond.value : "normal"
+          dayCondition: chosenCond
         });
 
         if (mNote) {
@@ -2789,9 +3426,22 @@
           if (mainNoteInp) mainNoteInp.value = mNote.value;
           try {
             if (typeof localStorage !== "undefined") {
-              localStorage.setItem(NOTES_STORAGE_KEY, mNote.value.trim());
+              localStorage.setItem(NOTES_STORAGE_KEY, chosenNote);
             }
           } catch (_) {}
+        }
+
+        // Sync Data tab DOM immediately so it never holds stale settings
+        hydrateSettingsCardDom();
+
+        // Apply modal condition/note to the most recent unsynced session runs before pushing
+        if (pendingSaveAfterModal) {
+          applyContextToRecentUnsyncedRuns({
+            dayCondition: chosenCond,
+            forceCondition: condExplicitlyChanged,
+            noteText: chosenNote,
+            forceNote: Boolean(chosenNote)
+          });
         }
 
         var vCheck = validateConfig(nextCfg, true);
@@ -2827,7 +3477,7 @@
           notifyToast(pullRes.message);
           refreshUi();
         } else if (pendingSaveAfterModal && stats.totalLocal > 0) {
-          var pushRes = await pushToRepo();
+          var pushRes = await pushToRepo({ config: nextCfg });
           if (submitBtn) submitBtn.disabled = false;
           if (!pushRes.ok) {
             if (mFeedback) {
@@ -2839,6 +3489,9 @@
           }
           closeSetupModal();
           notifyToast(pushRes.message);
+          if (typeof uiHooks.onRefreshViews === "function") {
+            try { uiHooks.onRefreshViews(); } catch (_) {}
+          }
           refreshUi();
         } else {
           var connRes = await testConnection(nextCfg);
@@ -2882,7 +3535,9 @@
     utf8ToBase64: utf8ToBase64,
     base64ToUtf8: base64ToUtf8,
     getConditionLabel: getConditionLabel,
+    getConditionIdFromLabel: getConditionIdFromLabel,
     getActiveClinicalSnapshot: getActiveClinicalSnapshot,
+    applyContextToRecentUnsyncedRuns: applyContextToRecentUnsyncedRuns,
     recordDailyCheckin: recordDailyCheckin,
     clearLocalCheckins: clearLocalCheckins,
     collectAllLocalEntries: collectAllLocalEntries,
@@ -2897,6 +3552,8 @@
     openSetupModal: openSetupModal,
     closeSetupModal: closeSetupModal,
     isModalOpen: isModalOpen,
+    shouldIgnoreArenaKey: shouldIgnoreArenaKey,
+    renderArenaContextBarHtml: renderArenaContextBarHtml,
     renderSaveButtonInnerHtml: renderSaveButtonInnerHtml,
     renderCrossDayCardHtml: renderCrossDayCardHtml,
     refreshUi: refreshUi,

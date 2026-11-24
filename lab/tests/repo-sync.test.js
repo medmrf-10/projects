@@ -458,13 +458,20 @@ test("6. Multi-day longitudinal saving (404 create -> Day 1 -> Day 2 -> Day 3), 
   const pullRes1 = await RS3.pullFromRepo();
   assert.equal(pullRes1.ok, true);
   assert.equal(pullRes1.totalDays, 3);
-  assert.equal(pullRes1.importedTotal, 8); // 6 Deep + 1 V2 + 1 Falsify
+  assert.equal(pullRes1.importedTotal, 9); // 6 Deep + 1 V2 + 1 Falsify + 1 Daily Check-in
 
   const restoredDeep = envDevice3.NeuroLab.DeepCore.loadState();
   assert.equal(restoredDeep.results.d2_refback_m3.pTargetPct, 63); // Latest Day 2 score!
   assert.equal(restoredDeep.baselineResults.d2_refback_m3.pTargetPct, 50); // Anchor T0 Day 1 score!
   assert.equal(restoredDeep.results.d3_bays_analog.K, 3.18);
+  assert.equal(restoredDeep.results.d3_bays_analog.dayCondition, "post_exercise");
   assert.equal(restoredDeep.history.length, 6);
+
+  // Verify zero "undefined"/"NaN" in DeepCore verdicts and active RCI 90% followup after pullFromRepo!
+  const restoredVerdict = envDevice3.NeuroLab.DeepCore.computeDeepVerdictSummary();
+  assert.equal(/undefined|NaN/.test(restoredVerdict.plainTextReport), false, "Verdict had undefined/NaN: " + restoredVerdict.plainTextReport);
+  const d5MeanRci = restoredVerdict.rciItems.find((x) => x.key === "d5_mean_recip");
+  assert.equal(Boolean(d5MeanRci && d5MeanRci.hasFollowup), true, "RCI 90% followup did not activate after multi-day pull!");
 
   // Pulling a second time must import 0 duplicates!
   const pullRes2 = await RS3.pullFromRepo();
@@ -541,4 +548,181 @@ test("7. Automatic 409 SHA conflict retry, >1MB git blob fallback, read-only PAT
   assert.equal(r2.ok, true);
   assert.equal(r1.commitSha, "resolved_after_409_sha");
   assert.equal(putAttempts, 3); // 2 conflicts + 1 success (NOT 6 from duplicate parallel loops!)
+});
+
+test("8. Chronological merge safety: pulling older remote runs onto a device with a newer local run preserves Latest and T0", async () => {
+  const devOld = createLabSandbox();
+  devOld.NeuroLab.RepoSync.saveConfig({ token: VALID_PAT });
+  devOld.NeuroLab.DeepCore.saveExperimentResult("d1_tbrs", {
+    timestamp: "2026-11-23T08:00:00.000Z",
+    localDateYmd: "2026-11-23",
+    localTimeHm: "09:00",
+    formId: "A",
+    phase: "baseline",
+    dayCondition: "normal",
+    calibratedScorePct: 70,
+    pTargetHighPct: 70,
+    pTargetLowPct: 85,
+    deltaTbrs: 0.55
+  });
+  devOld.NeuroLab.DeepCore.saveExperimentResult("d1_tbrs", {
+    timestamp: "2026-11-25T08:00:00.000Z",
+    localDateYmd: "2026-11-25",
+    localTimeHm: "09:00",
+    formId: "B",
+    phase: "metabolic",
+    dayCondition: "rested",
+    calibratedScorePct: 80,
+    pTargetHighPct: 80,
+    pTargetLowPct: 90,
+    deltaTbrs: 0.4
+  });
+  devOld.NeuroLab.Analytics.finalizeBatteryRun(
+    "bat_full_nov25",
+    { isolation: 50, updating: 45, gating: 100, binding: 83, vigilance: 88, control: 96 },
+    { timestamp: Date.parse("2026-11-25T08:30:00Z"), phase: "metabolic", dayCondition: "rested", notes: "بطارية كاملة" }
+  );
+
+  let remoteMd = "";
+  devOld.NeuroLab.RepoSync.setTransportForTest(async (req) => {
+    if (req.method === "GET") return { status: 404, body: "{}" };
+    remoteMd = devOld.NeuroLab.RepoSync.base64ToUtf8(JSON.parse(req.body).content);
+    return { status: 201, body: JSON.stringify({ commit: { sha: "sha_old" } }) };
+  });
+  await devOld.NeuroLab.RepoSync.pushToRepo();
+
+  // New device records a NEWER run on 2026-11-29 BEFORE pulling remote history!
+  const devNew = createLabSandbox();
+  devNew.NeuroLab.RepoSync.saveConfig({ token: VALID_PAT });
+  devNew.NeuroLab.DeepCore.saveExperimentResult("d1_tbrs", {
+    timestamp: "2026-11-29T08:00:00.000Z",
+    localDateYmd: "2026-11-29",
+    localTimeHm: "09:00",
+    formId: "C",
+    phase: "med_stable",
+    dayCondition: "treatment_followup",
+    calibratedScorePct: 92,
+    pTargetHighPct: 92,
+    pTargetLowPct: 96,
+    deltaTbrs: 0.16
+  });
+
+  devNew.NeuroLab.RepoSync.setTransportForTest(async () => ({
+    status: 200,
+    body: JSON.stringify({ type: "file", sha: "s1", size: remoteMd.length, content: devNew.NeuroLab.RepoSync.utf8ToBase64(remoteMd) })
+  }));
+  await devNew.NeuroLab.RepoSync.pullFromRepo();
+
+  const st = devNew.NeuroLab.DeepCore.loadState();
+  assert.equal(st.results.d1_tbrs.pTargetHighPct, 92, "Latest 2026-11-29 run must NOT be overwritten by older remote run!");
+  assert.equal(st.baselineResults.d1_tbrs.pTargetHighPct, 70, "T0 baseline must adopt earliest 2026-11-23 run!");
+  assert.equal(st.history.length, 3);
+  assert.equal(devNew.NeuroLab.Analytics.loadState().batteryRuns.length, 1, "Full V2 batteryRun must be restored on pullFromRepo!");
+  assert.equal(devNew.NeuroLab.Analytics.loadState().batteryRuns[0].dayCondition, "rested");
+});
+
+test("9. Multi-day Analytics V2 probes preserve per-day dayCondition and midnight timezone localDateYmd", async () => {
+  const env = createLabSandbox();
+  const RS = env.NeuroLab.RepoSync;
+  const A = env.NeuroLab.Analytics;
+  RS.saveConfig({ token: VALID_PAT, dayCondition: "sleep_inertia" });
+
+  // Day 1 V2 probe recorded under sleep_inertia around midnight boundary (23:30 UTC -> 2026-11-25 00:30 UTC+1)
+  A.recordProbeResult({
+    id: "rec_p2_midnight",
+    timestamp: Date.parse("2026-11-24T23:30:00.000Z"),
+    localDateYmd: "2026-11-25",
+    localTimeHm: "00:30",
+    probeId: "updating",
+    score: 35,
+    phase: "sleep_inertia",
+    dayCondition: "sleep_inertia"
+  });
+
+  // Next day user changes global dayCondition to post_exercise and records P5
+  RS.saveConfig({ dayCondition: "post_exercise" });
+  A.recordProbeResult({
+    id: "rec_p5_nextday",
+    timestamp: Date.parse("2026-11-26T16:00:00.000Z"),
+    localDateYmd: "2026-11-26",
+    localTimeHm: "17:00",
+    probeId: "vigilance",
+    score: 88,
+    phase: "metabolic",
+    dayCondition: "post_exercise"
+  });
+
+  const entries = RS.collectAllLocalEntries();
+  assert.equal(entries.length, 2);
+  assert.equal(entries[0].dayYmd, "2026-11-25");
+  assert.equal(entries[0].timeHm, "00:30");
+  assert.equal(entries[0].conditionId, "sleep_inertia");
+  assert.equal(entries[1].dayYmd, "2026-11-26");
+  assert.equal(entries[1].conditionId, "post_exercise");
+
+  const merged = RS.mergeEntriesIntoMarkdown("", entries, Date.parse("2026-11-26T17:05:00Z"));
+  assert.equal(merged.validation.ok, true);
+  assert.match(merged.updatedDocument, /## سجل يوم \*\*2026-11-25\*\*[\s\S]*الساعة \*\*00:30\*\*[\s\S]*الحالة اليومية \*\*جمود استيقاظ صباحي\*\*/);
+  assert.match(merged.updatedDocument, /## سجل يوم \*\*2026-11-26\*\*[\s\S]*الساعة \*\*17:00\*\*[\s\S]*الحالة اليومية \*\*بعد مشي أو رياضة\*\*/);
+});
+
+test("10. Hand-edited Obsidian Markdown: nested space-indented grandchildren, manual day notes, and ### subheadings", () => {
+  const env = createLabSandbox();
+  const RS = env.NeuroLab.RepoSync;
+
+  const handEdited =
+    "# السجل الطولي للبطارية النفس-فيزيائية (**LabLongitudinalLog**)\n\n" +
+    "## منهجية التدوين والمزامنة عبر الأيام\n" +
+    "1. يوثق هذا السجل نتائج الفحوص.\n\n" +
+    "## سجل يوم **2026-11-24**\n" +
+    "1. ملاحظة صباحية يدوية أضافها محمد في أوبسيديان:\n" +
+    "    1. شعور بنعاس صباحي خفيف:\n" +
+    "        1. استمر عشرين دقيقة بعد الاستيقاظ.\n" +
+    "        2. تحسن تدريجياً بعد شرب الماء.\n\n" +
+    "## ملاحظات المراجعة السريرية\n" +
+    "### أسئلة فحص النوم\n" +
+    "1. هل يلزم تخطيط نوم ليلي كامل؟\n\n" +
+    "### ملاحظات المكملات\n" +
+    "1. متابعة الاستجابة بعد أسبوعين.\n";
+
+  const incoming = [{
+    runKey: "v3-d5-morn",
+    suiteKind: "deep_v3",
+    suiteLabelAr: "النسخة العميقة",
+    probeKey: "d5_pvt5",
+    probeCode: "D5 · PVT-5",
+    probeTitleAr: "اليقظة المستدامة خمس دقائق",
+    epochMs: Date.parse("2026-11-24T06:30:00Z"),
+    timestampIso: "2026-11-24T06:30:00.000Z",
+    dayYmd: "2026-11-24",
+    timeHm: "07:30",
+    phaseId: "sleep_inertia",
+    phaseLabel: "جمود الاستيقاظ الصباحي",
+    conditionId: "sleep_inertia",
+    conditionLabel: "جمود استيقاظ صباحي",
+    formId: "A",
+    headlineVal: "3.15 s⁻¹",
+    numericMetric: 3.15,
+    metricUnit: " s⁻¹",
+    metricPrefix: "",
+    higherIsBetter: true,
+    contextLine: "السياق اليومي: المرحلة **جمود الاستيقاظ الصباحي** بمعرف **sleep_inertia**، الحالة اليومية **جمود استيقاظ صباحي**.",
+    mainMetricsLine: "المؤشرات الرئيسية: السرعة التبادلية **3.15 s⁻¹**.",
+    subMetricsLine: "",
+    noteText: ""
+  }];
+
+  const merged = RS.mergeEntriesIntoMarkdown(handEdited, incoming, Date.parse("2026-11-24T06:35:00Z"));
+  assert.equal(merged.validation.ok, true, "Validation errors: " + merged.validation.errors.join("; "));
+  assert.equal(merged.totalRuns, 1, "Manual day note must not inflate scored measurement count!");
+  assert.match(merged.updatedDocument, /ضمن مرحلة \*\*جمود الاستيقاظ الصباحي\*\* وحالة \*\*جمود استيقاظ صباحي\*\*/);
+  assert.match(merged.updatedDocument, /\t1\. شعور بنعاس صباحي خفيف:\n\t\t1\. استمر عشرين دقيقة بعد الاستيقاظ\.\n\t\t2\. تحسن تدريجياً بعد شرب الماء\./);
+  assert.match(merged.updatedDocument, /### أسئلة فحص النوم\n1\. هل يلزم/);
+  assert.match(merged.updatedDocument, /### ملاحظات المكملات\n1\. متابعة/);
+
+  // Direct validator negative checks: catch bad child numbering & English-start RTL violations
+  const badDepth = "# عنوان عربي\n\n## قسم تجريبي\n1. عنصر أول:\n\t1. فرع أول.\n\t1. فرع مكرر بالخطأ.\n";
+  assert.equal(RS.validateObsidianMarkdown(badDepth).ok, false);
+  const badRtl = "# عنوان عربي\n\n## قسم تجريبي\n1. English start breaks RTL.\n";
+  assert.equal(RS.validateObsidianMarkdown(badRtl).ok, false);
 });

@@ -566,10 +566,17 @@
     var st = loadState();
     var RS = (root.NeuroLab && root.NeuroLab.RepoSync) || root.RepoSync || null;
     var snap = RS && typeof RS.getActiveClinicalSnapshot === "function" ? RS.getActiveClinicalSnapshot() : null;
+    var refDate = payload && payload.timestamp ? new Date(payload.timestamp) : new Date();
+    if (Number.isNaN(refDate.getTime())) refDate = new Date();
+    var pad = function (x) { return x < 10 ? "0" + x : String(x); };
+    var localYmd = toAsciiDigits(refDate.getFullYear() + "-" + pad(refDate.getMonth() + 1) + "-" + pad(refDate.getDate()));
+    var localHm = toAsciiDigits(pad(refDate.getHours()) + ":" + pad(refDate.getMinutes()));
     var entry = Object.assign(
       {
         expId: expId,
-        timestamp: new Date().toISOString(),
+        timestamp: refDate.toISOString(),
+        localDateYmd: localYmd,
+        localTimeHm: localHm,
         phase: snap ? snap.phase : "baseline",
         dayCondition: snap ? snap.dayCondition : "normal",
         notes: snap ? snap.notes : ""
@@ -626,9 +633,35 @@
       return { ok: false, error: "لا يحتوي الملف على نتائج صالحة لتجارب الحسم (F1–F4)." };
     }
     var cur = loadState();
+    var combinedHist = incoming.history.concat(cur.history);
+    var seenHist = {};
+    var dedupedHist = [];
+    for (var mh = 0; mh < combinedHist.length; mh += 1) {
+      var hItem = combinedHist[mh];
+      var hKey = hItem.syncRunKey || (hItem.expId + "|" + String(hItem.timestamp || ""));
+      if (!seenHist[hKey]) {
+        seenHist[hKey] = true;
+        dedupedHist.push(Object.assign({}, hItem));
+      }
+    }
+    dedupedHist.sort(function (a, b) {
+      var ta = Date.parse(a.timestamp || "") || 0;
+      var tb = Date.parse(b.timestamp || "") || 0;
+      return tb - ta;
+    });
+    var mergedRes = Object.assign({}, cur.results);
+    Object.keys(incoming.results).forEach(function (k) {
+      var incR = incoming.results[k];
+      var curR = mergedRes[k];
+      var incTs = Date.parse((incR && incR.timestamp) || "") || 0;
+      var curTs = Date.parse((curR && curR.timestamp) || "") || 0;
+      if (!curR || incTs >= curTs) {
+        mergedRes[k] = Object.assign({}, incR);
+      }
+    });
     var nextState = {
-      results: Object.assign({}, cur.results, incoming.results),
-      history: incoming.history.concat(cur.history).slice(0, 40)
+      results: mergedRes,
+      history: dedupedHist.slice(0, 40)
     };
     memFallback = nextState;
     try {
@@ -811,6 +844,16 @@
     generateF3Trials: generateF3Trials,
     generateF4Trials: generateF4Trials,
     loadState: loadState,
+    saveState: function (nextState) {
+      var clean = sanitizeFalsifyState(nextState) || { results: {}, history: [] };
+      memFallback = clean;
+      try {
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+        }
+      } catch (_) {}
+      return clean;
+    },
     saveExperimentResult: saveExperimentResult,
     clearState: clearState,
     exportStateJSON: exportStateJSON,

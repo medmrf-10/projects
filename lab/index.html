@@ -13,8 +13,16 @@
   <link
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&display=swap"
     rel="stylesheet"
+    media="print"
+    onload="this.media='all'"
   />
-  <link rel="stylesheet" href="./styles.css?v=16" />
+  <noscript>
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Readex+Pro:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </noscript>
+  <link rel="stylesheet" href="./styles.css?v=17" />
 
   <style>
     :where(.backup-actions-row) {
@@ -667,14 +675,14 @@
   <!-- إشعار سريع لطيف -->
   <div id="toastEl" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="./stimuli.js?v=16"></script>
-  <script src="./analytics.js?v=16"></script>
-  <script src="./engine.js?v=16"></script>
-  <script src="./falsify-core.js?v=16"></script>
-  <script src="./falsify.js?v=16"></script>
-  <script src="./deep-core.js?v=16"></script>
-  <script src="./deep.js?v=16"></script>
-  <script src="./repo-sync.js?v=16"></script>
+  <script src="./stimuli.js?v=17"></script>
+  <script src="./analytics.js?v=17"></script>
+  <script src="./engine.js?v=17"></script>
+  <script src="./falsify-core.js?v=17"></script>
+  <script src="./falsify.js?v=17"></script>
+  <script src="./deep-core.js?v=17"></script>
+  <script src="./deep.js?v=17"></script>
+  <script src="./repo-sync.js?v=17"></script>
   <script>
     (function () {
       "use strict";
@@ -877,6 +885,7 @@
           data: document.getElementById("view-data")
         },
         phaseSelect: document.getElementById("phaseSelect"),
+        dayConditionSelect: document.getElementById("dayConditionSelect"),
         alertnessInput: document.getElementById("alertnessInput"),
         alertnessValue: document.getElementById("alertnessValue"),
         sleepInput: document.getElementById("sleepInput"),
@@ -1272,6 +1281,12 @@
         const phaseId = dom.phaseSelect ? dom.phaseSelect.value : "baseline";
         const phaseOption = dom.phaseSelect && dom.phaseSelect.selectedOptions[0];
         const phaseLabel = phaseOption ? toAsciiDigits(phaseOption.textContent) : phaseId;
+        const rsCfg = window.NeuroLab && window.NeuroLab.RepoSync && typeof window.NeuroLab.RepoSync.loadConfig === "function"
+          ? window.NeuroLab.RepoSync.loadConfig()
+          : null;
+        const dayCondition = (dom.dayConditionSelect && dom.dayConditionSelect.value)
+          ? dom.dayConditionSelect.value
+          : ((rsCfg && rsCfg.dayCondition) || "normal");
         const alertness = Number(dom.alertnessInput ? dom.alertnessInput.value : 8);
         const sleepQuality = Number(dom.sleepInput ? dom.sleepInput.value : 6);
         const nasalPatency = Number(dom.breathingQualityInput ? dom.breathingQualityInput.value : 5);
@@ -1283,6 +1298,7 @@
           phase: phaseId,
           phaseId: phaseId,
           phaseLabel: phaseLabel,
+          dayCondition: dayCondition,
           alertness: alertness,
           sleep: sleepQuality,
           sleepQuality: sleepQuality,
@@ -1304,6 +1320,7 @@
           try {
             A.updateContext({
               phase: ctx.phase,
+              dayCondition: ctx.dayCondition,
               sleepQuality: ctx.sleepQuality,
               alertness: ctx.alertness,
               nasalPatency: ctx.nasalPatency,
@@ -1823,6 +1840,7 @@
             try {
               A.recordProbeResult(Object.assign({
                 phase: ctx.phase,
+                dayCondition: ctx.dayCondition,
                 sleepQuality: ctx.sleepQuality,
                 alertness: ctx.alertness,
                 nasalPatency: ctx.nasalPatency,
