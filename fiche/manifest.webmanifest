@@ -53,8 +53,8 @@
       "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Notes & Dépôt",
-      "short_name": "Notes",
+      "name": "Synthèse & Décisions",
+      "short_name": "Synthèse",
       "url": "./index.html#notes",
       "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }

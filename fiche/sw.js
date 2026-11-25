@@ -1,4 +1,4 @@
-const CACHE_NAME = "fiche-clinique-pwa-v3";
+const CACHE_NAME = "fiche-clinique-pwa-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -31,7 +31,7 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);
-  /* Never intercept or cache external APIs (e.g., GitHub Contents API / webhooks) */
+  /* Never intercept or cache external origins */
   if (url.origin !== self.location.origin) return;
 
   const isNav = req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith(".html");
