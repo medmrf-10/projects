@@ -238,17 +238,17 @@
       min-height: 100vh;
       display: grid;
       place-items: center;
-      padding: 24px 16px;
+      padding: 58px 16px 24px;
       background:
         radial-gradient(circle at 50% 0%, var(--teal-soft) 0%, transparent 50%),
         radial-gradient(var(--bg-dot) 1px, transparent 1px),
         var(--bg);
       background-size: 100% 100%, 22px 22px, 100% 100%;
     }
-    .gate-theme-btn {
+    .ico-btn.gate-theme-btn {
       position: fixed;
-      top: 16px;
-      inset-inline-end: 16px;
+      top: max(14px, env(safe-area-inset-top, 14px));
+      inset-inline-end: max(14px, env(safe-area-inset-right, 14px));
       z-index: 10;
     }
     .gate-card {
@@ -518,8 +518,8 @@
     /* Compact Inline Live Search + Quick Filter Popover + Match Stepper */
     .search-shell {
       position: relative;
-      flex: 0 1 188px;
-      width: 188px;
+      flex: 0 1 168px;
+      width: 168px;
     }
     @media (min-width: 1320px) {
       .search-shell { flex: 0 1 214px; width: 214px; }
@@ -837,7 +837,7 @@
       content: "";
       position: absolute;
       top: 2px;
-      left: 2px;
+      inset-inline-start: 2px;
       width: 13px;
       height: 13px;
       border-radius: 999px;
@@ -850,6 +850,7 @@
       border-color: var(--teal-btn);
     }
     .read-switch[aria-checked="true"]::after { transform: translateX(15px); }
+    html[dir="rtl"] .read-switch[aria-checked="true"]::after { transform: translateX(-15px); }
 
     /* Notes Trigger Button Badge */
     .notes-badge {
@@ -1344,6 +1345,8 @@
     }
     .sec-title {
       margin: 0;
+      min-width: 0;
+      overflow-wrap: break-word;
       font-family: var(--font-display);
       font-size: 1.24rem;
       font-weight: 700;
@@ -1511,7 +1514,8 @@
       border: 1px solid var(--border);
       background: var(--bg);
       color: var(--text-3);
-      padding: 2px 8px;
+      min-height: 24px;
+      padding: 2px 9px;
       border-radius: 999px;
       font-size: 0.69rem;
       font-weight: 600;
@@ -1635,7 +1639,7 @@
       display: inline-grid;
       place-items: center;
       cursor: pointer;
-      opacity: 0.42;
+      opacity: 0.56;
       flex-shrink: 0;
       transition: opacity 150ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 120ms ease;
     }
@@ -1650,7 +1654,7 @@
       opacity: 1;
     }
     @media (hover: none) {
-      .card-act-btn { opacity: 0.78; }
+      .card-act-btn { opacity: 0.86; }
     }
     .card-act-btn:hover {
       background: var(--surface-2);
@@ -1905,10 +1909,19 @@
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 5px;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin-bottom: 6px;
     }
-    .prose-lead { font-size: 0.93rem; font-weight: 700; color: var(--text); line-height: 1.34; }
+    .prose-lead {
+      flex: 1 1 210px;
+      min-width: 0;
+      font-size: 0.94rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.35;
+      overflow-wrap: break-word;
+    }
     .item-tags {
       display: flex;
       flex-wrap: wrap;
@@ -2039,16 +2052,23 @@
     .safety-card.sev-ok { border-inline-start-color: var(--teal); }
     .safety-top {
       display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 6px;
+    }
+    .safety-bar {
+      display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 5px;
+      flex-wrap: wrap;
+      gap: 6px 8px;
     }
-    .safety-lead-wrap {
+    .safety-status {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
       min-width: 0;
+      flex-shrink: 0;
     }
     .safety-ico {
       width: 22px;
@@ -2061,12 +2081,18 @@
     .safety-ico.sev-warn { background: var(--amber-soft); color: var(--amber-text); }
     .safety-ico.sev-info { background: var(--info-soft); color: var(--info-text); }
     .safety-ico.sev-ok { background: var(--teal-soft); color: var(--teal-text); }
-    .safety-lead { font-size: 0.87rem; font-weight: 700; color: var(--text); line-height: 1.3; }
-    .safety-right { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
-    .sev-badge {
-      font-size: 0.66rem;
+    .safety-lead {
+      margin: 0;
+      font-size: 0.91rem;
       font-weight: 700;
-      padding: 1.5px 7.5px;
+      color: var(--text);
+      line-height: 1.34;
+      overflow-wrap: break-word;
+    }
+    .sev-badge {
+      font-size: 0.67rem;
+      font-weight: 700;
+      padding: 2px 8px;
       border-radius: 999px;
       white-space: nowrap;
       line-height: 1.35;
@@ -2074,7 +2100,7 @@
     .sev-badge.sev-warn { background: var(--amber-soft); color: var(--amber-text); border: 1px solid var(--amber-border); }
     .sev-badge.sev-info { background: var(--info-soft); color: var(--info-text); border: 1px solid var(--info-border); }
     .sev-badge.sev-ok { background: var(--teal-soft); color: var(--teal-text); border: 1px solid var(--teal-border); }
-    .safety-brief { margin: 0; font-size: 0.83rem; color: var(--text-2); line-height: 1.5; }
+    .safety-brief { margin: 0; font-size: 0.835rem; color: var(--text-2); line-height: 1.52; overflow-wrap: break-word; }
     .safety-card .detail-body { margin-top: 8px; padding-top: 8px; }
     .safety-card .detail-point { font-size: 0.79rem; line-height: 1.5; }
 
@@ -2161,13 +2187,13 @@
     }
     .spot-top {
       display: flex;
-      align-items: baseline;
+      align-items: flex-start;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 6px 12px;
       margin-bottom: 6px;
     }
-    .spot-left { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .spot-left { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 5px 8px; flex: 1 1 180px; min-width: 0; }
     .spot-lbl { font-size: 0.9rem; font-weight: 700; color: var(--text); }
     .spot-date { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-3); font-variant-numeric: tabular-nums; }
     .spot-badge {
@@ -2188,7 +2214,95 @@
       white-space: nowrap;
     }
     .spot-val .lab-unit { font-size: 0.74rem; font-weight: 500; color: var(--text-3); margin-inline-start: 3px; }
-    .spot-note { margin: 5px 0 0; font-size: 0.76rem; font-weight: 600; color: var(--amber-text); }
+    .spot-gauge {
+      position: relative;
+      padding: 8px 6px 2px;
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+    .spot-track {
+      position: relative;
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--track-bg);
+    }
+    .spot-caution {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      border-radius: 999px 0 0 999px;
+      background: var(--caution-bg);
+    }
+    .spot-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: var(--zone-bg);
+      border-left: 1.5px solid var(--zone-edge);
+      border-right: 1.5px solid var(--zone-edge);
+      border-radius: 2px;
+    }
+    .spot-zone::before,
+    .spot-zone::after {
+      content: "";
+      position: absolute;
+      top: -3px;
+      bottom: -3px;
+      width: 1.5px;
+      background: var(--zone-edge);
+    }
+    .spot-zone::before { left: -1.5px; }
+    .spot-zone::after { right: -1.5px; }
+    .spot-marker {
+      position: absolute;
+      top: 50%;
+      width: 26px;
+      height: 26px;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      z-index: 2;
+    }
+    .spot-marker::before {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: var(--amber-soft);
+    }
+    .spot-marker::after {
+      content: "";
+      position: relative;
+      width: 11px;
+      height: 11px;
+      border-radius: 999px;
+      background: var(--amber);
+      border: 2px solid var(--surface);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+    }
+    .spot-ticks {
+      position: relative;
+      height: 17px;
+      margin-top: 5px;
+    }
+    .spot-tick {
+      position: absolute;
+      top: 0;
+      transform: translateX(-50%);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+    .spot-note { margin: 4px 0 0; font-size: 0.77rem; font-weight: 600; color: var(--amber-text); line-height: 1.48; }
 
     /* Repleted Deficiencies + Compact Normal Clearance */
     .lab-subblock { margin-top: 14px; }
@@ -2375,21 +2489,31 @@
     .q-item.is-done .q-lead,
     .q-item.is-done .q-text { opacity: 0.72; }
     .q-top {
-      display: grid;
-      grid-template-columns: 24px minmax(0, 1fr) auto;
-      gap: 10px;
-      align-items: start;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 7px;
     }
     .q-num {
+      min-width: 24px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 6px;
+      background: var(--teal-soft);
+      border: 1px solid var(--teal-border);
+      display: inline-grid;
+      place-items: center;
       font-family: var(--font-mono);
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 700;
-      color: var(--teal);
-      padding-top: 2px;
+      color: var(--teal-text);
       font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
     }
-    .q-lead { margin: 0 0 4px; font-size: 0.9rem; font-weight: 700; color: var(--text); line-height: 1.35; }
-    .q-text { margin: 0; font-size: 0.85rem; color: var(--text-2); line-height: 1.54; }
+    .q-body { min-width: 0; }
+    .q-lead { margin: 0 0 4px; font-size: 0.92rem; font-weight: 700; color: var(--text); line-height: 1.35; overflow-wrap: break-word; }
+    .q-text { margin: 0; font-size: 0.855rem; color: var(--text-2); line-height: 1.54; overflow-wrap: break-word; }
     .q-check {
       width: 24px;
       height: 24px;
@@ -2414,7 +2538,7 @@
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      padding-inline-start: 34px;
+      padding-inline-start: 0;
     }
 
     /* Editorial End-Cap Footer (Screen-Only) */
@@ -2427,9 +2551,12 @@
       justify-content: flex-end;
     }
     .endcap-actions {
-      display: inline-flex;
+      display: flex;
       align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
       gap: 8px;
+      max-width: 100%;
     }
     .endcap-btn {
       border: 1px solid var(--border);
@@ -2756,6 +2883,9 @@
     .sc-modal {
       width: 100%;
       max-width: 430px;
+      max-height: calc(100vh - 32px);
+      max-height: calc(100dvh - 32px);
+      overflow-y: auto;
       background: var(--surface);
       border: 1px solid var(--glass-border);
       border-radius: 16px;
@@ -2883,6 +3013,11 @@
       }
       body.notes-open .return-toast { inset-inline-end: 392px; }
       body.notes-open .float-top { inset-inline-end: 392px; }
+    }
+    @media (min-width: 1180px) and (max-width: 1340px) {
+      body.notes-open .goals-list { grid-template-columns: 1fr; }
+      body.notes-open .repleted-grid { grid-template-columns: 1fr; }
+      body.notes-open .normal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     .drawer-head {
@@ -3093,15 +3228,16 @@
     .drawer-acts {
       display: flex;
       align-items: center;
-      flex-wrap: nowrap;
-      gap: 5px;
+      flex-wrap: wrap;
+      gap: 6px;
     }
     .drawer-act-btn {
       border: 1px solid var(--border);
       background: var(--surface-2);
       color: var(--text);
       border-radius: 8px;
-      padding: 6px 8.5px;
+      min-height: 33px;
+      padding: 6px 9px;
       font-size: 11.4px;
       font-weight: 600;
       white-space: nowrap;
@@ -3340,8 +3476,10 @@
     }
     .iv-check:hover { border-color: var(--teal); }
     .iv-card.is-done .iv-check { background: var(--teal-btn); border-color: var(--teal-btn); color: #FFFFFF; }
-    .iv-title { margin: 0 0 3px; font-size: 0.9rem; font-weight: 700; color: var(--text); line-height: 1.35; }
-    .iv-prompt { margin: 0; font-size: 0.82rem; color: var(--text-2); line-height: 1.5; }
+    .iv-title { margin: 0; font-size: 0.91rem; font-weight: 700; color: var(--text); line-height: 1.35; overflow-wrap: break-word; }
+    .iv-prompt { margin: 0; padding-inline-start: 33px; font-size: 0.83rem; color: var(--text-2); line-height: 1.52; overflow-wrap: break-word; }
+    .saved-quote-card .iv-prompt,
+    .iv-card > .saved-quote-head + .iv-prompt { padding-inline-start: 0; }
     .iv-meta-acts { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
     .iv-jump-btn {
       border: 1px solid var(--border);
@@ -3431,6 +3569,7 @@
       top: 0;
       left: 0;
       z-index: 96;
+      max-width: calc(100vw - 16px);
       display: inline-flex;
       align-items: center;
       gap: 4px;
@@ -4095,6 +4234,12 @@
       .search-kbd { display: none; }
     }
 
+    @media (max-width: 900px) {
+      .goals-list { grid-template-columns: 1fr; gap: 9px; }
+      .repleted-grid { grid-template-columns: 1fr; }
+      .normal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
     @media (max-width: 860px) {
       .triage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .qs-grid { grid-template-columns: 1fr; }
@@ -4114,7 +4259,13 @@
       .repleted-grid { grid-template-columns: 1fr; }
       .normal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .q-grid { grid-template-columns: 1fr; }
-      .return-toast, .mini-toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+      .return-toast {
+        bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+        inset-inline-end: 14px;
+        max-width: calc(100vw - 28px);
+      }
+      .return-go { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mini-toast { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
     }
 
     @media (max-width: 639px) {
@@ -4125,16 +4276,21 @@
       #scBtn, #readShell, #printBtn, #themeBtn { display: none; }
       .mob-search-toggle, .mob-menu-btn { display: inline-grid; }
 
-      .chrome-inner { padding: 6px 10px; min-height: 44px; gap: 5px; }
-      .chrome-controls { gap: 5px; align-items: center; }
+      .chrome-inner { padding: 6px 8px; min-height: 44px; gap: 5px; }
+      .chrome-controls { gap: 4px; align-items: center; }
       .search-shell { display: none; order: 2; flex: 1 1 100%; width: 100%; }
-      .search-shell.is-mob-open { display: block; padding-top: 4px; }
-      .seg-group { flex: 0 1 auto; justify-content: flex-start; gap: 4px; }
+      .search-shell.is-mob-open { display: block; padding-top: 5px; }
+      .search-box { height: 38px; padding: 0 8px 0 10px; }
+      html[dir="rtl"] .search-box { padding: 0 10px 0 8px; }
+      .search-input { font-size: 16px; }
+      .quick-pop { width: 100%; max-width: 100%; min-width: 0; }
+      .seg-group { flex: 0 1 auto; justify-content: flex-start; gap: 4px; min-width: 0; }
+      .seg-ctrl { padding: 1.5px; }
       .util-btns { gap: 3px; flex-shrink: 0; }
-      .ico-btn { width: 30px; height: 30px; border-radius: 7px; }
-      .install-btn { width: 30px; height: 30px; padding: 0; justify-content: center; border-radius: 7px; }
+      .ico-btn { width: 29px; height: 29px; border-radius: 7px; }
+      .install-btn { width: 29px; height: 29px; padding: 0; justify-content: center; border-radius: 7px; }
       .install-btn span { display: none; }
-      .seg-btn { padding: 3.5px 6px; font-size: 11px; }
+      .seg-btn { padding: 3px 5.5px; font-size: 11px; }
 
       /* Mobile Horizontal Section Quick-Jump Strip */
       .mob-sec-strip {
@@ -4153,7 +4309,8 @@
         background: var(--surface);
         color: var(--text-2);
         border-radius: 999px;
-        padding: 4.5px 10px;
+        min-height: 32px;
+        padding: 5px 11px;
         font-size: 0.74rem;
         font-weight: 600;
         white-space: nowrap;
@@ -4196,14 +4353,35 @@
       .lens-bar { padding: 7px 0 10px; margin-bottom: 10px; gap: 7px; }
       .lens-pills { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 2px; }
       .lens-pills::-webkit-scrollbar { display: none; }
+      .lens-pill { min-height: 32px; padding: 5px 12px; }
       .ed-section, .brief-root.is-brief .ed-section { padding-top: 22px; margin-top: 22px; scroll-margin-top: 58px; }
-      .prose-item { padding: 13px 13px; }
+      .sec-head { flex-wrap: wrap; gap: 6px 8px; }
+      .sec-title { flex: 1 1 200px; font-size: 1.12rem; }
+      html[dir="rtl"] .sec-title { font-size: 1.12rem; }
+      .sec-rule, .sec-top-mini { display: none; }
+      .prose-item { padding: 12px 13px; }
+      .prose-item-head {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+      .prose-item-head .prose-lead { flex: 0 0 auto; width: 100%; }
+      .prose-item-head .card-tools { width: 100%; justify-content: flex-end; }
       .card-act-btn { width: 29px; height: 29px; }
+      .item-expand { min-height: 29px; padding: 3px 10px; font-size: 0.72rem; }
       .bullet-save-btn { width: 26px; height: 26px; }
       .figure-card { padding: 14px 13px 13px; border-radius: var(--r-md); }
       .normal-grid { grid-template-columns: 1fr; }
+      .norm-item { margin: 0; padding: 7px 4px; }
+      .iv-prompt { padding-inline-start: 0; }
+      .brief-endcap { justify-content: center; }
+      .endcap-actions { justify-content: center; }
+      .q-summary-cta-acts { width: 100%; }
+      .q-summary-cta-acts .drawer-act-btn { flex: 1 1 auto; }
       .drawer-acts { flex-wrap: wrap; }
-      .stamp-btn, .goal-row .stamp-btn { min-height: 29px; padding: 3.5px 9px; font-size: 0.73rem; gap: 4px; }
+      .note-textarea, .iv-answer-ta, .saved-note-in, .drawer-textarea { font-size: 16px; }
+      .stamp-btn, .goal-row .stamp-btn { min-height: 30px; padding: 4px 9.5px; font-size: 0.73rem; gap: 4px; }
       .goal-row .card-stamp-bar { gap: 5px; }
       .q-chip { min-height: 34px; padding: 6px 11px; font-size: 0.78rem; }
       .qs-btn { min-height: 34px; font-size: 0.76rem; }
@@ -4229,7 +4407,19 @@
       .life-node { align-items: flex-start; text-align: start; gap: 2px; padding: 4px 6px; }
       .life-dot-wrap { position: static; width: auto; height: auto; }
       .life-dot-wrap::before { display: none; }
-      .life-dot { position: absolute; inset-inline-start: -20px; top: 8px; }
+      .life-dot { position: absolute; inset-inline-start: -19px; top: 7px; }
+    }
+
+    @media (max-width: 399px) {
+      .seg-btn { padding: 3px 5px; font-size: 10.6px; }
+    }
+
+    @media (max-width: 359px) {
+      .chrome-inner { padding: 5px 6px; gap: 4px; }
+      .seg-group { gap: 3px; }
+      .seg-btn { padding: 3px 4px; font-size: 10.2px; }
+      .util-btns { gap: 2px; }
+      .ico-btn, .install-btn { width: 27px; height: 27px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -4460,7 +4650,8 @@
       .prose-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.2mm; padding-top: 0.8mm; border-top: 0.5pt solid var(--border); }
       .prose-item { padding: 0 !important; margin: 0; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; break-inside: avoid; }
       .prose-item.tone-alert { border-inline-start: 1.5pt solid var(--coral) !important; padding-inline-start: 1.6mm !important; }
-      .prose-item-head { margin-bottom: 0.2mm; }
+      .prose-item-head { display: block !important; margin-bottom: 0.2mm; }
+      .prose-item-head .card-tools, .safety-bar .card-tools, .q-top .card-tools { display: none !important; }
       .prose-lead { font-size: 7.1pt; }
       .prose-brief { font-size: 6.65pt; line-height: 1.2; }
 
@@ -4480,8 +4671,9 @@
 
       .safety-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.9mm; margin-bottom: 0.75mm; }
       .safety-card { padding: 0.7mm 1.4mm; border-radius: 4px; box-shadow: none !important; break-inside: avoid; }
-      .safety-top { margin-bottom: 0.15mm; }
-      .safety-lead { font-size: 6.9pt; }
+      .safety-top { flex-direction: row !important; align-items: baseline; justify-content: space-between; gap: 1.5mm; margin-bottom: 0.15mm; }
+      .safety-bar { order: 2; flex-shrink: 0; }
+      .safety-lead { order: 1; flex: 1 1 auto; min-width: 0; font-size: 6.9pt; margin: 0; }
       .sev-badge { font-size: 5.8pt; padding: 0.12mm 1.1mm; }
       .safety-brief { font-size: 6.35pt; line-height: 1.15; }
       .safety-card .detail-point { font-size: 5.95pt !important; line-height: 1.13 !important; }
@@ -4492,7 +4684,14 @@
       .spot-top { margin-bottom: 0.15mm; }
       .spot-lbl { font-size: 6.85pt; }
       .spot-val { font-size: 7.2pt; }
-      .spot-svg { max-height: 24px; width: 100%; height: auto; }
+      .spot-gauge { padding: 2px 3px 0; }
+      .spot-track { height: 4.5px; }
+      .spot-zone::before, .spot-zone::after { top: -1.5px; bottom: -1.5px; width: 1px; }
+      .spot-marker { width: 12px; height: 12px; }
+      .spot-marker::before { width: 11px; height: 11px; }
+      .spot-marker::after { width: 6.5px; height: 6.5px; border-width: 1.2px; }
+      .spot-ticks { height: 9px; margin-top: 2px; }
+      .spot-tick { font-size: 5.8pt; }
       .spot-note { font-size: 6.1pt; margin-top: 0.15mm; }
 
       .lab-subblock { margin-top: 0.5mm; }
@@ -4519,9 +4718,11 @@
       #sec-questions .sub-prose { margin-bottom: 0.6mm; font-size: 6.65pt; }
       .q-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.9mm 2.4mm; padding-top: 0.6mm; border-top: 0.5pt solid var(--border); }
       .q-item { border: 0 !important; border-radius: 0 !important; padding: 0 !important; background: transparent !important; box-shadow: none !important; gap: 0; break-inside: avoid; }
+      .q-item > div { display: grid; grid-template-columns: 15px minmax(0, 1fr); gap: 1mm; align-items: start; }
+      .q-item .card-note-slot { grid-column: 1 / -1; }
       .q-item.is-done .q-lead, .q-item.is-done .q-text { opacity: 1 !important; }
-      .q-top { grid-template-columns: 15px minmax(0, 1fr); gap: 1mm; }
-      .q-num { font-size: 6.65pt; padding-top: 0.5px; }
+      .q-top { display: block; margin: 0; }
+      .q-num { min-width: 0; height: auto; padding: 0.5px 0 0; border: 0; background: transparent; color: var(--teal); font-size: 6.65pt; display: block; }
       .q-lead { font-size: 6.85pt; margin-bottom: 0.12mm; }
       .q-text { font-size: 6.35pt; line-height: 1.15; }
     }
@@ -6403,15 +6604,42 @@
           + "</div>";
       }
 
+      function clampPopover(popEl) {
+        if (!popEl || popEl.hidden) return;
+        popEl.style.insetInlineStart = "";
+        popEl.style.insetInlineEnd = "";
+        const w = popEl.offsetWidth;
+        if (!w) return;
+        const r = popEl.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const left0 = cx - w / 2;
+        const right0 = cx + w / 2;
+        const pad = 12;
+        let shift = 0;
+        if (right0 > window.innerWidth - pad) shift = (window.innerWidth - pad) - right0;
+        if (left0 + shift < pad) shift = pad - left0;
+        if (Math.abs(shift) > 0.5) {
+          const pr = (popEl.offsetParent || document.documentElement).getBoundingClientRect();
+          const isRtl = root.dir === "rtl";
+          popEl.style.insetInlineEnd = "auto";
+          popEl.style.insetInlineStart = (isRtl
+            ? Math.round(pr.right - (right0 + shift))
+            : Math.round(left0 - pr.left + shift)) + "px";
+        }
+      }
+
       function toggleReadPop(forceOpen) {
         const next = typeof forceOpen === "boolean" ? forceOpen : readPop.hidden;
         if (next) {
           hideQuickPop();
           renderReadPop();
           setHidden(readPop, false);
+          clampPopover(readPop);
           readBtn.setAttribute("aria-expanded", "true");
         } else {
           setHidden(readPop, true);
+          readPop.style.insetInlineStart = "";
+          readPop.style.insetInlineEnd = "";
           readBtn.setAttribute("aria-expanded", "false");
         }
         applyReadingPrefs(false);
@@ -7365,9 +7593,14 @@
           + chips.map((c) => '<button class="quick-chip" type="button" data-qchip="' + esc(c) + '">' + esc(c) + "</button>").join("")
           + "</div>";
         setHidden(quickPop, false);
+        clampPopover(quickPop);
       }
 
-      function hideQuickPop() { setHidden(quickPop, true); }
+      function hideQuickPop() {
+        setHidden(quickPop, true);
+        quickPop.style.insetInlineStart = "";
+        quickPop.style.insetInlineEnd = "";
+      }
 
       function updateSearchChrome(matchTotal, qNorm, preserveMarkIdx) {
         const ui = data && data[lang] && data[lang].ui;
@@ -7588,33 +7821,26 @@
          LAB BIOMARKER GAUGES
          ======================================================================= */
       function renderSpotlightGauge(lb, refLbl) {
-        const W = 860, H = 34;
-        const padL = 14, padR = 14, trackW = W - padL - padR;
         const span = Math.max(0.1, lb.max - lb.min);
-        const mapX = (v) => padL + Math.max(0, Math.min(1, (v - lb.min) / span)) * trackW;
-
-        const zL = mapX(lb.rLow);
-        const zR = mapX(lb.rHigh);
-        const cX = mapX(lb.curr);
-        const trackY = 9, trackH = 7;
+        const pct = (v) => Math.max(0, Math.min(100, ((v - lb.min) / span) * 100));
+        const zL = pct(lb.rLow);
+        const zR = pct(lb.rHigh);
+        const cX = Math.max(2, Math.min(98, pct(lb.curr)));
 
         const tipT = esc(lb.label + " (" + lb.date + ")");
         const tipB = esc(lb.currStr + " " + lb.unit + " · " + (refLbl || "Ref") + " " + lb.ref + (lb.note ? " — " + lb.note : ""));
 
-        return '<svg class="viz-svg spot-svg" viewBox="0 0 ' + W + " " + H + '" dir="ltr" direction="ltr" role="img" aria-label="' + tipT + ": " + tipB + '">'
-          + '<rect x="' + padL + '" y="' + trackY + '" width="' + trackW + '" height="' + trackH + '" rx="3.5" fill="var(--track-bg)"></rect>'
-          + '<rect x="' + padL + '" y="' + trackY + '" width="' + Math.max(0, zL - padL).toFixed(1) + '" height="' + trackH + '" rx="3.5" fill="var(--caution-bg)"></rect>'
-          + '<rect x="' + zL.toFixed(1) + '" y="' + trackY + '" width="' + Math.max(4, zR - zL).toFixed(1) + '" height="' + trackH + '" rx="2" fill="var(--zone-bg)"></rect>'
-          + '<line x1="' + zL.toFixed(1) + '" y1="' + (trackY - 3) + '" x2="' + zL.toFixed(1) + '" y2="' + (trackY + trackH + 3.5) + '" stroke="var(--zone-edge)" stroke-width="1.6"></line>'
-          + '<line x1="' + zR.toFixed(1) + '" y1="' + (trackY - 3) + '" x2="' + zR.toFixed(1) + '" y2="' + (trackY + trackH + 3.5) + '" stroke="var(--zone-edge)" stroke-width="1.6"></line>'
-          + '<text x="' + zL.toFixed(1) + '" y="' + (trackY + trackH + 14.5) + '" text-anchor="middle" direction="ltr" fill="var(--text-3)" font-size="11" font-weight="600" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">' + esc(lb.rLow.toFixed(1)) + "</text>"
-          + '<text x="' + zR.toFixed(1) + '" y="' + (trackY + trackH + 14.5) + '" text-anchor="middle" direction="ltr" fill="var(--text-3)" font-size="11" font-weight="600" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">' + esc(lb.rHigh.toFixed(1)) + "</text>"
-          + '<g class="svg-hit" tabindex="0" data-tip-title="' + tipT + '" data-tip-body="' + tipB + '">'
-            + '<circle cx="' + cX.toFixed(1) + '" cy="' + (trackY + trackH / 2) + '" r="10.5" fill="var(--amber-soft)"></circle>'
-            + '<circle cx="' + cX.toFixed(1) + '" cy="' + (trackY + trackH / 2) + '" r="5.2" fill="var(--amber)" stroke="var(--surface)" stroke-width="2"></circle>'
-            + '<circle cx="' + cX.toFixed(1) + '" cy="' + (trackY + trackH / 2) + '" r="16" fill="transparent"></circle>'
-          + "</g>"
-          + "</svg>";
+        return '<div class="spot-gauge" dir="ltr" role="img" aria-label="' + tipT + ": " + tipB + '">'
+          + '<div class="spot-track">'
+            + '<span class="spot-caution" style="width:' + zL.toFixed(2) + '%"></span>'
+            + '<span class="spot-zone" style="left:' + zL.toFixed(2) + "%;width:" + Math.max(3, zR - zL).toFixed(2) + '%"></span>'
+            + '<span class="spot-marker" tabindex="0" style="left:' + cX.toFixed(2) + '%" data-tip-title="' + tipT + '" data-tip-body="' + tipB + '"></span>'
+          + "</div>"
+          + '<div class="spot-ticks" aria-hidden="true">'
+            + '<span class="spot-tick" style="left:' + Math.max(6, Math.min(94, zL)).toFixed(2) + '%">' + esc(lb.rLow.toFixed(1)) + "</span>"
+            + '<span class="spot-tick" style="left:' + Math.max(6, Math.min(94, zR)).toFixed(2) + '%">' + esc(lb.rHigh.toFixed(1)) + "</span>"
+          + "</div>"
+        + "</div>";
       }
 
       function renderMiniBar(lb, qNorm) {
@@ -7937,16 +8163,14 @@
                 + '<div class="iv-top">'
                   + '<div class="iv-top-l">'
                     + '<button class="iv-check" type="button" data-iv-ask-done="' + esc(k) + '" aria-pressed="' + (done ? "true" : "false") + '" title="' + esc(ui.askedDone || "Asked") + '">' + ICO_CHECK + "</button>"
-                    + '<div style="min-width:0">'
-                      + '<h3 class="iv-title">' + fmt(meta.title, isRtl, "") + "</h3>"
-                      + (meta.brief ? '<p class="iv-prompt">' + fmt(meta.brief, isRtl, "") + "</p>" : "")
-                    + "</div>"
+                    + '<h3 class="iv-title">' + fmt(meta.title, isRtl, "") + "</h3>"
                   + "</div>"
                   + '<span class="iv-meta-acts">'
                     + '<button class="iv-jump-btn" type="button" data-jump-sec="' + esc(meta.secId) + '" data-jump-item="' + esc(k) + '"><bdi dir="ltr">' + esc(meta.secNum) + "</bdi> " + ICO_JUMP + "</button>"
                     + '<button class="drawer-mini-btn is-del" type="button" data-ask-key="' + esc(k) + '" title="' + esc(ui.askRemove || "Remove") + '">' + ICO_X + "</button>"
                   + "</span>"
                 + "</div>"
+                + (meta.brief ? '<p class="iv-prompt">' + fmt(meta.brief, isRtl, "") + "</p>" : "")
                 + (showTa
                   ? '<textarea class="iv-answer-ta" dir="auto" data-iv-note="' + esc(k) + '" data-iv-ta="' + esc(noteId) + '" placeholder="' + esc(ui.answerPh || "Patient response...") + '">' + esc(val) + "</textarea>"
                   : '<button class="iv-opt-note-btn" type="button" data-iv-open-note="' + esc(noteId) + '">' + esc(optNoteLbl) + "</button>")
@@ -7964,15 +8188,13 @@
             + '<div class="iv-top">'
               + '<div class="iv-top-l">'
                 + '<button class="iv-check" type="button" data-iv-probe-done="' + esc(pr.id) + '" aria-pressed="' + (done ? "true" : "false") + '" title="' + esc(ui.askedDone || "Asked") + '">' + ICO_CHECK + "</button>"
-                + '<div style="min-width:0">'
-                  + '<h3 class="iv-title">' + fmt(pr.title, isRtl, "") + "</h3>"
-                  + '<p class="iv-prompt">' + fmt(pr.prompt, isRtl, "") + "</p>"
-                + "</div>"
+                + '<h3 class="iv-title">' + fmt(pr.title, isRtl, "") + "</h3>"
               + "</div>"
               + '<span class="iv-meta-acts">'
                 + '<button class="iv-jump-btn" type="button" data-jump-sec="' + esc(pr.secId) + '" data-jump-item="' + esc(pr.itemKey || "") + '"><bdi dir="ltr">' + esc(pr.secNum) + "</bdi> " + ICO_JUMP + "</button>"
               + "</span>"
             + "</div>"
+            + '<p class="iv-prompt">' + fmt(pr.prompt, isRtl, "") + "</p>"
             + (showTa
               ? '<textarea class="iv-answer-ta" dir="auto" data-iv-probe-ans="' + esc(pr.id) + '" data-iv-ta="' + esc(noteId) + '" placeholder="' + esc(ui.answerPh || "Patient response...") + '">' + esc(val) + "</textarea>"
               : '<button class="iv-opt-note-btn" type="button" data-iv-open-note="' + esc(noteId) + '">' + esc(optNoteLbl) + "</button>")
@@ -7990,15 +8212,13 @@
             + '<div class="iv-top">'
               + '<div class="iv-top-l">'
                 + '<button class="iv-check" type="button" data-q-toggle="' + esc(k) + '" aria-pressed="' + (done ? "true" : "false") + '" title="' + esc(ui.discussedLabel || "Discussed") + '">' + ICO_CHECK + "</button>"
-                + '<div style="min-width:0">'
-                  + '<h3 class="iv-title"><bdi dir="ltr">' + String(i + 1).padStart(2, "0") + ".</bdi> " + fmt(q.lead, isRtl, "") + "</h3>"
-                  + '<p class="iv-prompt">' + fmt(q.text, isRtl, "") + "</p>"
-                + "</div>"
+                + '<h3 class="iv-title"><bdi dir="ltr">' + String(i + 1).padStart(2, "0") + ".</bdi> " + fmt(q.lead, isRtl, "") + "</h3>"
               + "</div>"
               + '<span class="iv-meta-acts">'
                 + '<button class="iv-jump-btn" type="button" data-jump-sec="questions" data-jump-item="' + esc(k) + '"><bdi dir="ltr">06</bdi> ' + ICO_JUMP + "</button>"
               + "</span>"
             + "</div>"
+            + '<p class="iv-prompt">' + fmt(q.text, isRtl, "") + "</p>"
             + renderDecisionChips(k, ui, isRtl)
             + (showTa
               ? '<textarea class="iv-answer-ta" dir="auto" data-iv-note="' + esc(k) + '" data-iv-ta="' + esc(noteId) + '" placeholder="' + esc(ui.answerPh || "Decision / patient response...") + '">' + esc(val) + "</textarea>"
@@ -8381,12 +8601,17 @@
               const stampCls = stampVal ? " is-stamped-" + stampVal : "";
               return '<div id="item-' + esc(key) + '" class="safety-card sev-' + esc(sev) + pinCls + stampCls + (hasDet ? " expandable" : "") + (isOpen ? " is-open" : "") + (searchOpen ? " is-search-open" : "") + '"' + (hasDet ? ' data-exp-card="' + esc(key) + '"' : "") + ">"
                 + '<div class="safety-top">'
-                  + '<span class="safety-lead-wrap"><span class="safety-ico sev-' + esc(sev) + '">' + ico + '</span><span class="safety-lead">' + fmt(b.lead, isRtl, qNorm) + "</span></span>"
-                  + '<span class="safety-right">'
-                    + (b.badge ? '<span class="sev-badge sev-' + esc(sev) + '">' + fmt(b.badge, isRtl, qNorm) + "</span>" : "")
-                    + renderCardTools(key, ui)
-                    + (hasDet ? renderExpandBtn(key, expNow, ui, searchOpen) : "")
-                  + "</span>"
+                  + '<div class="safety-bar">'
+                    + '<span class="safety-status">'
+                      + '<span class="safety-ico sev-' + esc(sev) + '">' + ico + "</span>"
+                      + (b.badge ? '<span class="sev-badge sev-' + esc(sev) + '">' + fmt(b.badge, isRtl, qNorm) + "</span>" : "")
+                    + "</span>"
+                    + '<span class="card-tools">'
+                      + renderCardTools(key, ui)
+                      + (hasDet ? renderExpandBtn(key, expNow, ui, searchOpen) : "")
+                    + "</span>"
+                  + "</div>"
+                  + '<h3 class="safety-lead">' + fmt(b.lead, isRtl, qNorm) + "</h3>"
                 + "</div>"
                 + '<p class="safety-brief">' + fmt(b.brief, isRtl, qNorm) + "</p>"
                 + renderDetailBlock(b, key, "safety", ui, isRtl, qNorm)
@@ -8512,12 +8737,12 @@
                 + '<div>'
                   + '<div class="q-top">'
                     + '<span class="q-num"><bdi dir="ltr">' + String(i + 1).padStart(2, "0") + "</bdi></span>"
-                    + '<div><h3 class="q-lead">' + fmt(q.lead, isRtl, qNorm) + '</h3><p class="q-text">' + fmt(q.text, isRtl, qNorm) + "</p></div>"
                     + '<span class="card-tools">'
                       + renderCardTools(key, ui)
                       + '<button class="q-check" type="button" data-q-toggle="' + esc(key) + '" aria-pressed="' + (isDone ? "true" : "false") + '" aria-label="' + esc(ui.discussedLabel || "Mark as discussed") + '" title="' + esc(ui.discussedLabel || "Mark as discussed") + '">' + ICO_CHECK + "</button>"
                     + "</span>"
                   + "</div>"
+                  + '<div class="q-body"><h3 class="q-lead">' + fmt(q.lead, isRtl, qNorm) + '</h3><p class="q-text">' + fmt(q.text, isRtl, qNorm) + "</p></div>"
                   + renderDecisionChips(key, ui, isRtl, qNorm)
                   + '<div class="card-note-slot">' + renderCardNoteSlotInner(key, ui) + "</div>"
                 + "</div>"
@@ -8751,18 +8976,24 @@
       langBtns.forEach((btn) => btn.addEventListener("click", () => switchLanguage(btn.dataset.loc)));
       densBtns.forEach((btn) => btn.addEventListener("click", () => switchDensity(btn.dataset.dens)));
 
+      function setMobileSearchOpen(open, focusInput) {
+        const next = Boolean(open);
+        searchShell.classList.toggle("is-mob-open", next);
+        if (mobSearchToggle) {
+          mobSearchToggle.classList.toggle("is-active", next);
+          mobSearchToggle.setAttribute("aria-expanded", next ? "true" : "false");
+        }
+        if (next && focusInput) {
+          searchInput.focus();
+          showQuickPop();
+        } else if (!next) {
+          hideQuickPop();
+        }
+      }
+
       if (mobSearchToggle) {
         mobSearchToggle.addEventListener("click", () => {
-          const open = !searchShell.classList.contains("is-mob-open");
-          searchShell.classList.toggle("is-mob-open", open);
-          mobSearchToggle.classList.toggle("is-active", open);
-          mobSearchToggle.setAttribute("aria-expanded", open ? "true" : "false");
-          if (open) {
-            searchInput.focus();
-            showQuickPop();
-          } else {
-            hideQuickPop();
-          }
+          setMobileSearchOpen(!searchShell.classList.contains("is-mob-open"), true);
         });
       }
       if (mobMenuBtn) {
@@ -8988,7 +9219,7 @@
 
         if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === "k" || e.code === "KeyK")) {
           e.preventDefault();
-          searchShell.classList.add("is-mob-open");
+          setMobileSearchOpen(true, false);
           searchInput.focus();
           searchInput.select();
           showQuickPop();
@@ -9004,6 +9235,7 @@
           if (notesOpen) { e.preventDefault(); setNotesOpen(false, true); return; }
           if (activeView !== "brief") { e.preventDefault(); switchView("brief", false); return; }
           if (searchQuery) { e.preventDefault(); clearSearch(false); return; }
+          if (searchShell.classList.contains("is-mob-open")) { e.preventDefault(); setMobileSearchOpen(false, false); return; }
           if (activeLens !== "all") { e.preventDefault(); switchLens("all"); return; }
           if (document.activeElement === searchInput) { searchInput.blur(); return; }
           if (returnOrigin) { hideReturnToast(); return; }
@@ -9014,7 +9246,7 @@
 
         if (e.key === "/" || (e.code === "Slash" && !e.shiftKey)) {
           e.preventDefault();
-          searchShell.classList.add("is-mob-open");
+          setMobileSearchOpen(true, false);
           searchInput.focus();
           searchInput.select();
           showQuickPop();
@@ -9404,6 +9636,8 @@
           syncOverlayBodyLock();
           syncAllPills(true);
           syncNavFade();
+          if (!readPop.hidden) clampPopover(readPop);
+          if (!quickPop.hidden) clampPopover(quickPop);
           updateScrollUI();
         }
       });
