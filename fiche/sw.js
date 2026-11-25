@@ -1,4 +1,4 @@
-const CACHE_NAME = "fiche-clinique-pwa-v7";
+const CACHE_NAME = "fiche-clinique-pwa-v9";
 const APP_SHELL = [
   "./",
   "./index.html",
