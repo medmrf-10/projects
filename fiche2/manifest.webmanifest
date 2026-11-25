@@ -1,18 +1,25 @@
 {
-  "id": "/projects/fiche/",
+  "id": "/projects/fiche2/",
   "name": "Fiche Clinique · المذكرة السريرية",
   "short_name": "Fiche Clinique",
-  "description": "Note clinique préparatoire chiffrée localement pour consultation médicale — مذكرة سريرية تمهيدية مشفرة محلياً.",
+  "description": "Note clinique préparatoire pour consultation médicale — مذكرة سريرية تمهيدية.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#F5EFE4",
   "theme_color": "#13625A",
   "lang": "fr",
   "dir": "auto",
-  "categories": ["medical", "health", "productivity"],
+  "categories": [
+    "medical",
+    "health",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "./icons/icon-192.png",

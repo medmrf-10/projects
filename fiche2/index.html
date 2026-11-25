@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr" data-font="md" data-spacing="normal" data-cards="spacious">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#F5EFE4" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Fiche Clinique" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
+  <title>Fiche clinique · مذكرة سريرية · Clinical Note</title>
+  <script>
+    (function(){
+      try {
+        var r = document.documentElement;
+        var l = localStorage.getItem('fiche_lang');
+        if (l === 'fr' || l === 'ar' || l === 'en') {
+          r.lang = l;
+          r.dir = l === 'ar' ? 'rtl' : 'ltr';
+        }
+        var f = localStorage.getItem('fiche_font');
+        if (f === 'sm' || f === 'md' || f === 'lg') r.dataset.font = f;
+        var s = localStorage.getItem('fiche_spacing');
+        if (s === 'compact' || s === 'normal' || s === 'relaxed') r.dataset.spacing = s;
+        var c = localStorage.getItem('fiche_cards');
+        if (c === 'compact' || c === 'spacious') r.dataset.cards = c;
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+      --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+      --font-ar: "SF Arabic", "IBM Plex Sans Arabic", "Geeza Pro", "Noto Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+      /* Warm Paper (Exclusive Theme — WCAG AA+ Verified) */
+      --bg: #F5EFE4;
+      --surface: #FCF9F2;
+      --surface-2: #EAE2D3;
+      --surface-3: #DFD5C3;
+      --seg-active: #FCF9F2;
+      --seg-active-text: #1F1A14;
+      --seg-shadow: 0 1px 2px rgba(31, 26, 20, 0.10);
+      --chrome: rgba(245, 239, 228, 0.92);
+      --sheet-bg: #FCF9F2;
+      --backdrop: rgba(31, 26, 20, 0.34);
+
+      --border: rgba(31, 26, 20, 0.11);
+      --border-subtle: rgba(31, 26, 20, 0.07);
+      --border-strong: rgba(31, 26, 20, 0.22);
+
+      --text: #1F1A14;
+      --text-2: #3E352B;
+      --text-3: #5D5144;
+
+      --teal: #13625A;
+      --teal-btn: #13625A;
+      --teal-btn-hover: #0E4D47;
+      --teal-text: #0E534C;
+      --teal-soft: rgba(19, 98, 90, 0.10);
+      --teal-wash: rgba(19, 98, 90, 0.055);
+      --teal-border: rgba(19, 98, 90, 0.28);
+
+      --coral: #B23B1B;
+      --coral-text: #942F16;
+      --coral-soft: rgba(178, 59, 27, 0.10);
+      --coral-wash: rgba(178, 59, 27, 0.05);
+      --coral-border: rgba(178, 59, 27, 0.28);
+
+      --amber: #A1520B;
+      --amber-text: #85410B;
+      --amber-soft: rgba(161, 82, 11, 0.10);
+      --amber-wash: rgba(161, 82, 11, 0.06);
+      --amber-border: rgba(161, 82, 11, 0.28);
+
+      --info: #2655B3;
+      --info-text: #1E4799;
+      --info-soft: rgba(38, 85, 179, 0.10);
+      --info-border: rgba(38, 85, 179, 0.26);
+
+      --card-highlight: 0 0 0 0 transparent;
+      --shadow-card: 0 1px 2px rgba(31, 26, 20, 0.04), 0 4px 14px -8px rgba(31, 26, 20, 0.08);
+      --shadow-pop: 0 18px 44px -10px rgba(31, 26, 20, 0.22), 0 2px 8px rgba(31, 26, 20, 0.08);
+
+      --r-lg: 14px;
+      --r-md: 10px;
+      --r-sm: 8px;
+
+      --col-w: 760px;
+      --page-px: 20px;
+
+      /* Dynamic Typography & Density */
+      --fs-body: 0.95rem;
+      --fs-title: 1.05rem;
+      --fs-sub: 0.87rem;
+      --fs-sm: 0.82rem;
+      --lh-body: 1.60;
+      --lh-body-rtl: 1.74;
+      --card-py: 15px;
+      --card-px: 18px;
+      --card-gap: 12px;
+      --sec-gap: 32px;
+    }
+
+    html[data-font="sm"] {
+      --fs-body: 0.88rem;
+      --fs-title: 0.99rem;
+      --fs-sub: 0.82rem;
+      --fs-sm: 0.78rem;
+    }
+    html[data-font="lg"] {
+      --fs-body: 1.05rem;
+      --fs-title: 1.16rem;
+      --fs-sub: 0.94rem;
+      --fs-sm: 0.88rem;
+    }
+    html[data-spacing="compact"] {
+      --lh-body: 1.46;
+      --lh-body-rtl: 1.60;
+    }
+    html[data-spacing="relaxed"] {
+      --lh-body: 1.82;
+      --lh-body-rtl: 1.96;
+    }
+    html[data-cards="compact"] {
+      --card-py: 11px;
+      --card-px: 14px;
+      --card-gap: 9px;
+      --sec-gap: 22px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      transition: background-color 180ms var(--ease), color 180ms var(--ease);
+    }
+    html[dir="rtl"] body {
+      font-family: var(--font-ar);
+      line-height: var(--lh-body-rtl);
+    }
+    html[dir="rtl"] * {
+      letter-spacing: 0 !important;
+      text-transform: none !important;
+    }
+    bdi.ltr-tok {
+      unicode-bidi: isolate;
+      direction: ltr;
+      font-variant-numeric: tabular-nums;
+      display: inline;
+    }
+    button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 2px;
+    }
+    [hidden] { display: none !important; }
+
+    @keyframes sheetUp {
+      from { transform: translateY(18px); opacity: 0.7; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes popIn {
+      from { transform: scale(0.97) translateY(-4px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    /* ================= SHARED LANGUAGE PILL ================= */
+    .lang-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px;
+      border-radius: 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      gap: 2px;
+    }
+    .lang-btn {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-3);
+      min-height: 32px;
+      min-width: 36px;
+      padding: 0 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 650;
+      cursor: pointer;
+      transition: background-color 140ms var(--ease), color 140ms var(--ease), transform 100ms var(--ease);
+    }
+    .lang-btn:hover { color: var(--text); }
+    .lang-btn:active { transform: scale(0.97); }
+    .lang-btn.is-active {
+      background: var(--seg-active);
+      color: var(--seg-active-text);
+      box-shadow: var(--seg-shadow);
+    }
+
+    /* ================= SLEEK ZERO-BLOAT TOP UTILITY STRIP ================= */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: var(--chrome);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid transparent;
+      transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+    }
+    .topbar.is-scrolled {
+      border-bottom-color: var(--border);
+      box-shadow: 0 4px 16px -12px rgba(12, 22, 34, 0.16);
+    }
+    .topbar-inner {
+      max-width: var(--col-w);
+      margin: 0 auto;
+      padding: 6px var(--page-px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .prefs-trigger {
+      min-height: 36px;
+      min-width: 44px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--font-display);
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 140ms var(--ease), border-color 140ms var(--ease), transform 100ms var(--ease);
+    }
+    .prefs-trigger:hover { background: var(--surface-2); border-color: var(--border-strong); }
+    .prefs-trigger:active { transform: scale(0.97); }
+    .prefs-trigger[aria-expanded="true"] {
+      background: var(--teal-soft);
+      border-color: var(--teal-border);
+      color: var(--teal-text);
+    }
+
+    /* ================= MAIN EDITORIAL COLUMN ================= */
+    .main-col {
+      max-width: var(--col-w);
+      margin: 0 auto;
+      padding: 12px var(--page-px) calc(48px + env(safe-area-inset-bottom));
+    }
+    .block { margin-top: var(--sec-gap); }
+    .block:first-of-type { margin-top: 0; }
+    .block-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .block-title {
+      margin: 0;
+      font-size: 0.76rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+    html[dir="rtl"] .block-title { font-size: 0.89rem; font-weight: 700; }
+
+    .ghost-pill {
+      min-height: 36px;
+      padding: 0 11px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-2);
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 140ms var(--ease), border-color 140ms var(--ease), transform 100ms var(--ease);
+    }
+    .ghost-pill:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+    .ghost-pill:active { transform: scale(0.98); }
+
+    /* ================= SMOOTH GRID-ROW ACCORDION ================= */
+    .acc-wrap {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 220ms var(--ease), opacity 180ms ease;
+      opacity: 0;
+    }
+    .acc-wrap.is-open {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+    .acc-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .acc-wrap, .chev, .ios-thumb, .prefs-sheet { transition: none !important; animation: none !important; }
+    }
+
+    /* ================= BLOCK 1: DE-BOXED 2-IN-1 PROBLEM CARDS ================= */
+    .prob-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--card-gap);
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--card-highlight), var(--shadow-card);
+      overflow: hidden;
+    }
+    .prob-card.is-alert {
+      border-inline-start: 3.5px solid var(--coral);
+    }
+    .prob-body {
+      padding: var(--card-py) var(--card-px) calc(var(--card-py) - 3px);
+    }
+    .prob-head {
+      display: flex;
+      align-items: baseline;
+      gap: 9px;
+      margin-bottom: 6px;
+    }
+    .prob-num {
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      color: var(--teal-text);
+      line-height: 1.3;
+    }
+    .prob-card.is-alert .prob-num { color: var(--coral-text); }
+    .prob-eyebrow-row {
+      margin-bottom: 5px;
+    }
+    .prob-alert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 1.5px 8px;
+      border-radius: 6px;
+      background: var(--coral-soft);
+      border: 1px solid var(--coral-border);
+      color: var(--coral-text);
+      font-size: 0.72rem;
+      font-weight: 750;
+    }
+    .prob-alert-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--coral);
+      flex-shrink: 0;
+    }
+    .prob-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: var(--fs-title);
+      font-weight: 700;
+      line-height: 1.32;
+      letter-spacing: -0.015em;
+      color: var(--text);
+    }
+    html[dir="rtl"] .prob-title { font-family: var(--font-ar); line-height: 1.44; }
+    .prob-summary {
+      margin: 0;
+      color: var(--text-2);
+      max-width: 66ch;
+    }
+
+    /* Quiet Zero-Tear Disclosure Trigger (sits below summary when closed, below details when open!) */
+    .card-disclosure {
+      width: 100%;
+      min-height: 40px;
+      padding: 7px var(--card-px);
+      border: 0;
+      border-top: 1px solid var(--border-subtle);
+      background: transparent;
+      color: var(--teal-text);
+      font-size: 0.80rem;
+      font-weight: 600;
+      line-height: 1.35;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-align: start;
+      transition: background-color 140ms var(--ease), color 140ms var(--ease);
+    }
+    .card-disclosure:hover { background: var(--surface-2); }
+    .prob-card.is-alert .card-disclosure { color: var(--coral-text); }
+    .prob-card.is-alert .card-disclosure:hover { background: var(--coral-wash); }
+    .chev {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      transition: transform 200ms var(--ease);
+    }
+    [aria-expanded="true"] .chev { transform: rotate(180deg); }
+
+    .prob-details {
+      padding: 2px var(--card-px) 10px;
+      border-top: 1px dashed var(--border);
+    }
+    .detail-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .detail-item:last-child { border-bottom: 0; padding-bottom: 2px; }
+    .detail-label {
+      font-size: var(--fs-sub);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .detail-text {
+      margin: 0;
+      color: var(--text-2);
+      font-size: var(--fs-body);
+      max-width: 66ch;
+    }
+
+    /* ================= BLOCK 2: SAFETY CARDS, TOP-ALIGNED WATCH LAB & UNIFIED A -> B SHEET ================= */
+    .safety-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+      gap: var(--card-gap);
+      margin-bottom: 14px;
+    }
+    .safety-card.is-full { grid-column: 1 / -1; }
+    .safety-card.sev-warn { border-inline-start: 3px solid var(--amber); }
+    .safety-card.sev-info { border-inline-start: 3px solid var(--info); }
+    .safety-body { padding: var(--card-py) var(--card-px) calc(var(--card-py) - 3px); }
+    .safety-top {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+      margin-bottom: 7px;
+    }
+    .sev-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .sev-warn .sev-badge {
+      background: var(--amber-soft);
+      color: var(--amber-text);
+      border: 1px solid var(--amber-border);
+    }
+    .sev-info .sev-badge {
+      background: var(--info-soft);
+      color: var(--info-text);
+      border: 1px solid var(--info-border);
+    }
+    .safety-title {
+      margin: 0;
+      font-size: 0.97rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.34;
+    }
+    .safety-summary {
+      margin: 0;
+      color: var(--text-2);
+      font-size: var(--fs-sub);
+    }
+    .safety-detail {
+      padding: 10px var(--card-px) 12px;
+      border-top: 1px dashed var(--border);
+      color: var(--text-2);
+      font-size: var(--fs-sub);
+    }
+
+    /* Watch Lab — Hero Value in Headline Row */
+    .watch-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-inline-start: 3.5px solid var(--amber);
+      border-radius: var(--r-lg);
+      box-shadow: var(--card-highlight), var(--shadow-card);
+      padding: var(--card-py) var(--card-px);
+      margin-bottom: 14px;
+    }
+    .watch-head-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: nowrap;
+      margin-bottom: 5px;
+    }
+    .watch-label {
+      font-weight: 700;
+      font-size: 0.97rem;
+      color: var(--text);
+      min-width: 0;
+    }
+    .watch-sub-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin-bottom: 7px;
+    }
+    .watch-badge {
+      padding: 1.5px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 750;
+      background: var(--amber-soft);
+      color: var(--amber-text);
+      border: 1px solid var(--amber-border);
+    }
+    .watch-val {
+      font-family: var(--font-display);
+      font-size: 1.36rem;
+      font-weight: 800;
+      line-height: 1.15;
+      color: var(--amber-text);
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .watch-unit {
+      font-size: 0.80rem;
+      font-weight: 700;
+      opacity: 1;
+    }
+    .watch-meta-line {
+      font-size: 0.76rem;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+    }
+    .watch-note {
+      margin: 0;
+      font-size: var(--fs-sm);
+      color: var(--text-2);
+    }
+
+    /* Unified Borderless-Interior A -> B Lab Transitions Card */
+    .trans-sheet {
+      margin-bottom: 14px;
+    }
+    .trans-sheet-head {
+      padding: var(--card-py) var(--card-px) 13px;
+    }
+    .sub-heading {
+      margin: 0 0 8px;
+      font-size: 0.98rem;
+      font-weight: 750;
+      color: var(--text);
+    }
+    .trans-takeaway {
+      position: relative;
+      overflow: hidden;
+      margin: 0;
+      padding: 8px 12px;
+      padding-inline-start: 14px;
+      border-radius: 7px;
+      background: var(--teal-wash);
+      font-size: var(--fs-sm);
+      color: var(--text-2);
+    }
+    .trans-takeaway::before {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: 0;
+      width: 3px;
+      background: var(--teal);
+      pointer-events: none;
+    }
+    .trans-rows {
+      display: flex;
+      flex-direction: column;
+    }
+    .trans-row {
+      padding: 13px var(--card-px);
+      border-top: 1px solid var(--border-subtle);
+    }
+    .trans-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .trans-name {
+      font-weight: 700;
+      font-size: 0.94rem;
+      color: var(--text);
+    }
+    .trans-ref {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+    }
+    .trans-flow {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+    }
+    .trans-side {
+      border-radius: 9px;
+      padding: 8px 11px;
+      min-width: 0;
+    }
+    .trans-side.is-before {
+      background: var(--amber-wash);
+    }
+    .trans-side.is-after {
+      position: relative;
+      overflow: hidden;
+      background: var(--teal-wash);
+      padding-inline-start: 13px;
+    }
+    .trans-side.is-after::before {
+      content: "";
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: 0;
+      width: 3px;
+      background: var(--teal);
+      pointer-events: none;
+    }
+    .trans-side-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 3px;
+      flex-wrap: wrap;
+    }
+    .trans-kicker {
+      font-size: 0.70rem;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--amber-text);
+    }
+    .trans-side.is-after .trans-kicker { color: var(--teal-text); }
+    .trans-date {
+      font-family: var(--font-mono);
+      font-size: 0.71rem;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+    }
+    .trans-val {
+      font-family: var(--font-display);
+      font-size: 1.24rem;
+      font-weight: 750;
+      line-height: 1.16;
+      color: var(--amber-text);
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      text-align: start;
+      margin-bottom: 3px;
+    }
+    .trans-side.is-after .trans-val {
+      font-size: 1.34rem;
+      font-weight: 800;
+      color: var(--teal-text);
+    }
+    html[dir="rtl"] .trans-val { text-align: end; }
+    .trans-unit {
+      font-size: 0.77rem;
+      font-weight: 700;
+      opacity: 1;
+    }
+    .trans-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--amber-text);
+    }
+    .trans-status.is-after { color: var(--teal-text); }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--amber);
+      flex-shrink: 0;
+    }
+    .trans-arrow {
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .trans-arrow svg { width: 38px; height: 16px; display: block; }
+    html[dir="rtl"] .trans-arrow svg { transform: scaleX(-1); }
+    .trans-note {
+      margin-top: 7px;
+      font-size: 0.77rem;
+      color: var(--text-3);
+    }
+
+    /* Collapsed Disclosure Bars (9 Normal Labs & Patient Baseline) */
+    .disclosure-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--card-highlight), var(--shadow-card);
+      overflow: hidden;
+    }
+    .disclosure-bar {
+      width: 100%;
+      min-height: 46px;
+      padding: 11px var(--card-px);
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: var(--fs-sm);
+      font-weight: 650;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-align: start;
+      transition: background-color 140ms var(--ease);
+    }
+    .disclosure-bar:hover { background: var(--surface-2); }
+    .disclosure-label { display: inline-flex; align-items: center; gap: 9px; }
+    .teal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--teal);
+      flex-shrink: 0;
+    }
+    .normal-labs-panel {
+      border-top: 1px solid var(--border-subtle);
+      padding: 4px var(--card-px) 10px;
+    }
+    .nlab-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0 22px;
+    }
+    .nlab-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .nlab-row:last-child { border-bottom: 0; }
+    @media (min-width: 620px) {
+      .nlab-row:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
+    }
+    .nlab-name { font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+    .nlab-right { text-align: end; flex-shrink: 0; }
+    .nlab-val {
+      display: block;
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      color: var(--teal-text);
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+    }
+    .nlab-meta {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ================= BLOCK 3: COLLAPSED PATIENT BASELINE ================= */
+    .baseline-panel {
+      border-top: 1px solid var(--border-subtle);
+      padding: 4px var(--card-px) 12px;
+    }
+    .baseline-list { margin: 0; }
+    .baseline-row {
+      display: grid;
+      grid-template-columns: minmax(140px, 190px) minmax(0, 1fr);
+      gap: 4px 16px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .baseline-row:last-child { border-bottom: 0; padding-bottom: 2px; }
+    .baseline-row dt { font-size: var(--fs-sm); font-weight: 700; color: var(--text-3); }
+    .baseline-row dd { margin: 0; font-size: var(--fs-sub); color: var(--text-2); }
+
+    /* ================= UNIFIED Aa PREFERENCES POPOVER / MOBILE SHEET ================= */
+    .prefs-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      background: transparent;
+    }
+    .prefs-sheet {
+      position: fixed;
+      z-index: 100;
+      width: 344px;
+      max-width: calc(100vw - 24px);
+      max-height: calc(100dvh - 80px);
+      overflow-y: auto;
+      background: var(--sheet-bg);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      box-shadow: var(--card-highlight), var(--shadow-pop);
+      padding: 15px 15px 13px;
+      animation: popIn 160ms var(--ease);
+    }
+    .prefs-handle { display: none; }
+    .prefs-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 13px;
+    }
+    .prefs-title { margin: 0; font-size: 0.95rem; font-weight: 750; color: var(--text); }
+    .prefs-close {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-2);
+      font-size: 1.15rem;
+      line-height: 1;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .prefs-close:hover { background: var(--surface-3); color: var(--text); }
+    .pref-group { margin-bottom: 12px; }
+    .pref-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-3);
+    }
+    .seg-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 3px;
+      padding: 3px;
+      border-radius: 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .seg-row.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .seg-btn {
+      min-height: 36px;
+      padding: 6px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-3);
+      font-size: 0.79rem;
+      font-weight: 650;
+      line-height: 1.22;
+      white-space: normal;
+      text-align: center;
+      cursor: pointer;
+      transition: background-color 140ms var(--ease), color 140ms var(--ease);
+    }
+    .seg-btn:hover { color: var(--text); }
+    .seg-btn.is-active {
+      background: var(--seg-active);
+      color: var(--seg-active-text);
+      box-shadow: var(--seg-shadow);
+    }
+    .prefs-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 7px;
+      padding-top: 11px;
+      margin-top: 11px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .pref-act-btn {
+      min-height: 40px;
+      padding: 8px 12px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 0.82rem;
+      font-weight: 650;
+      line-height: 1.2;
+      text-align: center;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background-color 140ms var(--ease), border-color 140ms var(--ease), color 140ms var(--ease);
+    }
+    .pref-act-btn:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+    .prefs-reset {
+      display: block;
+      width: 100%;
+      margin-top: 9px;
+      min-height: 36px;
+      border: 0;
+      background: transparent;
+      color: var(--text-3);
+      font-size: 0.79rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    .prefs-reset:hover { background: var(--surface-2); color: var(--text); }
+
+    /* ================= MOBILE ERGONOMICS (320px–767px) ================= */
+    @media (max-width: 767px) {
+      :root {
+        --page-px: 13px;
+        --card-py: 13px;
+        --card-px: 15px;
+        --card-gap: 10px;
+      }
+      .topbar-inner { padding: 3px var(--page-px); }
+      .lang-pill { padding: 1px; }
+      .lang-btn { border: 0; min-height: 44px; min-width: 44px; padding: 0 9px; font-size: 0.84rem; }
+      .prefs-trigger { min-height: 44px; min-width: 46px; }
+      .ghost-pill { min-height: 44px; }
+      .card-disclosure { min-height: 44px; padding: 8px var(--card-px); }
+      .disclosure-bar { min-height: 46px; }
+      .prefs-close { width: 44px; height: 44px; }
+      .seg-btn { min-height: 44px; }
+      .pref-act-btn { min-height: 48px; }
+      .prefs-reset { min-height: 44px; }
+
+      .prefs-backdrop { background: var(--backdrop); }
+      .prefs-sheet {
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        bottom: 0;
+        width: 100%;
+        max-width: 100%;
+        max-height: 86dvh;
+        border-radius: 20px 20px 0 0;
+        border-inline: 0;
+        border-bottom: 0;
+        padding: 10px 16px calc(18px + env(safe-area-inset-bottom));
+        animation: sheetUp 180ms var(--ease);
+      }
+      .prefs-handle {
+        display: block;
+        width: 38px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--border-strong);
+        margin: 0 auto 12px;
+      }
+    }
+    @media (max-width: 639px) {
+      .safety-grid { grid-template-columns: minmax(0, 1fr); }
+      .nlab-grid { grid-template-columns: minmax(0, 1fr); }
+      .baseline-row { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+    }
+    @media (max-width: 400px) {
+      :root { --page-px: 11px; --card-px: 13px; }
+      .trans-flow { gap: 6px; }
+      .trans-side { padding: 7px 8px; }
+      .trans-val { font-size: 1.08rem; }
+      .trans-side.is-after .trans-val { font-size: 1.15rem; }
+      .trans-arrow svg { width: 26px; height: 14px; }
+    }
+
+    @media print { body { display: none !important; } }
+  </style>
+</head>
+<body>
+  <!-- APP SHELL -->
+  <div id="app">
+    <header id="topbar" class="topbar">
+      <div class="topbar-inner">
+        <div class="lang-pill" dir="ltr" role="group" aria-label="Language">
+          <button type="button" class="lang-btn" data-lang="fr">FR</button>
+          <button type="button" class="lang-btn" data-lang="ar">ع</button>
+          <button type="button" class="lang-btn" data-lang="en">EN</button>
+        </div>
+        <button type="button" id="prefsBtn" class="prefs-trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="prefsSheet">Aa</button>
+      </div>
+    </header>
+    <main id="appMain" class="main-col"></main>
+  </div>
+
+  <!-- UNIFIED Aa PREFERENCES POPOVER / MOBILE SHEET -->
+  <div id="prefsBackdrop" class="prefs-backdrop" hidden></div>
+  <section id="prefsSheet" class="prefs-sheet" role="dialog" aria-modal="true" aria-labelledby="prefsTitle" hidden></section>
+
+
+  <script>
+  (() => {
+    'use strict';
+
+    const DATA = {"fr":{"dir":"ltr","lang":"fr","docTitle":"Fiche clinique — Consultation de psychiatrie","ui":{"prefsBtn":"Affichage et préférences (Aa)","prefsTitle":"Affichage et préférences","fontSizeLabel":"Taille du texte","fontSm":"Compact","fontMd":"Normal","fontLg":"Confort +","spacingLabel":"Interligne","spacingCompact":"Dense","spacingNormal":"Équilibré","spacingRelaxed":"Aéré","cardDensityLabel":"Espacement des cartes","cardCompact":"Compact","cardSpacious":"Aéré","expandAll":"Tout déplier","collapseAll":"Tout replier","prefsReset":"Réinitialiser l'affichage","dismiss":"Fermer","problemsTitle":"Motifs de consultation","detailsHide":"Masquer les détails","safetyTitle":"Sécurité médicale et biologie","labBefore":"Avant","labAfter":"Après","labRef":"Réf.","normalLabsToggle":"9 bilans normaux ✓ — TSH · Hb/Plq · glycémie · rein · foie/lipides","baselineTitle":"Données de base du patient"},"problems":[{"id":"prob-1","num":"01","tone":"default","alertBadge":"","title":"Peur sociale, colère retenue et frayeur brusque (« khelâa »)","summary":"Les situations d'exposition déclenchent depuis l'enfance peur, tremblements et crainte de la pitié ou du mépris. Il réagit par un masque verbal réflexe, ravale sa colère et sursaute facilement.","detailHint":"4 repères · Estime en privé, colère, « khelâa », refus et choix","details":[{"label":"Contraste en privé et masque verbal réflexe","text":"Son estime de soi reste préservée dans l'intimité et il se montre naturellement ouvert auprès de ses 2 à 3 amis proches. En contexte social ou d'évaluation, la crainte de la pitié, de la moquerie ou du mépris face au décalage perçu dans ses réalisations entraîne dissimulation des défauts et réponse rassurante réflexe dès la première seconde (affirmer que tout va bien ou est déjà fait pour éviter le reproche ou l'exposition)."},{"label":"Colère retenue et évitement du conflit","text":"Face aux abus ou aux injustices, il ressent une colère claire et vive, mais la ravale par crainte du conflit, basculant ensuite vers le retrait ou une rêverie dans laquelle il l'emporte."},{"label":"Frayeur brusque (« khelâa ») et lecture des émotions","text":"Depuis l'enfance, les imprévus, les bruits ou voix fortes soudaines et divers déclencheurs quotidiens provoquent une frayeur brusque avec tension abdominale nette. Il ne rapporte ni cauchemars récurrents, ni reviviscences intrusives, ni sensation de détachement du réel ou du corps. Il décrit aussi une difficulté durable à identifier ses émotions internes, sans idées obsédantes ni rituels."},{"label":"Contexte d'enfance, refus et choix importants","text":"Enfance précoce sociable, mais cadre familial sévère et anxiogène marqué par des humiliations liées à l'énurésie (jusqu'à 13 ans) et un manque de chaleur affective. Difficulté à dire « non » et hésitation sur les choix personnels mêlant gêne face au mécontentement d'autrui et peur d'une erreur irréversible faute de certitude absolue ; dès qu'une certitude ou un repère fiable existe, l'action devient franche et immédiate. Devant le mariage s'ajoute la crainte aiguë d'être exposé comme paresseux, inférieur ou choisi par défaut."}]},{"id":"prob-2","num":"02","tone":"default","alertBadge":"","title":"Surcharge cognitive en flux rapide, démarrage et organisation","summary":"Un exposé structuré reste aisé, mais un flux dense et rapide le sature vite, même seul. Oublis anciens, inertie au démarrage et schéma « tout-ou-rien » complètent ce tableau.","detailHint":"3 repères · Interférences, ASRS 5/6, blocage « tout-ou-rien », vision 3D","details":[{"label":"Compréhension en flux rapide (auto-observations à évaluer)","text":"Difficulté rapportée depuis l'enfance malgré un bilan auditif normal. Le fil cède au-delà de deux à trois idées imbriquées, devant un terme non défini ou face à plusieurs variables rapides, à l'oral comme sur texte non structuré. Le maintien à court terme et la vigilance au calme lui paraissent satisfaisants (non testés cliniquement), tandis que ses essais informels non standardisés évoquent plutôt une interférence entre éléments récents sous pression temporelle qu'un oubli aléatoire."},{"label":"Organisation, démarrage et schéma « tout-ou-rien »","text":"Oublis depuis l'enfance, recul en mémorisation au lycée et forte difficulté à initier les tâches courantes (cuisine, ménage). Rythme de pensée interne rapide avec longues phases d'absorption profonde sur les sujets stimulants, mais difficulté marquée à travailler par blocs courts ou interrompus : dès qu'une obligation intermédiaire rompt sa continuité, il bascule vers l'arrêt complet et l'évitement total de ses projets personnels."},{"label":"Auto-questionnaire et repères visuo-spatiaux","text":"Auto-questionnaire ASRS v1.1 (Partie A) rempli par le patient : 5/6 (simple repère de dépistage initial, non diagnostique). Il note aussi une difficulté ancienne et secondaire d'orientation dans l'espace 3D, avec perception 2D et reconnaissance des visages vécues comme normales ; examen ophtalmologique standard satisfaisant (8/10 et 9/10), sans bilan orthoptique ni stéréoscopique dédié."}]},{"id":"prob-3","num":"03","tone":"default","alertBadge":"","title":"Rêveries immersives, maîtrise de soi et habitudes nocturnes","summary":"Des rêveries héroïques immersives, reconnues comme imaginaires, occupent la moitié de ses journées. Une difficulté constante à différer la gratification et la pornographie nocturne quasi quotidienne s'y ajoutent.","detailHint":"3 repères · Rêveries (~50 %), achats/alimentation, pornographie, 0 sélectivité","details":[{"label":"Rêveries héroïques diurnes","text":"Surviennent à tout moment et absorbent en moyenne la moitié du temps d'éveil : scénarios où il incarne un héros extraordinaire suscitant admiration et émerveillement, tout en conservant pleinement conscience de leur caractère purement imaginaire."},{"label":"Maîtrise de soi et récompense différée","text":"Difficulté générale et stable toute l'année (non épisodique) dans l'alimentation et les achats : par exemple, consommer en une seule journée des fruits prévus pour la semaine, ou acheter immédiatement un téléphone convoité tout en sachant qu'une remise arrive deux semaines plus tard."},{"label":"Habitudes nocturnes, alimentation et gestes mineurs","text":"Usage nocturne quasi quotidien de pornographie s'ajoutant à l'irrégularité du sommeil ; les fortes envies lors des tentatives d'arrêt ont laissé place récemment à une résignation calme, sans spirale de culpabilité. Aucune sélectivité alimentaire ou sensorielle rapportée (alimentation très pauvre attribuée à l'inertie culinaire et à la sédentarité). Brèves tensions musculaires volontaires (~3 s) lors de tâches manuelles lentes et grattage distrait d'acné dorsale."}]},{"id":"prob-4","num":"04","tone":"alert","alertBadge":"Alerte suicidaire","title":"Baisses d'élan récurrentes et vigilance suicidaire","summary":"Il traverse depuis deux mois une baisse d'élan récurrente, avec plaisir préservé. Des idées suicidaires passées sont contenues par ses convictions religieuses, mais un mépris marital déclencherait une escalade aiguë.","detailHint":"3 repères · Déclencheur (hors Curacné), idées suicidaires, 0 manie/hallucination","details":[{"label":"Épisode actuel et déclencheur perçu","text":"Le patient ne relie pas cette baisse d'élan à Curacné (débuté en juin 2026, sans effet psychique perçu), mais à une obligation hebdomadaire exigeant 2 à 3 jours de préparation, qui rompt sa continuité et active son blocage « tout-ou-rien »."},{"label":"Sécurité suicidaire et alerte relationnelle","text":"Idées suicidaires et d'auto-agression passées (dernier épisode il y a quelques mois ; gravité à évaluer cliniquement), liées à la déception devant des attentes non atteintes et au sentiment d'absence d'accomplissement réel (matériel, moral, psychologique, physique ou intellectuel). La situation est jugée contenue par ses convictions religieuses, mais il signale qu'une découverte de mépris ou de comparaison dévalorisante dans le mariage (être perçu comme un choix par défaut, paresseux ou inférieur) provoquerait une escalade majeure du risque suicidaire."},{"label":"Dépistage thymique et contexte familial","text":"Aucun antécédent maniaque ou hypomaniaque manifeste connu (à évaluer cliniquement) et aucune hallucination rapportée. Des difficultés psychiques ou émotionnelles non diagnostiquées ont été observées chez un parent au premier degré (selon le patient)."}]},{"id":"prob-5","num":"05","tone":"default","alertBadge":"","title":"Sommeil irrégulier non réparateur et voies aériennes","summary":"Il dort environ 9 heures sur un rythme irrégulier et peu réparateur, sans somnolence diurne actuelle ni siestes réparatrices. Une polysomnographie complète (PSG Type I) est programmée dans un mois.","detailHint":"4 repères · PSG et siestes, ORL/septoplastie 2018, dépistages négatifs, enfance/souplesse","details":[{"label":"Architecture du sommeil, PSG et siestes","text":"Bref réveil quasi quotidien à l'aube (au Fajr ou ~1 h avant : regarde l'heure et se rendort, avec lever très lourd ~1 jour sur 2 pour la prière du Fajr), respiration buccale, paralysies du sommeil occasionnelles et sensibilité à la lumière au coucher depuis 2 à 3 ans. Ronflement sur le dos disparaissant sur le côté observé autrefois en résidence universitaire (diplômé il y a 1 an ; vit seul). Réveil matinal plus léger que dans l'enfance (entend bien le réveil), aucune somnolence diurne actuelle, mais siestes courtes non réparatrices (réveil lourd et fatigué) ; PSG Type I prévue dans ~1 mois."},{"label":"Voies aériennes et antécédents ORL","text":"Gêne et obstruction persistantes de la narine droite (avis ORL prévu), avec éternuements et démangeaisons nasales au contact de la poussière. Chirurgies répétées des végétations et amygdales dans l'enfance (détails exacts et récidive éventuelle non confirmés), puis septoplastie isolée le 30/06/2018 pour déviation septale (déméchage le 02/07/2018)."},{"label":"Dépistages différentiels négatifs","text":"Aucun accès de sommeil diurne, aucune hallucination (à l'éveil, à l'endormissement ou au réveil), et uniquement des secousses volontaires des jambes au réveil sans aucun besoin impérieux de bouger les jambes le soir ou la nuit. Seule une brève perte de tonus des mains ou des genoux en pleine conscience survient rarement, strictement lors d'un orgasme particulièrement intense — jamais au rire, à la surprise ou à la colère."},{"label":"Sommeil infantile et souplesse articulaire asymptomatique","text":"Sommeil très profond dans l'enfance avec énurésie jusqu'à 13 ans, endormissements inhabituels à 15 ans (en prosternation lors de la prière et en piscine) et un épisode infantile décrit comme du somnambulisme, tous résolus sans récidive adulte. Souplesse articulaire locale notable (pouce touchant facilement l'avant-bras, sans score clinique complet), totalement asymptomatique : aucune douleur articulaire ou dorsale, aucune entorse répétée, aucun malaise ni palpitation debout ou à la chaleur."}]}],"safety":{"cards":[{"id":"meds","severity":"warn","badge":"Traitements · Vigilance","title":"Exposition médicamenteuse et tolérance","summary":"Aucun psychotrope pris à ce jour. Curacné (isotrétinoïne) 30 mg/j depuis juin 2026 (~4 mois restants, sans effet psychique perçu), aucun complément actuel. Anafranil (clomipramine, ATC) 10 mg prescrit le 22/11/2026 lors d'une consultation neurologique expéditive (~1 min, survol des dossiers sans examen détaillé), non débuté dans l'attente de cette évaluation et de la PSG (~1 mois). Préférence pour éviter une sédation diurne marquée ou un ralentissement cognitif.","detailHint":"Bilan hépatique Curacné (02/09/26), cure avril 2026 et signes absents","detail":"Cure de correction d'avril 2026 terminée (Solyne Vit D 50 000, Vit D 200 000 ×3, Vit B12 IM ×2 boîtes, Fumafer 200 mg, Foldine 5 mg). Bilan hépatique et lipidique normal sous Curacné le 02/09/2026 ; aucun symptôme digestif chronique ni fourmillement ou engourdissement des extrémités."},{"id":"eeg","severity":"warn","badge":"Seuil épileptogène","title":"EEG de veille prolongé (24/04/2022)","summary":"Réalisé pour sommeil lourd (assoupissement 30 à 60 s) : rythme alpha normal avec « quelques bouffées de pointes rares — À SURVEILLER ». Vigilance avant toute molécule abaissant le seuil épileptogène (ex. : tricycliques comme Anafranil, bupropion).","detailHint":"0 crise clinique · Absence de secousses, déjà-vu, absences ou migraines","detail":"Aucune crise épileptique clinique connue. Le patient ne rapporte aucune secousse matinale involontaire, aucune sensation de déjà-vu inhabituelle, aucune absence brève, ni migraines ou céphalées récurrentes."},{"id":"cardio","severity":"warn","badge":"Pas d'ECG 12D","title":"Repères cardiovasculaires","summary":"Échocardiographie normale le 21/09/2025 (FE 75.09 %, fuite mitrale grade 1), mais aucun ECG 12 dérivations récent (QTc de base absent). Anciennes syncopes orthostatiques résolues depuis ~10 ans.","detailHint":"Syncopes orthostatiques anciennes (~10 ans) et récupération à l'effort","detail":"Quelques épisodes anciens de perte de connaissance brève (~10 s après lever brusque précédé de vertige, avec brèves secousses motrices transitoires puis récupération immédiate complète sans confusion au décours), disparus depuis ~10 ans (à apprécier cliniquement). Ressenti subjectif d'une récupération cardiaque un peu lente après l'effort dans un contexte de sédentarité prolongée (>7 ans)."}],"watchLab":{"label":"Globules blancs (GB)","value":"4.10","unit":"G/L","ref":"4.0–10.0","date":"29/04/26","badge":"Seuil inférieur · À contrôler","note":"Valeur normale sur la FNS mais juste au seuil inférieur (4.0) et non recontrôlée depuis avril 2026 (avant Curacné en juin 2026) : FNS à recontrôler sous Curacné et avant tout psychotrope à risque hématologique."},"transitionsTitle":"Carences corrigées (29/04 → 14/11/2026)","transitionsNote":"Correction biologique complète (cure d'avril 2026 terminée, aucun complément en cours), avec amélioration très limitée du sommeil uniquement et persistance des symptômes principaux. Contexte : alimentation très pauvre et absence de soleil (cause non explorée).","transitions":[{"label":"Vitamine D (25-OH)","before":"3.92","after":"31.36","unit":"ng/mL","ref":"25–100","beforeDate":"29/04/26","afterDate":"14/11/26","beforeTag":"Carence sévère","afterTag":"Normalisée ✓","note":"Solyne 50 000 + 200 000 ×3 · terminée (sans entretien, proche du seuil)"},{"label":"Vitamine B12","before":"111.0","after":"642.3","unit":"pg/mL","ref":"211–911","beforeDate":"29/04/26","afterDate":"14/11/26","beforeTag":"Basse","afterTag":"Normalisée ✓","note":"Vit B12 IM (2 boîtes) · terminée"},{"label":"Ferritine","before":"18.74","after":"57.00","unit":"ng/mL","ref":"20–300","beforeDate":"29/04/26","afterDate":"14/11/26","beforeTag":"Basse","afterTag":"Normalisée ✓","note":"Fumafer 200 mg (+ Foldine 5 mg) · terminée"}],"normalLabs":[{"label":"Hémoglobine (Hb)","value":"14.60","unit":"g/dL","date":"04/26","ref":"13–17.5"},{"label":"Plaquettes","value":"172","unit":"G/L","date":"04/26","ref":"150–400"},{"label":"TSH","value":"1.37","unit":"µUI/mL","date":"04/26","ref":"0.27–4.2"},{"label":"Glycémie à jeun","value":"0.89","unit":"g/L","date":"04/26","ref":"0.70–1.1"},{"label":"Créatinine","value":"7.21","unit":"mg/L","date":"14/11/26","ref":"6.7–11"},{"label":"ASAT (TGO)","value":"25.18","unit":"UI/L","date":"02/09/26","ref":"10–40"},{"label":"ALAT (TGP)","value":"9.73","unit":"UI/L","date":"02/09/26","ref":"<46"},{"label":"Cholestérol total","value":"1.35","unit":"g/L","date":"02/09/26","ref":"<2.0"},{"label":"Triglycérides","value":"0.53","unit":"g/L","date":"02/09/26","ref":"<1.5"}]},"baseline":{"items":[{"label":"Profil","value":"Homme, 25 ans (né en 2001)"},{"label":"Biométrie","value":"172 cm · 62 kg · IMC 20.96"},{"label":"Cadre de vie et entourage","value":"Vit seul de manière autonome depuis 5 ans (diplômé de l'université il y a 1 an) ; 2 à 3 amis proches."},{"label":"Hygiène de vie et substances","value":"Sédentarité prolongée (>7 ans sans activité physique), alimentation très pauvre et exposition solaire quasi nulle ; caféine quasi nulle, zéro tabac ni autres substances."},{"label":"Audition et vision","value":"Bilan auditif normal ; acuité visuelle standard satisfaisante (8/10 et 9/10, sans bilan orthoptique 3D)."}]}},"ar":{"dir":"rtl","lang":"ar","docTitle":"مذكرة سريرية — استشارة طبية نفسية","ui":{"prefsBtn":"العرض والتفضيلات (Aa)","prefsTitle":"العرض والتفضيلات","fontSizeLabel":"حجم الخط","fontSm":"مضغوط","fontMd":"قياسي","fontLg":"مريح +","spacingLabel":"تباعد الأسطر","spacingCompact":"مكثّف","spacingNormal":"متوازن","spacingRelaxed":"مريح","cardDensityLabel":"تباعد البطاقات","cardCompact":"مضغوط","cardSpacious":"واسع","expandAll":"توسيع الكل","collapseAll":"طيّ الكل","prefsReset":"إعادة ضبط العرض","dismiss":"إغلاق","problemsTitle":"المشكلات الأساسية للاستشارة","detailsHide":"إخفاء التفاصيل","safetyTitle":"الأمان الطبي والتحاليل المخبرية","labBefore":"قبل","labAfter":"بعد","labRef":"المرجع","normalLabsToggle":"9 تحاليل طبيعية ✓ — TSH · Hb/صفائح · سكر · كلى · كبد/دهون","baselineTitle":"بيانات المريض الأساسية"},"problems":[{"id":"prob-1","num":"01","tone":"default","alertBadge":"","title":"الخوف الاجتماعي، الغضب المكتوم والفزع المفاجئ («الخلعة»)","summary":"تُثير مواقف التقييم منذ الطفولة خوفاً وارتجافاً جسدياً وخشيةً من الشفقة أو السخرية أو الاحتقار. ويقابل ذلك بتمويه لفظي تلقائي، وكبتٍ للغضب الحار، وفزعٍ مفاجئ متكرر.","detailHint":"4 تفاصيل · التقدير في الخلوة، الغضب، «الخلعة»، الرفض والقرارات","details":[{"label":"التقدير في الخلوة والتمويه اللفظي التلقائي","text":"يحافظ على تقدير سليم لذاته في خلوته وينفتح بعفوية مع أصدقائه المقربين (2 إلى 3 أصدقاء). وفي مواقف التقييم أو الانكشاف أمام الآخرين، تؤدي خشية الشفقة أو السخرية أو الاحتقار بسبب فجوة الإنجاز إلى إخفاء العيوب وإطلاق ردّ مطمئن تلقائي في الثانية الأولى (ادعاء أن كل شيء بخير أو منجَز لتفادي اللوم والانكشاف)."},{"label":"الغضب المكتوم وتفادي الصدام","text":"يشعر بغضب حار وواضح عند التعرّض للتجاوز أو الظلم، لكنه يبتلعه خشية الصدام، فينقلب لاحقاً إلى انسحاب هادئ أو إلى حلم يقظة ينتصر فيه."},{"label":"الفزع المفاجئ («الخلعة») وقراءة المشاعر","text":"تُثير المفاجآت والأصوات المرتفعة المفاجئة ومثيرات يومية متنوعة منذ الطفولة فزعاً مفاجئاً شديداً يصحبه شدّ بطني واضح. لا يبلّغ عن كوابيس متكررة ولا استرجاعات اقتحامية ولا إحساس بالانفصال عن الواقع أو الجسد. كما يذكر صعوبة مستمرة في التعرّف إلى مشاعره الداخلية وتسميتها، دون أفكار وسواسية متكررة أو طقوس."},{"label":"بيئة الطفولة، الرفض والقرارات الكبرى","text":"كانت طفولته المبكرة اجتماعية، لكنه نشأ في بيئة أسرية قاسية ومخيفة تخللتها مواقف إذلال بسبب سلس البول الليلي (حتى سن 13 سنة) وقلة الدفء العاطفي. ويرتبط التردّد في قول «لا» وفي القرارات الشخصية بضيق حاد أمام استياء الآخرين وخوف من خطأ لا رجعة فيه عند غياب اليقين التام؛ غير أنه يُنفّذ بحسم فوري متى توافر اليقين أو التوجيه الموثوق. وأمام الزواج يقترن ذلك بخشية حادة من الانكشاف ككسول أو أقل شأناً أو خيار اضطراري."}]},{"id":"prob-2","num":"02","tone":"default","alertBadge":"","title":"إجهاد الاستيعاب مع تلاحق المعلومات، صعوبة المبادرة والتنظيم","summary":"يستوعب الشرح المنظّم بيسر، لكن تلاحق الكلام أو النص غير المنظّم يُجهد فهمه سريعاً حتى في الهدوء. ويرافق ذلك نسيان قديم، وصعوبة في المبادرة، ونمط توقّف «الكل أو لا شيء».","detailHint":"3 تفاصيل · تداخل المعلومات، ASRS 5/6، «الكل أو لا شيء»، التوجه 3D","details":[{"label":"تلاحق المعلومات (ملاحظات ذاتية للتقييم)","text":"صعوبة ممتدة منذ الطفولة رغم سلامة فحص السمع. يتعثر الفهم عند تجاوز فكرتين إلى ثلاث أفكار متداخلة، أو ورود مصطلح غير معرّف، أو تلاحق متغيرات سريعة، سواء في الكلام المسموع أو النص غير المنظّم. تبدو له الذاكرة قصيرة المدى والانتباه في الهدوء جيدَين (دون اختبار معياري)، بينما توحي محاولاته الاستكشافية غير المعيارية بتداخل وخلط بين العناصر الحديثة تحت ضغط الوقت أكثر من النسيان العشوائي."},{"label":"التنظيم والمبادرة ونمط «الكل أو لا شيء»","text":"نسيان مبكر منذ الطفولة، وتراجع في الحفظ خلال المرحلة الثانوية، وصعوبة حادة في بدء المهام اليومية كالطبخ والتنظيف. يصف إيقاعاً ذهنياً داخلياً سريعاً مع فترات طويلة من الاستغراق العميق في المواضيع الجاذبة، مقابل صعوبة واضحة في العمل عبر أشواط قصيرة أو متقطعة؛ فمتى قطع التزام وسيط متكرر استرسال عمله، يتحوّل إلى توقّف كامل وإحجام تام عن مشاريعه الشخصية."},{"label":"الاستبيان الذاتي والتوجه البصري المكاني","text":"سجّل 5 من 6 في استبيان ASRS v1.1 (القسم أ) بتعبئة ذاتية (مؤشر فرز أولي فقط، وليس تشخيصاً). كما يذكر صعوبة قديمة وثانوية في التوجه المكاني ثلاثي الأبعاد مع إدراك ثنائي الأبعاد وتعرّف على الوجوه طبيعيين وفق ملاحظته؛ وكان فحص العيون القياسي جيداً (8/10 و 9/10) دون فحص متخصص لتقويم البصر (orthoptie) أو الرؤية المجسمة 3D."}]},{"id":"prob-3","num":"03","tone":"default","alertBadge":"","title":"أحلام اليقظة الغامرة، صعوبة ضبط النفس والعادات الليلية","summary":"تستغرق أحلام اليقظة البطولية، مع وعي تام بأنها خيال محض، نحو نصف يومه. وترافقها صعوبة ثابتة طوال السنة في تأجيل الإشباع واستهلاك ليلي شبه يومي للإباحية.","detailHint":"3 تفاصيل · أحلام اليقظة (نصف اليوم)، الأكل والشراء، الإباحية، بلا انتقائية","details":[{"label":"أحلام اليقظة البطولية","text":"تحدث في مختلف الأوقات وتستحوذ في المتوسط على نصف ساعات اليقظة تقريباً، ضمن سيناريوهات يؤدي فيها دور بطل خارق ينال الإعجاب والانبهار، مع إدراك كامل بأنها خيال محض غير واقعي."},{"label":"ضبط النفس وتأجيل الإشباع طوال السنة","text":"صعوبة عامة ومستمرة طوال السنة (غير نوبية) في الأكل والشراء؛ كاستهلاك فواكه مخصّصة لأسبوع كامل في يوم واحد، أو شراء هاتف مرغوب فوراً رغم معرفته بوجود تخفيض بعد أسبوعين."},{"label":"العادات الليلية والتغذية والسلوكيات البسيطة","text":"استهلاك ليلي شبه يومي للإباحية يتداخل مع عدم انتظام النوم؛ وبعد إلحاح قوي في محاولات الإقلاع السابقة، انتهى الأمر مؤخراً إلى استسلام هادئ دون شعور حاد بالذنب أو تأنيب متكرر. لا يبلّغ عن أي انتقائية غذائية أو حسية، ويربط ضعف نظامه الغذائي بصعوبة المبادرة للطبخ والخمول البدني. كما يلاحظ شدّاً عضلياً إرادياً وجيزاً (نحو 3 ثوانٍ) أثناء المهام اليدوية البطيئة ونزعاً تلقائياً لبثور الظهر عند الشرود."}]},{"id":"prob-4","num":"04","tone":"alert","alertBadge":"تنبيه خطر انتحاري","title":"فترات الفتور المتكررة وتنبيه خطر الانتحار","summary":"يمرّ منذ شهرين بنوبة فتور متكررة مع بقاء القدرة على الاستمتاع. وسبق له اختبار أفكار انتحارية يضبطها الوازع الديني، مع خطر تصعيد حاد عند التعرّض للاحتقار في الزواج.","detailHint":"3 تفاصيل · المحفّز (دون صلة بـ Curacné)، الأفكار الانتحارية، بلا هوس أو هلوسات","details":[{"label":"النوبة الحالية والمحفّز وفق المريض","text":"لا يربط المريض فترة الفتور هذه بدواء Curacné (بدأه في جوان 2026 دون ملاحظة أثر نفسي)، بل بتزامنها مع التزام أسبوعي يتطلب يومين إلى ثلاثة أيام من التحضير، يقطع استرسال عمله ويُدخله في التوقف الكامل («الكل أو لا شيء»)."},{"label":"تقييم خطر الانتحار والتنبيه الحاد حول الزواج","text":"أفكار انتحارية وإيذاء ذات سابقة (آخرها قبل بضعة أشهر؛ تُقيَّم شدتها سريرياً)، نابعة من خيبة التوقعات والشعور بانعدام الإنجاز الحقيقي مادياً ومعنوياً ونفسياً وصحياً وعلمياً. يرى الوضع مضبوطاً حالياً بفضل الوازع الديني، لكنه ينبّه صراحةً إلى أن اكتشاف احتقار أو مقارنة مهينة في الزواج (كأن يُنظَر إليه كخيار اضطراري كسول أو أقل شأناً مقارنة بغيره) سيرفع لديه خطر الانتحار إلى مستوى حاد وخطير."},{"label":"الفرز المزاجي والسياق العائلي","text":"لا توجد سوابق هوس أو هوس خفيف واضحة معروفة (تُقيَّم سريرياً)، ولا يبلّغ عن أي هلوسات إطلاقاً. كما يذكر ملاحظة صعوبات نفسية أو انفعالية غير مشخّصة لدى قريب من الدرجة الأولى."}]},{"id":"prob-5","num":"05","tone":"default","alertBadge":"","title":"النوم غير المنتظم وغير المريح والمجرى التنفسي","summary":"ينام نحو 9 ساعات على وتيرة غير منتظمة وغير مريحة مع قيلولات غير منعشة، لكن دون نعاس نهاري حالي. وقد بُرمجت دراسة نوم مخبرية كاملة (Type I PSG) خلال شهر.","detailHint":"4 تفاصيل · فحص PSG والقيلولة، الأنف والحنجرة 2018، الاستبعادات السلبية، الطفولة والمرونة","details":[{"label":"بنية النوم، فحص PSG والقيلولة","text":"استيقاظ خاطف شبه يومي عند الفجر أو قبله بنحو ساعة (ينظر للساعة ويعود للنوم، مع نهوض بثقل شديد جداً نحو نصف الأيام لصلاة الفجر)، وتنفس فموي، ونوبات متباعدة من شلل النوم، وانزعاج مستجد من الضوء وقت النوم منذ سنتين إلى ثلاث سنوات. سُجّل سابقاً شخير عند النوم على الظهر يزول على الجنب خلال السكن الجامعي (تخرّج منذ سنة ويسكن وحده حالياً). الاستيقاظ صباحاً أخف مما كان في الصغر (يسمع المنبه بانتظام) بلا نعاس نهاري حالياً، لكن القيلولات القصيرة غير منعشة وتتركه مثقلاً ومتعباً؛ وتُجرى دراسة Type I PSG خلال نحو شهر لتقييم النوم والتنفس الليلي موضوعياً."},{"label":"المجرى التنفسي وسوابق الأنف والحنجرة","text":"ضيق وانزعاج مستمران في المنخر الأيمن (مع فحص ORL مرتقب) وعطاس وحكة أنفية عند التعرّض للغبار. في الطفولة أُجريت له جراحات متكررة على اللحمية واللوزتين (دون تأكد من تفاصيلها أو احتمال تكرارها)، تلتها عملية تقويم حاجز أنفي منفردة بتاريخ 30/06/2018 لانحراف الحاجز (نزع الفتيل 02/07/2018)."},{"label":"مؤشرات الفرز السلبي (الاستبعاد)","text":"لا يبلّغ عن أي نوبات نوم نهارية قسرية ولا أي هلوسات (في اليقظة أو عند بدء النوم أو الاستيقاظ)، ويقتصر تحريك الساقين على هزّ إرادي عند الاستيقاظ بلا أي رغبة ملحة لتحريك الساقين مساءً أو ليلاً. ولا يُسجّل إلا ارتخاء خاطف ونادر في اليدين أو الركبتين بوعي كامل حصراً عند الذروة الجنسية (النشوة الجنسية) الأشد من المعتاد، ولا يحدث مطلقاً مع الضحك أو المفاجأة أو الغضب."},{"label":"سوابق الطفولة ومرونة المفاصل غير العرضية","text":"كان نومه في الطفولة بالغ العمق مع سلس بول ليلي حتى 13 سنة، وحالات غفو غير معتادة بعمر 15 سنة (في السجود أثناء الصلاة وفي المسبح)، وواقعة واحدة وُصفت كسير أثناء النوم في الصغر، وكلها زالت دون تكرار في البلوغ. وتُلاحَظ مرونة مفصلية موضعية (ملامسة الإبهام للساعد بسهولة دون تقييم سريري كامل) غير مصحوبة بأي أعراض: لا آلام مفاصل أو ظهر، ولا التواءات متكررة، ولا دوخة أو خفقان عند الوقوف أو في الحر."}]}],"safety":{"cards":[{"id":"meds","severity":"warn","badge":"الأدوية · تنبيه","title":"الوضع الدوائي والتحمّل","summary":"لم يتناول أي دواء نفسي سابقاً. يتناول Curacné (isotrétinoïne) 30 mg يومياً منذ جوان 2026 (نحو 4 أشهر متبقية، دون أثر نفسي ملحوظ) ولا مكملات حالياً. وُصف له Anafranil (clomipramine، مضاد اكتئاب ثلاثي الحلقات ATC) 10 mg بتاريخ 22/11/2026 خلال استشارة طب أعصاب عاجلة (نحو دقيقة واحدة دون فحص تفصيلي) ولم يبدأه انتظاراً لهذا التقييم وفحص PSG (خلال نحو شهر). يُفضّل تفادي التهدئة النهارية الثقيلة أو التباطؤ الذهني قدر الإمكان.","detailHint":"تحاليل الكبد تحت Curacné (02/09/26)، تعويض أفريل 2026 والأعراض الغائبة","detail":"اكتملت وتوقفت خطة تعويض النواقص لشهر أفريل 2026 (Solyne Vit D 50000، و Vit D 200000 ×3، وحقن Vit B12 علبتين، و Fumafer 200 mg، و Foldine 5 mg). تحاليل الكبد والدهون تحت Curacné طبيعية بتاريخ 02/09/2026؛ ولا يبلّغ عن أعراض هضمية مزمنة ولا تنميل أو خدر في الأطراف."},{"id":"eeg","severity":"warn","badge":"عتبة الاختلاج","title":"تخطيط الدماغ EEG المطوّل (24/04/2022)","summary":"أُجري بسبب ثقل النوم (غفوة 30 إلى 60 ثانية): إيقاع ألفا طبيعي مع عبارة « quelques bouffées de pointes rares — À SURVEILLER ». يمثّل ضابط أمان أساسياً قبل أي دواء يخفض عتبة الاختلاج (مثل ثلاثيات الحلقات كـ Anafranil أو bupropion).","detailHint":"بلا نوبات سريرية · غياب النفضات والـ déjà vu والغيابات والشقيقة","detail":"لا توجد سوابق نوبات صرع سريرية معروفة. ولا يبلّغ عن نفضات صباحية لاإرادية، أو إحساس غير معتاد بالألفة المسبقة (déjà vu)، أو غيابات لحظية، أو شقيقة أو صداع متكرر."},{"id":"cardio","severity":"warn","badge":"بلا ECG 12D","title":"معطيات القلب والأوعية","summary":"صدى القلب طبيعي بتاريخ 21/09/2025 (FE 75.09%، ارتجاع تاجي درجة 1)، لكن لا يتوفر تخطيط قلب كهربائي ECG 12D حديث (بلا مرجع لـ QTc). نوبات إغماء قديمة منتهية منذ نحو 10 سنوات.","detailHint":"نوبات إغماء قديمة منتهية (نحو 10 سنوات) وعودة النبض بعد الجهد","detail":"سُجّلت بضع نوبات إغماء عابرة قديمة اختفت منذ نحو 10 سنوات (نحو 10 ثوانٍ عقب الوقوف المفاجئ بدوار مسبق، مع حركات تشنجية عابرة ثم إفاقة فورية كاملة بلا ذهول بعدها؛ للتقييم السريري). كما يذكر إحساساً ذاتياً بتباطؤ عودة النبض بعد الجهد في سياق خمول بدني مطوّل (أكثر من 7 سنوات)."}],"watchLab":{"label":"الكريات البيضاء (GB)","value":"4.10","unit":"G/L","ref":"4.0–10.0","date":"29/04/26","badge":"حدّي أدنى · للمراجعة","note":"ضمن المجال الطبيعي على التقرير لكنها عند الحد الأدنى مباشرةً (4.0) ولم يُعَد فحص FNS منذ أفريل 2026 (قبل بدء Curacné في جوان 2026): تستدعي إعادة FNS تحت Curacné وقبل أي علاج نفسي ذي أثر دموي."},"transitionsTitle":"نواقص مُصحّحة (29/04 إلى 14/11/2026)","transitionsNote":"رغم عودة المؤشرات الثلاثة إلى المجال الطبيعي (انتهى التعويض في أفريل 2026 ولا مكملات حالياً)، لم يُلاحَظ سوى تحسّن طفيف جداً في النوم مع استمرار الأعراض الأساسية. السياق: تغذية ضعيفة جداً وانعدام التعرّض للشمس (السبب غير مستقصى).","transitions":[{"label":"فيتامين D (25-OH)","before":"3.92","after":"31.36","unit":"ng/mL","ref":"25–100","beforeDate":"29/04/26","afterDate":"14/11/26","beforeTag":"نقص حاد","afterTag":"طبيعي ✓","note":"علاج فموي: Solyne 50000 + 200000 ×3 · انتهت (دون جرعة مداومة، قريبة من الحد)"},{"label":"فيتامين B12","before":"111.0","after":"642.3","unit":"pg/mL","ref":"211–911","beforeDate":"29/04/26","afterDate":"14/11/26","beforeTag":"منخفض","afterTag":"طبيعي ✓","note":"حقن Vit B12 عضلية (علبتان) · انتهت"},{"label":"الفيريتين","before":"18.74","after":"57.00","unit":"ng/mL","ref":"20–300","beforeDate":"29/04/26","afterDate":"14/11/26","beforeTag":"منخفض","afterTag":"طبيعي ✓","note":"حديد فموي: Fumafer 200 mg مع Foldine 5 mg · انتهت"}],"normalLabs":[{"label":"الهيموغلوبين (Hb)","value":"14.60","unit":"g/dL","date":"04/26","ref":"13–17.5"},{"label":"الصفائح الدموية","value":"172","unit":"G/L","date":"04/26","ref":"150–400"},{"label":"هرمون TSH","value":"1.37","unit":"µUI/mL","date":"04/26","ref":"0.27–4.2"},{"label":"سكر الدم الصائم","value":"0.89","unit":"g/L","date":"04/26","ref":"0.70–1.1"},{"label":"الكرياتينين","value":"7.21","unit":"mg/L","date":"14/11/26","ref":"6.7–11"},{"label":"إنزيم ASAT (TGO)","value":"25.18","unit":"UI/L","date":"02/09/26","ref":"10–40"},{"label":"إنزيم ALAT (TGP)","value":"9.73","unit":"UI/L","date":"02/09/26","ref":"<46"},{"label":"الكوليسترول الكلي","value":"1.35","unit":"g/L","date":"02/09/26","ref":"<2.0"},{"label":"الشحوم الثلاثية","value":"0.53","unit":"g/L","date":"02/09/26","ref":"<1.5"}]},"baseline":{"items":[{"label":"البيانات الأساسية","value":"ذكر، 25 سنة (مواليد 2001)"},{"label":"القياسات الحيوية","value":"172 سم · 62 كغ · مؤشر الكتلة 20.96"},{"label":"السكن والمحيط الاجتماعي","value":"يسكن وحده باستقلالية منذ 5 سنوات (تخرّج من الجامعة منذ سنة واحدة)؛ له 2 إلى 3 أصدقاء مقربين."},{"label":"نمط الحياة والمواد","value":"خمول بدني مطوّل (أكثر من 7 سنوات دون نشاط رياضي)، تغذية ضعيفة جداً وتعرّض شبه معدوم للشمس؛ كافيين شبه معدوم، وصفر تبغ أو مواد أخرى."},{"label":"السمع والبصر","value":"فحص السمع سليم؛ حدة الإبصار القياسية جيدة (8/10 و 9/10 دون فحص متخصص لتقويم البصر 3D)."}]}},"en":{"dir":"ltr","lang":"en","docTitle":"Clinical Note — Psychiatry Consultation","ui":{"prefsBtn":"Display & preferences (Aa)","prefsTitle":"Display & Preferences","fontSizeLabel":"Text size","fontSm":"Compact","fontMd":"Standard","fontLg":"Comfort +","spacingLabel":"Line spacing","spacingCompact":"Tight","spacingNormal":"Balanced","spacingRelaxed":"Relaxed","cardDensityLabel":"Card spacing","cardCompact":"Compact","cardSpacious":"Spacious","expandAll":"Expand all","collapseAll":"Collapse all","prefsReset":"Reset display","dismiss":"Close","problemsTitle":"Presenting Concerns","detailsHide":"Hide details","safetyTitle":"Medical Safety & Labs","labBefore":"Before","labAfter":"After","labRef":"Ref","normalLabsToggle":"9 normal baseline labs ✓ — TSH · Hb/Plt · glucose · renal · liver/lipids","baselineTitle":"Patient Baseline"},"problems":[{"id":"prob-1","num":"01","tone":"default","alertBadge":"","title":"Social Fear, Swallowed Anger & Sudden Startle (\"Khelâa\")","summary":"Since childhood, evaluative situations trigger marked fear, physical trembling, and dread of pity, ridicule, or contempt. He reacts with reflexive verbal masking, swallows sharp anger, and startles easily.","detailHint":"4 details · Private self-regard, anger, \"khelâa\", refusal & choices","details":[{"label":"Private contrast & reflexive verbal masking","text":"Maintains intact self-regard in private and natural openness with his 2 to 3 close friends. In social or evaluative settings, acute dread of pity, ridicule, or contempt over unmet achievement drives flaw-hiding and split-second reflexive verbal masking (claiming everything is fine or already done in the first second to avert blame or exposure)."},{"label":"Swallowed anger & conflict avoidance","text":"Feels clear, sharp anger when wronged or treated unfairly, yet swallows it to avoid conflict, shifting afterward into withdrawal or a daydream in which he prevails."},{"label":"Sudden startle (\"khelâa\") & reading emotions","text":"Surprises, sudden loud voices or noises, and diverse everyday triggers have caused pronounced sudden fright with clear abdominal tension since childhood. Reports no recurring nightmares, intrusive flashbacks, or detachment from reality or body. Also notes longstanding difficulty identifying his internal emotions, with no repetitive obsessions or rituals."},{"label":"Childhood context, saying \"no\" & major choices","text":"Sociable in early childhood, yet raised in a harsh, fear-inducing home marked by humiliation over enuresis (until age 13) and a lack of emotional warmth. Difficulty saying \"no\" and hesitation on personal choices reflect acute discomfort with others' displeasure combined with fear of an irreversible mistake without full certainty — whereas once clear certainty or trusted guidance is present, action is immediate and decisive. Facing marriage, this pairs with intense fear of being exposed as lazy or inferior, or chosen only as a fallback."}]},{"id":"prob-2","num":"02","tone":"default","alertBadge":"","title":"Rapid-Flow Comprehension Overload, Task Initiation & Organization","summary":"Structured explanations feel effortless, yet dense rapid speech or unstructured text quickly overloads him, even alone in quiet. Lifelong forgetfulness, task-initiation inertia, and all-or-nothing shutdown complete this picture.","detailHint":"3 details · Rapid-flow interference, ASRS 5/6, all-or-nothing, 3D orientation","details":[{"label":"Rapid-flow comprehension bottleneck (self-observations for evaluation)","text":"Reported since childhood despite a normal hearing test. Comprehension breaks down past two to three nested ideas, around undefined terms, or under dense rapidly shifting details, orally and in unstructured written text. Short-term retention and calm alertness feel satisfactory on self-observation (not formally tested), while informal non-standardized personal exercises suggest interference among recent items under time pressure rather than random forgetting."},{"label":"Organization, task initiation & \"all-or-nothing\" pattern","text":"Forgetfulness since childhood, a high-school dip in rote memorization, and strong difficulty initiating everyday chores such as cooking and cleaning. Internal thought pace feels fast with long stretches of deep absorption on engaging topics, contrasted with marked difficulty working in short or interrupted blocks; whenever recurring intermediate obligations break continuity, he shifts into complete shutdown and total avoidance of personal projects."},{"label":"Self-questionnaire & visuospatial note","text":"Self-completed ASRS v1.1 (Part A): 5/6 (initial screening indicator only, not a diagnosis). Also notes a longstanding, secondary difficulty with 3D spatial orientation, while 2D visual perception and face recognition feel normal; standard eye exam showed good visual acuity (8/10 and 9/10), without specialized orthoptic or stereoscopic testing."}]},{"id":"prob-3","num":"03","tone":"default","alertBadge":"","title":"Immersive Daydreaming, Self-Control & Nighttime Habits","summary":"Immersive heroic daydreams, fully recognized as imaginary, occupy roughly half his waking day. He also reports steady year-round difficulty delaying gratification and near-daily nighttime pornography use.","detailHint":"3 details · Daydreaming (~50%), food/spending, nighttime habits, no food selectivity","details":[{"label":"Immersive heroic daydreaming","text":"Occurs at any time and takes up roughly half the waking day on average, centering on imaginative scenarios in which he plays an extraordinary hero drawing admiration and awe, while remaining fully aware that they are purely imaginary."},{"label":"Year-round self-control & delayed gratification","text":"Stable, year-round (non-episodic) difficulty with self-control and delayed gratification in eating and spending — for example, eating a week's supply of fruit in a single day, or buying a desired phone immediately despite knowing a discount arrives two weeks later."},{"label":"Nighttime habits, diet & minor behaviors","text":"Near-daily nighttime pornography compounding irregular sleep; strong urges during prior quit attempts recently gave way to calm resignation without guilt spirals. Reports no food or sensory selectivity (attributes his very poor diet to difficulty starting cooking and sedentariness). Notes brief voluntary muscle tensing (~3 s) during slow manual tasks and absent-minded picking of dorsal acne."}]},{"id":"prob-4","num":"04","tone":"alert","alertBadge":"Suicide risk alert","title":"Recurrent Low-Drive Periods & Suicide Risk","summary":"He has been in a recurring low-drive episode for two months, with preserved pleasure. Past suicidal thoughts are contained by religious convictions, yet marital contempt would acutely escalate risk.","detailHint":"3 details · Trigger (not Curacné), past SI & marital risk, no mania/hallucinations","details":[{"label":"Current episode & perceived trigger","text":"Does not link this dip to Curacné (started in June 2026 with no perceived psychological effect); instead, it coincided with a weekly obligation requiring 2 to 3 days of preparation, which disrupted continuity and triggered his \"all-or-nothing\" shutdown."},{"label":"Suicide safety & marital-contempt alert","text":"Past suicidal and self-harm thoughts (most recent a few months ago; severity to evaluate clinically), driven by disappointment over unmet expectations and a perceived lack of real material, moral, psychological, physical, or intellectual achievement. Currently felt to be contained through religious convictions, yet he specifically flags that discovering contempt or demeaning comparison in marriage (being chosen only as a fallback, or seen as lazy or inferior) would acutely escalate suicide risk."},{"label":"Mood screen & family context","text":"No clear known history of manic or hypomanic episodes (to evaluate clinically) and zero hallucinations at any time. Notes undiagnosed psychological or emotional difficulties observed in a first-degree relative."}]},{"id":"prob-5","num":"05","tone":"default","alertBadge":"","title":"Irregular Non-Restorative Sleep & Airway Context","summary":"He sleeps about 9 hours on an irregular, non-restorative schedule with unrefreshing naps, yet reports no current daytime sleepiness. Full in-lab Type I polysomnography is scheduled in one month.","detailHint":"4 details · Sleep/PSG & naps, ENT/2018 septoplasty, negative screens, childhood & flexibility","details":[{"label":"Sleep architecture, PSG & daytime naps","text":"Near-daily brief dawn waking (at Fajr or ~1 hour earlier: checks the clock and falls back asleep, with very heavy waking ~1 day in 2 for Fajr prayer), mouth-breathing, occasional sleep paralysis, and bedtime light sensitivity over the past 2–3 years. Back-sleeping snoring resolving on the side was previously witnessed in student housing (graduated 1 year ago; lives alone). Morning waking is lighter than in childhood (hears alarms reliably) with no current daytime sleepiness, yet short daytime naps leave him heavy and tired; full in-lab Type I PSG is scheduled in ~1 month."},{"label":"Airway & ENT history","text":"Persistent right-sided nasal obstruction and discomfort (ENT consult planned) with sneezing and nasal itching around dust. Childhood history of repeated adenoid and tonsil surgeries (exact details and possible recurrence unconfirmed), followed by an isolated septoplasty on 30/06/2018 for septal deviation (packing removed 02/07/2018)."},{"label":"Negative differential screens","text":"Reports zero daytime sleep attacks, zero hallucinations (awake, falling asleep, or waking), and only voluntary leg shaking upon waking with zero evening or nighttime urge to move his legs. Only notes a rare, brief loss of hand or knee tone with full awareness strictly during an unusually intense orgasm — never triggered by laughter, surprise, or anger."},{"label":"Childhood heavy sleep & asymptomatic joint flexibility","text":"Very deep childhood sleep with enuresis until age 13, unusual falling asleep at age 15 (during prayer prostration and in a swimming pool), and one childhood episode described as sleepwalking, all resolved with no adult recurrence. Noticeable local joint flexibility (e.g., thumb easily touching forearm; no formal clinical score), completely asymptomatic: no joint or back pain, no recurrent sprains, and no dizziness or palpitations on standing or in heat."}]}],"safety":{"cards":[{"id":"meds","severity":"warn","badge":"Medications · Caution","title":"Medication Exposure & Tolerability","summary":"No psychotropics taken to date. Taking Curacné (isotretinoin) 30 mg/day since June 2026 (~4 months left, no perceived psychological effect), with no active supplements. Anafranil (clomipramine, TCA) 10 mg was prescribed on 22/11/2026 during an abrupt neurology visit (~1 minute, rapid chart scan without detailed exam) and has not been started pending this assessment and Type I PSG (~1 month). Prefers to avoid marked daytime sedation or cognitive slowing when possible.","detailHint":"Curacné liver/lipid panel (02/09/26), April 2026 repletion & absent symptoms","detail":"April 2026 deficiency repletion is completed and stopped (Solyne Vit D 50,000, Vit D 200,000 ×3, Vit B12 IM ×2 boxes, Fumafer 200 mg, Foldine 5 mg). Liver and lipid panel under Curacné was normal on 02/09/2026; reports no chronic digestive symptoms and no limb tingling or numbness."},{"id":"eeg","severity":"warn","badge":"Seizure threshold","title":"Prolonged Awake EEG (24/04/2022)","summary":"Recorded for heavy sleep (30–60 s doze): normal alpha rhythm with \"quelques bouffées de pointes rares — À SURVEILLER\" (rare spikes). Key safety guardrail before any medication that lowers the seizure threshold (e.g., TCAs such as Anafranil, bupropion).","detailHint":"No clinical seizures · Negative myoclonus, déjà vu, absence & migraine screen","detail":"No known clinical seizures. Reports no involuntary morning jerks, unusual déjà vu sensations, brief absence spells, migraines, or recurring headaches."},{"id":"cardio","severity":"warn","badge":"No 12-Lead ECG","title":"Cardiovascular Baseline","summary":"Normal echocardiogram on 21/09/2025 (EF 75.09%, grade 1 mitral regurgitation), but no recent 12-lead ECG on file (no baseline QTc). Past orthostatic syncopes resolved ~10 years ago.","detailHint":"Resolved orthostatic syncopes (~10 yrs ago) & post-exertion recovery","detail":"A few past brief fainting episodes (~10 s after abrupt standing preceded by dizziness, with brief transient motor jerking and immediate full conscious recovery without confusion) stopped ~10 years ago (for clinical appraisal). Subjective sense of slightly slow heart-rate recovery after exertion in the context of prolonged sedentariness (>7 years)."}],"watchLab":{"label":"White Blood Cells (WBC)","value":"4.10","unit":"G/L","ref":"4.0–10.0","date":"29/04/26","badge":"Lower-limit borderline · Recheck","note":"Reported within normal limits on CBC yet sitting right at the lower cutoff (4.0) and never rechecked since April 2026 (before Curacné in June 2026): recheck CBC while on Curacné and before hematologic-risk psychotropics."},"transitionsTitle":"Corrected Deficiencies (29/04 → 14/11/2026)","transitionsNote":"Biochemically normalized (April 2026 repletion completed; no active supplements), yet only slight sleep improvement was seen and core symptoms persisted. Context: very poor diet and minimal sun exposure (cause not formally investigated).","transitions":[{"label":"Vitamin D (25-OH)","before":"3.92","after":"31.36","unit":"ng/mL","ref":"25–100","beforeDate":"29/04/26","afterDate":"14/11/26","beforeTag":"Severe deficit","afterTag":"Normal ✓","note":"Solyne 50,000 + 200,000 ×3 · completed (no maintenance, near cutoff)"},{"label":"Vitamin B12","before":"111.0","after":"642.3","unit":"pg/mL","ref":"211–911","beforeDate":"29/04/26","afterDate":"14/11/26","beforeTag":"Low","afterTag":"Normal ✓","note":"Vit B12 IM (2 boxes) · completed"},{"label":"Ferritin","before":"18.74","after":"57.00","unit":"ng/mL","ref":"20–300","beforeDate":"29/04/26","afterDate":"14/11/26","beforeTag":"Low","afterTag":"Normal ✓","note":"Fumafer 200 mg (+ Foldine 5 mg) · completed"}],"normalLabs":[{"label":"Hemoglobin (Hb)","value":"14.60","unit":"g/dL","date":"04/26","ref":"13–17.5"},{"label":"Platelets","value":"172","unit":"G/L","date":"04/26","ref":"150–400"},{"label":"TSH","value":"1.37","unit":"µIU/mL","date":"04/26","ref":"0.27–4.2"},{"label":"Fasting Glucose","value":"0.89","unit":"g/L","date":"04/26","ref":"0.70–1.1"},{"label":"Creatinine","value":"7.21","unit":"mg/L","date":"14/11/26","ref":"6.7–11"},{"label":"AST (ASAT)","value":"25.18","unit":"U/L","date":"02/09/26","ref":"10–40"},{"label":"ALT (ALAT)","value":"9.73","unit":"U/L","date":"02/09/26","ref":"<46"},{"label":"Total Cholesterol","value":"1.35","unit":"g/L","date":"02/09/26","ref":"<2.0"},{"label":"Triglycerides","value":"0.53","unit":"g/L","date":"02/09/26","ref":"<1.5"}]},"baseline":{"items":[{"label":"Profile","value":"Male, 25 yrs (born 2001)"},{"label":"Biometrics","value":"172 cm · 62 kg · BMI 20.96"},{"label":"Living & social context","value":"Living independently alone for 5 years (graduated university 1 year ago); 2 to 3 close friends."},{"label":"Lifestyle & substances","value":"Prolonged sedentariness (>7 years without exercise), very poor diet, minimal sun exposure; near-zero caffeine, zero tobacco or other substances."},{"label":"Hearing & vision","value":"Normal hearing test; satisfactory standard visual acuity (8/10 and 9/10, without 3D orthoptic exam)."}]}}};
+
+    const $ = (id) => document.getElementById(id);
+
+    // Runtime UI state
+    let openProbs = new Set();
+    let openSafety = new Set();
+    let normalLabsOpen = false;
+    let baselineOpen = false;
+    let prefsOpen = false;
+
+    // Display preferences
+    const prefs = {
+      lang: readPref('fiche_lang', ['fr', 'ar', 'en'], 'fr'),
+      font: readPref('fiche_font', ['sm', 'md', 'lg'], 'md'),
+      spacing: readPref('fiche_spacing', ['compact', 'normal', 'relaxed'], 'normal'),
+      cards: readPref('fiche_cards', ['compact', 'spacious'], 'spacious')
+    };
+
+    function readPref(key, allowed, fallback) {
+      try {
+        const v = localStorage.getItem(key);
+        return allowed.includes(v) ? v : fallback;
+      } catch { return fallback; }
+    }
+    function writePref(key, val) {
+      try { localStorage.setItem(key, val); } catch {}
+    }
+
+    // ================= HTML, FR TYPOGRAPHY & ARABIC RTL BIDI HELPERS =================
+    function esc(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function fmt(str) {
+      let s = String(str == null ? '' : str);
+      if (prefs.lang === 'fr') {
+        s = s
+          .replace(/« /g, '«\u202F')
+          .replace(/ »/g, '\u202F»')
+          .replace(/ ([:;?!%])/g, '\u202F$1');
+        return esc(s);
+      }
+      if (prefs.lang !== 'ar') return esc(s);
+      // Isolate Latin/numeric runs cleanly without swallowing trailing sentence punctuation
+      // Include leading × so multiplier tokens stay one contiguous LTR run
+      const re = /([~<>\u00B5\u00D7]?[A-Za-z0-9\u00C0-\u024F](?:[A-Za-z0-9\u00C0-\u024F\u00B5_/%+\u00D7\-\u2013]|(?:[.:](?=[A-Za-z0-9])))*(?:(?:\s+|\s+[\-\u2013\u2014+\u00D7]\s+)[~<>\u00B5\u00D7]?[A-Za-z0-9\u00C0-\u024F](?:[A-Za-z0-9\u00C0-\u024F\u00B5_/%+\u00D7\-\u2013]|(?:[.:](?=[A-Za-z0-9])))*)*)/g;
+      let out = '';
+      let last = 0;
+      let m;
+      while ((m = re.exec(s)) !== null) {
+        if (m.index > last) out += esc(s.slice(last, m.index));
+        out += '<bdi class="ltr-tok" dir="ltr">' + esc(m[0]) + '</bdi>';
+        last = re.lastIndex;
+      }
+      if (last < s.length) out += esc(s.slice(last));
+      return out;
+    }
+
+    // ================= DISPLAY PREFERENCES =================
+    function applyDisplayPrefs() {
+      const r = document.documentElement;
+      r.dataset.font = prefs.font;
+      r.dataset.spacing = prefs.spacing;
+      r.dataset.cards = prefs.cards;
+      r.lang = prefs.lang;
+      r.dir = prefs.lang === 'ar' ? 'rtl' : 'ltr';
+
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        const active = btn.dataset.lang === prefs.lang;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+
+      const d = DATA[prefs.lang];
+      document.title = d.docTitle;
+      const pBtn = $('prefsBtn');
+      pBtn.setAttribute('aria-label', d.ui.prefsBtn);
+      pBtn.setAttribute('title', d.ui.prefsBtn);
+      if (prefsOpen) {
+        renderPrefsSheet();
+        positionPrefsSheet();
+      }
+    }
+
+    function setLang(lang) {
+      if (lang !== 'fr' && lang !== 'ar' && lang !== 'en') return;
+      prefs.lang = lang;
+      writePref('fiche_lang', lang);
+      applyDisplayPrefs();
+      renderApp();
+    }
+    function setFont(font) {
+      if (!['sm', 'md', 'lg'].includes(font)) return;
+      prefs.font = font;
+      writePref('fiche_font', font);
+      applyDisplayPrefs();
+    }
+    function setSpacing(spacing) {
+      if (!['compact', 'normal', 'relaxed'].includes(spacing)) return;
+      prefs.spacing = spacing;
+      writePref('fiche_spacing', spacing);
+      applyDisplayPrefs();
+    }
+    function setCards(cards) {
+      if (!['compact', 'spacious'].includes(cards)) return;
+      prefs.cards = cards;
+      writePref('fiche_cards', cards);
+      applyDisplayPrefs();
+    }
+    function resetDisplayPrefs() {
+      prefs.font = 'md';
+      prefs.spacing = 'normal';
+      prefs.cards = 'spacious';
+      writePref('fiche_font', prefs.font);
+      writePref('fiche_spacing', prefs.spacing);
+      writePref('fiche_cards', prefs.cards);
+      applyDisplayPrefs();
+    }
+
+    // ================= PREFERENCES SHEET =================
+    function allProblemsExpanded() {
+      if (!DATA) return false;
+      const probs = DATA[prefs.lang].problems;
+      return probs.length > 0 && probs.every(p => openProbs.has(p.id));
+    }
+
+    function updateExpandAllButtons() {
+      if (!DATA) return;
+      const ui = DATA[prefs.lang].ui;
+      const lbl = allProblemsExpanded() ? ui.collapseAll : ui.expandAll;
+      const mainBtn = $('expandAllBtn');
+      if (mainBtn) mainBtn.textContent = lbl;
+      const sheetSpan = $('prefsSheet').querySelector('[data-act-expand] span');
+      if (sheetSpan) sheetSpan.textContent = lbl;
+    }
+
+    function setAccordionState(wrapEl, btnEl, isOpen, closedLabel, openLabel) {
+      if (wrapEl) {
+        wrapEl.classList.toggle('is-open', isOpen);
+        wrapEl.setAttribute('aria-hidden', String(!isOpen));
+        const inner = wrapEl.firstElementChild;
+        if (inner) inner.inert = !isOpen;
+      }
+      if (btnEl) {
+        btnEl.setAttribute('aria-expanded', String(isOpen));
+        if (closedLabel != null && openLabel != null) {
+          const sp = btnEl.querySelector('.disc-txt');
+          if (sp) sp.textContent = isOpen ? openLabel : closedLabel;
+        }
+      }
+    }
+
+    function toggleExpandAllProblems() {
+      if (!DATA) return;
+      const d = DATA[prefs.lang];
+      const ui = d.ui;
+      const expand = !allProblemsExpanded();
+      if (expand) d.problems.forEach(p => openProbs.add(p.id));
+      else openProbs.clear();
+      d.problems.forEach(p => {
+        const isOpen = openProbs.has(p.id);
+        const btn = $('appMain').querySelector('[data-toggle-prob="' + p.id + '"]');
+        const wrap = $('det-' + p.id);
+        setAccordionState(wrap, btn, isOpen, p.detailHint, ui.detailsHide);
+      });
+      updateExpandAllButtons();
+    }
+
+    function renderPrefsSheet() {
+      if (!DATA) return;
+      const ui = DATA[prefs.lang].ui;
+      const allOpen = allProblemsExpanded();
+      $('prefsSheet').innerHTML = `
+        <div class="prefs-handle" aria-hidden="true"></div>
+        <div class="prefs-head">
+          <h2 id="prefsTitle" class="prefs-title">${esc(ui.prefsTitle)}</h2>
+          <button type="button" class="prefs-close" data-prefs-close aria-label="${esc(ui.dismiss)}" title="${esc(ui.dismiss)}">&times;</button>
+        </div>
+        <div class="pref-group">
+          <span class="pref-label">${esc(ui.fontSizeLabel)}</span>
+          <div class="seg-row">
+            <button type="button" class="seg-btn${prefs.font === 'sm' ? ' is-active' : ''}" data-set-font="sm" aria-pressed="${prefs.font === 'sm'}">${esc(ui.fontSm)}</button>
+            <button type="button" class="seg-btn${prefs.font === 'md' ? ' is-active' : ''}" data-set-font="md" aria-pressed="${prefs.font === 'md'}">${esc(ui.fontMd)}</button>
+            <button type="button" class="seg-btn${prefs.font === 'lg' ? ' is-active' : ''}" data-set-font="lg" aria-pressed="${prefs.font === 'lg'}">${esc(ui.fontLg)}</button>
+          </div>
+        </div>
+        <div class="pref-group">
+          <span class="pref-label">${esc(ui.spacingLabel)}</span>
+          <div class="seg-row">
+            <button type="button" class="seg-btn${prefs.spacing === 'compact' ? ' is-active' : ''}" data-set-spacing="compact" aria-pressed="${prefs.spacing === 'compact'}">${esc(ui.spacingCompact)}</button>
+            <button type="button" class="seg-btn${prefs.spacing === 'normal' ? ' is-active' : ''}" data-set-spacing="normal" aria-pressed="${prefs.spacing === 'normal'}">${esc(ui.spacingNormal)}</button>
+            <button type="button" class="seg-btn${prefs.spacing === 'relaxed' ? ' is-active' : ''}" data-set-spacing="relaxed" aria-pressed="${prefs.spacing === 'relaxed'}">${esc(ui.spacingRelaxed)}</button>
+          </div>
+        </div>
+        <div class="pref-group">
+          <span class="pref-label">${esc(ui.cardDensityLabel)}</span>
+          <div class="seg-row cols-2">
+            <button type="button" class="seg-btn${prefs.cards === 'compact' ? ' is-active' : ''}" data-set-cards="compact" aria-pressed="${prefs.cards === 'compact'}">${esc(ui.cardCompact)}</button>
+            <button type="button" class="seg-btn${prefs.cards === 'spacious' ? ' is-active' : ''}" data-set-cards="spacious" aria-pressed="${prefs.cards === 'spacious'}">${esc(ui.cardSpacious)}</button>
+          </div>
+        </div>
+        <div class="prefs-actions">
+          <button type="button" class="pref-act-btn" data-act-expand>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+            <span>${esc(allOpen ? ui.collapseAll : ui.expandAll)}</span>
+          </button>
+        </div>
+        <button type="button" class="prefs-reset" data-act-reset>${esc(ui.prefsReset)}</button>
+      `;
+    }
+
+    function positionPrefsSheet() {
+      const sheet = $('prefsSheet');
+      if (window.innerWidth <= 767) {
+        sheet.style.left = '';
+        sheet.style.top = '';
+        return;
+      }
+      const btnRect = $('prefsBtn').getBoundingClientRect();
+      const sw = Math.min(344, window.innerWidth - 24);
+      const isRtl = document.documentElement.dir === 'rtl';
+      let left = isRtl ? btnRect.left : (btnRect.right - sw);
+      left = Math.max(12, Math.min(left, window.innerWidth - sw - 12));
+      const top = Math.max(12, btnRect.bottom + 8);
+      sheet.style.left = left + 'px';
+      sheet.style.top = top + 'px';
+    }
+
+    function openPrefsSheet() {
+      if (!DATA) return;
+      prefsOpen = true;
+      renderPrefsSheet();
+      $('prefsBackdrop').hidden = false;
+      $('prefsSheet').hidden = false;
+      $('prefsBtn').setAttribute('aria-expanded', 'true');
+      positionPrefsSheet();
+    }
+
+    function closePrefsSheet(returnFocus = true) {
+      if (!prefsOpen) return;
+      prefsOpen = false;
+      $('prefsBackdrop').hidden = true;
+      $('prefsSheet').hidden = true;
+      $('prefsBtn').setAttribute('aria-expanded', 'false');
+      if (returnFocus) $('prefsBtn').focus();
+    }
+
+    // ================= MAIN APP RENDERER =================
+    const CHEV_SVG = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+    function renderArrowSvg(idx) {
+      const gid = 'arrGrad' + idx;
+      return `<svg viewBox="0 0 40 16" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="${gid}" x1="0" y1="8" x2="38" y2="8" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="var(--amber)"/>
+            <stop offset="100%" stop-color="var(--teal)"/>
+          </linearGradient>
+        </defs>
+        <line x1="2" y1="8" x2="30" y2="8" stroke="url(#${gid})" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M27.5 3L37.5 8L27.5 13Z" fill="var(--teal)"/>
+      </svg>`;
+    }
+
+    function renderApp() {
+      if (!DATA) return;
+      const d = DATA[prefs.lang];
+      const ui = d.ui;
+      const allOpen = allProblemsExpanded();
+
+      // Block 1: 5 De-Boxed 2-in-1 Presenting Problems
+      const probsHtml = d.problems.map(p => {
+        const isOpen = openProbs.has(p.id);
+        const alertPill = p.alertBadge
+          ? '<span class="prob-alert-badge"><span class="prob-alert-dot" aria-hidden="true"></span><span>' + esc(p.alertBadge) + '</span></span>'
+          : '';
+        const detHtml = p.details.map(item => `
+          <div class="detail-item">
+            <div class="detail-label">${fmt(item.label)}</div>
+            <p class="detail-text">${fmt(item.text)}</p>
+          </div>`).join('');
+        return `
+          <article class="card prob-card${p.tone === 'alert' ? ' is-alert' : ''}" data-prob-id="${esc(p.id)}">
+            <div class="prob-body">
+              ${alertPill ? '<div class="prob-eyebrow-row">' + alertPill + '</div>' : ''}
+              <div class="prob-head">
+                <span class="prob-num" dir="ltr">${esc(p.num)}</span>
+                <h3 class="prob-title">${fmt(p.title)}</h3>
+              </div>
+              <p class="prob-summary">${fmt(p.summary)}</p>
+            </div>
+            <div class="acc-wrap${isOpen ? ' is-open' : ''}" id="det-${esc(p.id)}" aria-hidden="${!isOpen}">
+              <div class="acc-inner"${isOpen ? '' : ' inert'}>
+                <div class="prob-details">${detHtml}</div>
+              </div>
+            </div>
+            <button type="button" class="card-disclosure" data-toggle-prob="${esc(p.id)}" aria-expanded="${isOpen}" aria-controls="det-${esc(p.id)}">
+              <span class="disc-txt">${fmt(isOpen ? ui.detailsHide : p.detailHint)}</span>
+              ${CHEV_SVG}
+            </button>
+          </article>`;
+      }).join('');
+
+      // Block 2: Uniform Safety Cards + Headline WBC Watch Lab + Unified A -> B Sheet + Collapsed 9 Normal Labs
+      const safetyCardsHtml = d.safety.cards.map((c, idx) => {
+        const isOpen = openSafety.has(c.id);
+        return `
+          <article class="card safety-card sev-${esc(c.severity)}${idx === 0 ? ' is-full' : ''}">
+            <div class="safety-body">
+              <div class="safety-top">
+                <span class="sev-badge">${fmt(c.badge)}</span>
+                <h3 class="safety-title">${fmt(c.title)}</h3>
+              </div>
+              <p class="safety-summary">${fmt(c.summary)}</p>
+            </div>
+            <div class="acc-wrap${isOpen ? ' is-open' : ''}" id="sdet-${esc(c.id)}" aria-hidden="${!isOpen}">
+              <div class="acc-inner"${isOpen ? '' : ' inert'}>
+                <div class="safety-detail">${fmt(c.detail)}</div>
+              </div>
+            </div>
+            <button type="button" class="card-disclosure" data-toggle-safety="${esc(c.id)}" aria-expanded="${isOpen}" aria-controls="sdet-${esc(c.id)}">
+              <span class="disc-txt">${fmt(isOpen ? ui.detailsHide : c.detailHint)}</span>
+              ${CHEV_SVG}
+            </button>
+          </article>`;
+      }).join('');
+
+      const w = d.safety.watchLab;
+      const watchHtml = `
+        <article class="watch-card">
+          <div class="watch-head-row">
+            <span class="watch-label">${fmt(w.label)}</span>
+            <span class="watch-val" dir="ltr">${esc(w.value)} <span class="watch-unit">${esc(w.unit)}</span></span>
+          </div>
+          <div class="watch-sub-row">
+            <span class="watch-badge">${fmt(w.badge)}</span>
+            <span class="watch-meta-line"><bdi class="ltr-tok" dir="ltr">${esc(w.date)}</bdi> · ${esc(ui.labRef)} <bdi class="ltr-tok" dir="ltr">${esc(w.ref)} ${esc(w.unit)}</bdi></span>
+          </div>
+          <p class="watch-note">${fmt(w.note)}</p>
+        </article>`;
+
+      const transRowsHtml = d.safety.transitions.map((t, i) => `
+        <div class="trans-row">
+          <div class="trans-head">
+            <span class="trans-name">${fmt(t.label)}</span>
+            <span class="trans-ref">${esc(ui.labRef)} <bdi class="ltr-tok" dir="ltr">${esc(t.ref)} ${esc(t.unit)}</bdi></span>
+          </div>
+          <div class="trans-flow">
+            <div class="trans-side is-before">
+              <div class="trans-side-top">
+                <span class="trans-kicker">${esc(ui.labBefore)}</span>
+                <span class="trans-date" dir="ltr">${esc(t.beforeDate)}</span>
+              </div>
+              <div class="trans-val" dir="ltr">${esc(t.before)} <span class="trans-unit">${esc(t.unit)}</span></div>
+              <span class="trans-status"><span class="status-dot" aria-hidden="true"></span><span>${fmt(t.beforeTag)}</span></span>
+            </div>
+            <div class="trans-arrow" aria-hidden="true">${renderArrowSvg(i)}</div>
+            <div class="trans-side is-after">
+              <div class="trans-side-top">
+                <span class="trans-kicker">${esc(ui.labAfter)}</span>
+                <span class="trans-date" dir="ltr">${esc(t.afterDate)}</span>
+              </div>
+              <div class="trans-val" dir="ltr">${esc(t.after)} <span class="trans-unit">${esc(t.unit)}</span></div>
+              <span class="trans-status is-after">${fmt(t.afterTag)}</span>
+            </div>
+          </div>
+          <div class="trans-note">${fmt(t.note)}</div>
+        </div>`).join('');
+
+      const normalLabsHtml = d.safety.normalLabs.map(n => `
+        <div class="nlab-row">
+          <span class="nlab-name">${fmt(n.label)}</span>
+          <span class="nlab-right">
+            <span class="nlab-val" dir="ltr">${esc(n.value)} ${esc(n.unit)}</span>
+            <span class="nlab-meta"><bdi class="ltr-tok" dir="ltr">${esc(n.date)}</bdi> · ${esc(ui.labRef)} <bdi class="ltr-tok" dir="ltr">${esc(n.ref)}</bdi></span>
+          </span>
+        </div>`).join('');
+
+      // Block 3: Collapsed Patient Baseline
+      const baselineRowsHtml = d.baseline.items.map(row => `
+        <div class="baseline-row">
+          <dt>${fmt(row.label)}</dt>
+          <dd>${fmt(row.value)}</dd>
+        </div>`).join('');
+
+      $('appMain').innerHTML = `
+        <section class="block" id="block-problems" aria-labelledby="h-problems">
+          <div class="block-head">
+            <h2 id="h-problems" class="block-title">${esc(ui.problemsTitle)}</h2>
+            <button type="button" id="expandAllBtn" class="ghost-pill">${esc(allOpen ? ui.collapseAll : ui.expandAll)}</button>
+          </div>
+          <div class="prob-list">${probsHtml}</div>
+        </section>
+
+        <section class="block" id="block-safety" aria-labelledby="h-safety">
+          <div class="block-head">
+            <h2 id="h-safety" class="block-title">${esc(ui.safetyTitle)}</h2>
+          </div>
+          <div class="safety-grid">${safetyCardsHtml}</div>
+          ${watchHtml}
+          <article class="card trans-sheet">
+            <div class="trans-sheet-head">
+              <h3 class="sub-heading">${fmt(d.safety.transitionsTitle)}</h3>
+              <p class="trans-takeaway">${fmt(d.safety.transitionsNote)}</p>
+            </div>
+            <div class="trans-rows">${transRowsHtml}</div>
+          </article>
+          <div class="disclosure-wrap">
+            <button type="button" class="disclosure-bar" id="normalLabsToggle" aria-expanded="${normalLabsOpen}" aria-controls="normalLabsPanel">
+              <span class="disclosure-label"><span class="teal-dot" aria-hidden="true"></span><span>${fmt(ui.normalLabsToggle)}</span></span>
+              ${CHEV_SVG}
+            </button>
+            <div class="acc-wrap${normalLabsOpen ? ' is-open' : ''}" id="normalLabsPanel" aria-hidden="${!normalLabsOpen}">
+              <div class="acc-inner"${normalLabsOpen ? '' : ' inert'}>
+                <div class="normal-labs-panel">
+                  <div class="nlab-grid">${normalLabsHtml}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="block" id="block-baseline" aria-labelledby="baselineToggle">
+          <div class="disclosure-wrap">
+            <button type="button" class="disclosure-bar" id="baselineToggle" aria-expanded="${baselineOpen}" aria-controls="baselinePanel">
+              <span class="disclosure-label">${esc(ui.baselineTitle)}</span>
+              ${CHEV_SVG}
+            </button>
+            <div class="acc-wrap${baselineOpen ? ' is-open' : ''}" id="baselinePanel" aria-hidden="${!baselineOpen}">
+              <div class="acc-inner"${baselineOpen ? '' : ' inert'}>
+                <div class="baseline-panel">
+                  <dl class="baseline-list">${baselineRowsHtml}</dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      `;
+    }
+
+    // ================= EVENT DELEGATION =================
+    document.addEventListener('click', (e) => {
+      const langBtn = e.target.closest('.lang-btn');
+      if (langBtn) { setLang(langBtn.dataset.lang); return; }
+    });
+
+    $('prefsBtn').addEventListener('click', () => {
+      if (prefsOpen) closePrefsSheet(true);
+      else openPrefsSheet();
+    });
+    $('prefsBackdrop').addEventListener('click', () => closePrefsSheet(true));
+
+    $('prefsSheet').addEventListener('click', (e) => {
+      if (e.target.closest('[data-prefs-close]')) { closePrefsSheet(true); return; }
+      const fo = e.target.closest('[data-set-font]');
+      if (fo) { setFont(fo.dataset.setFont); return; }
+      const sp = e.target.closest('[data-set-spacing]');
+      if (sp) { setSpacing(sp.dataset.setSpacing); return; }
+      const ca = e.target.closest('[data-set-cards]');
+      if (ca) { setCards(ca.dataset.setCards); return; }
+      if (e.target.closest('[data-act-expand]')) { toggleExpandAllProblems(); return; }
+      if (e.target.closest('[data-act-reset]')) { resetDisplayPrefs(); return; }
+    });
+
+    $('appMain').addEventListener('click', (e) => {
+      if (e.target.closest('#expandAllBtn')) { toggleExpandAllProblems(); return; }
+
+      const probBtn = e.target.closest('[data-toggle-prob]');
+      if (probBtn) {
+        const id = probBtn.dataset.toggleProb;
+        const d = DATA[prefs.lang];
+        const p = d.problems.find(x => x.id === id);
+        const isOpen = !openProbs.has(id);
+        if (isOpen) openProbs.add(id);
+        else openProbs.delete(id);
+        setAccordionState($('det-' + id), probBtn, isOpen, p ? p.detailHint : '', d.ui.detailsHide);
+        updateExpandAllButtons();
+        return;
+      }
+
+      const safBtn = e.target.closest('[data-toggle-safety]');
+      if (safBtn) {
+        const id = safBtn.dataset.toggleSafety;
+        const d = DATA[prefs.lang];
+        const c = d.safety.cards.find(x => x.id === id);
+        const isOpen = !openSafety.has(id);
+        if (isOpen) openSafety.add(id);
+        else openSafety.delete(id);
+        setAccordionState($('sdet-' + id), safBtn, isOpen, c ? c.detailHint : '', d.ui.detailsHide);
+        return;
+      }
+
+      const nlabBtn = e.target.closest('#normalLabsToggle');
+      if (nlabBtn) {
+        normalLabsOpen = !normalLabsOpen;
+        setAccordionState($('normalLabsPanel'), nlabBtn, normalLabsOpen);
+        return;
+      }
+
+      const baseBtn = e.target.closest('#baselineToggle');
+      if (baseBtn) {
+        baselineOpen = !baselineOpen;
+        setAccordionState($('baselinePanel'), baseBtn, baselineOpen);
+        return;
+      }
+
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && prefsOpen) {
+        e.preventDefault();
+        closePrefsSheet(true);
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (prefsOpen) positionPrefsSheet();
+    });
+
+    window.addEventListener('scroll', () => {
+      const bar = $('topbar');
+      if (bar) bar.classList.toggle('is-scrolled', window.scrollY > 8);
+    }, { passive: true });
+
+    // ================= SERVICE WORKER =================
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // Boot (clean up legacy removed workspace & theme keys)
+    try { localStorage.removeItem('fiche_enc_ws_v2'); localStorage.removeItem('fiche_theme'); } catch {}
+    applyDisplayPrefs();
+    renderApp();
+  })();
+  </script>
+</body>
+</html>
